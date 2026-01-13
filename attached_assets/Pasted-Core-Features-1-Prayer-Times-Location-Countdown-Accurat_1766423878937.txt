@@ -1,0 +1,86 @@
+Core Features
+1. Prayer Times, Location & Countdown
+Accurate prayer times for all countries and cities worldwide
+Manual location selection only (no automatic location permission required)
+Location selection button that allows the user to choose country and city
+Display:
+Time remaining until the next Adhan
+Time remaining until Iqamah (configurable by the user)
+Support multiple calculation methods
+2. Prayer Notifications
+Push notifications for all five daily prayers
+Ability to turn notifications on/off for each prayer
+Custom notification times before Adhan
+Optional Iqamah reminders
+3. Optional Prayer Reminders
+Reminders for optional prayers:
+Duha
+Witr
+Tahajjud
+Any custom prayer
+User-defined reminder times
+4. Adhkar (Remembrances)
+Morning Adhkar
+Evening Adhkar
+Adhkar after prayer
+Ability to include multiple authentic hadiths per dhikr
+Arabic text with translation
+Mark dhikr as completed
+5. Daily Hadith System
+Display one authentic (Sahih) hadith
+Button to refresh and show a different hadith manually
+Hadith topics include:
+Prayer
+Dhikr
+Protection
+Faith and worship
+Arabic text + translation
+Clear source reference (e.g., Sahih Bukhari, Sahih Muslim)
+6. Daily Islamic Benefits (Fada’il)
+Show one Islamic benefit daily
+Ability to refresh and show another benefit
+Each benefit includes:
+Explanation
+Authentic evidence from Qur’an or Sahih Hadith
+Source reference
+7. Qur’an Section
+Include all Surahs of the Qur’an
+Arabic text
+Ability to browse by Surah name and number
+Special Qur’an Features
+Dedicated section for the last two verses of Surah Al-Baqarah
+Explanation that these verses protect the person, supported by an authentic hadith
+Clear reference to the hadith source
+8. Reciters (Sheikhs)
+Include well-known Qur’an reciters
+Ability to select a reciter and listen to recitation
+Clean audio player interface
+9. Protection Hadith Section
+Special section for authentic hadiths about protection
+Example: Hadith regarding the last verses of Surah Al-Baqarah
+Arabic text, translation, and source
+10. Tasbeeh & Dhikr Notifications
+Digital tasbeeh counter
+Periodic notifications for:
+Tasbeeh
+Istighfar
+General dhikr reminders
+User chooses frequency
+11. Multi-Language Support
+Arabic and English by default
+Easily extendable to more languages
+12. User Interface
+Clean, modern, Islamic-inspired design
+Light mode and dark mode
+Simple navigation
+13. Technical Requirements
+Use reliable public APIs for prayer times and Qur’an data
+Store user preferences locally
+Use scalable, clean, and well-commented code
+Proper state management
+Ensure content authenticity and correct sourcing
+14. Project Output
+Full project structure
+Frontend and backend logic
+Instructions on how to run the app in Replit
+Code ready for deployment as a web app or mobile app

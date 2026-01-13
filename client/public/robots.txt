@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mihrabapp.com/sitemap.xml
+
+Disallow: /api/
+Disallow: /admin/
+
+Allow: /prayer-times
+Allow: /qibla
+Allow: /zakat
+Allow: /azkar
+Allow: /tasbih
+Allow: /hadith
+Allow: /quran
+Allow: /settings
+
+Crawl-delay: 1

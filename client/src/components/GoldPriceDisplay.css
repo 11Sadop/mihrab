@@ -1,0 +1,249 @@
+.gold-price-container {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  border-radius: 24px;
+  padding: 32px;
+  margin: 24px 0;
+  box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+.gold-price-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+.gold-price-header {
+  text-align: center;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+.gold-price-header h3 {
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+.gold-price-subtitle {
+  font-size: 0.95em;
+  color: rgba(0, 0, 0, 0.7);
+  margin: 0;
+}
+.currency-selector {
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+.currency-selector label {
+  display: block;
+  font-size: 1.05em;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+}
+.currency-select {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 1.05em;
+  border: 3px solid #D4AF37;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+.currency-select:hover {
+  border-color: #B8860B;
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.currency-select:focus {
+  outline: none;
+  border-color: #B8860B;
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2);
+}
+.gold-price-content {
+  position: relative;
+  z-index: 1;
+}
+.price-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 16px 0;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+.price-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+.price-card.primary {
+  border: 3px solid #D4AF37;
+}
+.price-card.secondary {
+  border: 3px solid #B8860B;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 250, 230, 0.95) 100%);
+}
+.price-label {
+  font-size: 1.1em;
+  color: #666;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.price-value {
+  font-size: 2.8em;
+  font-weight: bold;
+  color: #D4AF37;
+  margin: 12px 0;
+  line-height: 1.2;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+.price-value.nisab {
+  color: #B8860B;
+}
+.currency-symbol {
+  font-size: 0.7em;
+  margin-right: 8px;
+  color: #666;
+}
+.price-note {
+  font-size: 0.9em;
+  color: #777;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+.loading-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid #D4AF37;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.loading-state p {
+  color: #1a1a1a;
+  font-size: 1.1em;
+}
+.error-state {
+  text-align: center;
+  padding: 32px 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+}
+.error-icon {
+  font-size: 3em;
+  display: block;
+  margin-bottom: 12px;
+}
+.error-state p {
+  color: #d32f2f;
+  font-size: 1.05em;
+  margin-bottom: 16px;
+}
+.retry-btn {
+  background: #D4AF37;
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-size: 1.05em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.retry-btn:hover {
+  background: #B8860B;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+.update-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.update-time {
+  font-size: 0.95em;
+  color: #666;
+  font-weight: 500;
+}
+.refresh-btn {
+  background: transparent;
+  border: 2px solid #D4AF37;
+  color: #D4AF37;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.refresh-btn:hover {
+  background: #D4AF37;
+  color: white;
+  transform: scale(1.05);
+}
+.info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(33, 150, 243, 0.1);
+  border-right: 4px solid #2196F3;
+  padding: 16px;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+.info-icon {
+  font-size: 1.5em;
+  flex-shrink: 0;
+}
+.info-banner p {
+  margin: 0;
+  font-size: 0.95em;
+  color: #1a1a1a;
+  line-height: 1.5;
+}
+@media (max-width: 768px) {
+  .gold-price-container {
+    padding: 24px 20px;
+    margin: 16px 0;
+  }
+  .gold-price-header h3 {
+    font-size: 1.5em;
+  }
+  .price-value {
+    font-size: 2.2em;
+  }
+  .update-info {
+    flex-direction: column;
+    text-align: center;
+  }
+  .refresh-btn {
+    width: 100%;
+  }
+}

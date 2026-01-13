@@ -1,0 +1,68 @@
+Main Features
+1. Prayer Times & Notifications
+Accurate prayer times for all countries and cities worldwide
+Automatic location detection with manual selection option
+Display remaining time until the next prayer
+Push notifications for all five daily prayers
+Ability to enable or disable notifications per prayer
+2. Optional Prayer Reminders
+Custom reminders for optional prayers:
+Duha prayer
+Witr prayer
+Tahajjud prayer
+Any other optional prayer
+User can set reminder times and toggle notifications on/off
+3. Adhkar (Remembrances)
+Morning Adhkar
+Evening Adhkar
+Adhkar after prayer
+Each dhikr includes:
+Arabic text
+Translation
+Ability to track completion of adhkar
+4. Duas (Supplications)
+Categorized duas (morning, evening, forgiveness, stress, travel, etc.)
+Arabic text with translation
+5. Daily Hadith
+Show one authentic (Sahih) hadith every day
+Hadith content focuses on:
+Prayer
+Dhikr
+Good manners
+Faith and worship
+Daily automatic refresh
+Optional daily notification
+6. Daily Islamic Benefits (Fada’il Al-A‘mal)
+Display one Islamic benefit every day, such as:
+The virtue of reading Surah Al-Ikhlas (equal to one-third of the Qur’an)
+Each benefit must include:
+Clear explanation
+Authentic evidence (Qur’an verse or Sahih Hadith)
+Source reference (e.g., Sahih Bukhari, Sahih Muslim)
+Content should refresh automatically every day
+7. Tasbeeh & Istighfar Reminders
+Digital tasbeeh counter
+Periodic notifications reminding users to:
+SubhanAllah
+Alhamdulillah
+Allahu Akbar
+Istighfar
+User chooses notification frequency (custom, hourly, etc.)
+8. Multi-Language Support
+Arabic and English by default
+Easy to add more languages in the future
+9. User Interface
+Clean, modern, Islamic-inspired design
+Light mode and dark mode
+Simple and user-friendly navigation
+10. Technical Requirements
+Use reliable public APIs for prayer times and location
+Implement push notifications for web and mobile
+Store user preferences locally
+Use clean, scalable, and well-commented code
+Organized project structure
+11. Project Output
+Generate full frontend and backend code
+Include project structure
+Explain how to run the project in Replit
+Ensure the app is ready for future expansion
