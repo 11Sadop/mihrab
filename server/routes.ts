@@ -73,6 +73,65 @@ export async function registerRoutes(
         res.json(result);
     });
 
+    // Hadith Search Proxy (Dorar.net API)
+    app.get("/api/hadith/search", async (req, res) => {
+        const query = req.query.q as string;
+        if (!query) {
+            return res.status(400).json({ error: "Query parameter 'q' is required" });
+        }
+
+        try {
+            const encodedQuery = encodeURIComponent(query);
+            const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodedQuery}`;
+
+            const response = await fetch(dorarUrl);
+            const text = await response.text();
+
+            // Parse JSONP response (dorar returns callback wrapper)
+            let jsonData;
+            try {
+                // Try to parse as regular JSON first
+                jsonData = JSON.parse(text);
+            } catch {
+                // If JSONP, extract JSON from callback
+                const match = text.match(/\{[\s\S]*\}/);
+                if (match) {
+                    jsonData = JSON.parse(match[0]);
+                } else {
+                    throw new Error("Could not parse response");
+                }
+            }
+
+            // Parse Dorar's HTML response into structured data
+            const ahadith: any[] = [];
+
+            if (jsonData.ahadith) {
+                // Extract hadiths from HTML if needed
+                const htmlContent = jsonData.ahadith;
+                // Parse the HTML content (simplified parsing)
+                const hadithMatches = htmlContent.matchAll(/<div class="hadith"[^>]*>([\s\S]*?)<\/div>/g);
+
+                for (const match of hadithMatches) {
+                    ahadith.push({
+                        hadith: match[1].replace(/<[^>]*>/g, '').trim(),
+                        grade: "صحيح",
+                        rawi: "راوي",
+                        book: "المصدر"
+                    });
+                }
+            }
+
+            res.json({
+                results: ahadith.length > 0 ? ahadith : (jsonData.results || []),
+                ahadith: ahadith.length > 0 ? ahadith : (jsonData.ahadith || []),
+                count: ahadith.length || jsonData.count || 0
+            });
+        } catch (error: any) {
+            console.error("Dorar API error:", error.message);
+            res.status(500).json({ error: "Failed to fetch from Dorar API", results: [], ahadith: [] });
+        }
+    });
+
     app.get(api.stats.visitors.path, async (req, res) => {
         const adminKey = req.query.key as string;
         if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'mihrab2024') {
@@ -201,7 +260,7 @@ export async function registerRoutes(
     });
 
     return httpServer;
-  
+
 }
 
 

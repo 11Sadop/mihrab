@@ -1,65 +1,230 @@
-import { useState, useRef, useEffect } from "react";
-import { Loader2, Send, ArrowRight, Bot, User, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Sparkles, ArrowRight, MapPin, ShoppingBag, Building2, Moon, Sun, Utensils, Plane, Car, Heart, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { Link } from "wouter";
-import { cn } from "@/lib/utils";
 
-interface Message {
-    role: "user" | "assistant";
-    content: string;
+interface ActivitySuggestion {
+    title: string;
+    type: "dua" | "sunnah" | "adhkar";
+    text: string;
+    source?: string;
 }
 
+interface Activity {
+    id: string;
+    name: string;
+    icon: React.ElementType;
+    color: string;
+    suggestions: ActivitySuggestion[];
+}
+
+const activities: Activity[] = [
+    {
+        id: "leaving_home",
+        name: "الخروج من المنزل",
+        icon: MapPin,
+        color: "bg-blue-500/10 text-blue-500",
+        suggestions: [
+            {
+                title: "دعاء الخروج من المنزل",
+                type: "dua",
+                text: "بِسْمِ اللَّهِ، تَوَكَّلْتُ عَلَى اللَّهِ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ",
+                source: "أخرجه أبو داود والترمذي"
+            },
+            {
+                title: "سنة",
+                type: "sunnah",
+                text: "قول: اللَّهُمَّ إِنِّي أَعُوذُ بِكَ أَنْ أَضِلَّ أَوْ أُضَلَّ، أَوْ أَزِلَّ أَوْ أُزَلَّ، أَوْ أَظْلِمَ أَوْ أُظْلَمَ، أَوْ أَجْهَلَ أَوْ يُجْهَلَ عَلَيَّ",
+                source: "أخرجه أبو داود"
+            }
+        ]
+    },
+    {
+        id: "market",
+        name: "الذهاب للسوق",
+        icon: ShoppingBag,
+        color: "bg-orange-500/10 text-orange-500",
+        suggestions: [
+            {
+                title: "دعاء دخول السوق",
+                type: "dua",
+                text: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، يُحْيِي وَيُمِيتُ وَهُوَ حَيٌّ لَا يَمُوتُ، بِيَدِهِ الْخَيْرُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
+                source: "أخرجه الترمذي"
+            },
+            {
+                title: "سنة",
+                type: "sunnah",
+                text: "لا ترفع الصوت ولا تتعجل، وتصدق على الفقراء إن استطعت"
+            }
+        ]
+    },
+    {
+        id: "mosque",
+        name: "الذهاب للمسجد",
+        icon: Building2,
+        color: "bg-emerald-500/10 text-emerald-500",
+        suggestions: [
+            {
+                title: "دعاء الذهاب للمسجد",
+                type: "dua",
+                text: "اللَّهُمَّ اجْعَلْ فِي قَلْبِي نُورًا، وَفِي لِسَانِي نُورًا، وَاجْعَلْ فِي سَمْعِي نُورًا، وَاجْعَلْ فِي بَصَرِي نُورًا",
+                source: "متفق عليه"
+            },
+            {
+                title: "دعاء دخول المسجد",
+                type: "dua",
+                text: "اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
+                source: "أخرجه مسلم"
+            },
+            {
+                title: "سنة تحية المسجد",
+                type: "sunnah",
+                text: "صلاة ركعتين قبل الجلوس (تحية المسجد)"
+            },
+            {
+                title: "دعاء الخروج من المسجد",
+                type: "dua",
+                text: "اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
+                source: "أخرجه مسلم"
+            }
+        ]
+    },
+    {
+        id: "sleeping",
+        name: "النوم",
+        icon: Moon,
+        color: "bg-indigo-500/10 text-indigo-500",
+        suggestions: [
+            {
+                title: "دعاء النوم",
+                type: "dua",
+                text: "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا",
+                source: "متفق عليه"
+            },
+            {
+                title: "سنة قبل النوم",
+                type: "sunnah",
+                text: "قراءة آية الكرسي وسورة الإخلاص والمعوذتين ثلاث مرات"
+            },
+            {
+                title: "سنة النوم على الشق الأيمن",
+                type: "sunnah",
+                text: "النوم على الجانب الأيمن ووضع اليد اليمنى تحت الخد"
+            }
+        ]
+    },
+    {
+        id: "waking",
+        name: "الاستيقاظ",
+        icon: Sun,
+        color: "bg-amber-500/10 text-amber-500",
+        suggestions: [
+            {
+                title: "دعاء الاستيقاظ",
+                type: "dua",
+                text: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ",
+                source: "متفق عليه"
+            },
+            {
+                title: "سنة",
+                type: "sunnah",
+                text: "السواك عند الاستيقاظ"
+            }
+        ]
+    },
+    {
+        id: "eating",
+        name: "الطعام",
+        icon: Utensils,
+        color: "bg-red-500/10 text-red-500",
+        suggestions: [
+            {
+                title: "دعاء قبل الطعام",
+                type: "dua",
+                text: "بِسْمِ اللَّهِ",
+                source: "أخرجه أبو داود"
+            },
+            {
+                title: "دعاء بعد الطعام",
+                type: "dua",
+                text: "الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنِي هَذَا وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ",
+                source: "أخرجه أبو داود والترمذي"
+            },
+            {
+                title: "سنة",
+                type: "sunnah",
+                text: "الأكل باليد اليمنى ومما يليك"
+            }
+        ]
+    },
+    {
+        id: "travel",
+        name: "السفر",
+        icon: Plane,
+        color: "bg-sky-500/10 text-sky-500",
+        suggestions: [
+            {
+                title: "دعاء السفر",
+                type: "dua",
+                text: "اللَّهُ أَكْبَرُ، اللَّهُ أَكْبَرُ، اللَّهُ أَكْبَرُ، سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ، وَإِنَّا إِلَى رَبِّنَا لَمُنْقَلِبُونَ",
+                source: "أخرجه مسلم"
+            },
+            {
+                title: "سنة القصر والجمع",
+                type: "sunnah",
+                text: "قصر الصلاة الرباعية إلى ركعتين، والجمع بين الظهر والعصر أو المغرب والعشاء"
+            }
+        ]
+    },
+    {
+        id: "car",
+        name: "ركوب السيارة",
+        icon: Car,
+        color: "bg-slate-500/10 text-slate-500",
+        suggestions: [
+            {
+                title: "دعاء ركوب الدابة/السيارة",
+                type: "dua",
+                text: "سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ، وَإِنَّا إِلَى رَبِّنَا لَمُنْقَلِبُونَ",
+                source: "أخرجه مسلم"
+            }
+        ]
+    },
+    {
+        id: "visiting_sick",
+        name: "زيارة المريض",
+        icon: Heart,
+        color: "bg-pink-500/10 text-pink-500",
+        suggestions: [
+            {
+                title: "دعاء للمريض",
+                type: "dua",
+                text: "اللَّهُمَّ رَبَّ النَّاسِ، أَذْهِبِ الْبَأْسَ، اشْفِ أَنْتَ الشَّافِي، لَا شِفَاءَ إِلَّا شِفَاؤُكَ، شِفَاءً لَا يُغَادِرُ سَقَمًا",
+                source: "متفق عليه"
+            },
+            {
+                title: "سنة",
+                type: "sunnah",
+                text: "وضع اليد على موضع الألم والدعاء له"
+            }
+        ]
+    }
+];
+
 export default function SmartAssistant() {
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [input, setInput] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    const handleSend = async () => {
-        if (!input.trim() || isLoading) return;
-
-        const userMessage = input.trim();
-        setInput("");
-        setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-        setIsLoading(true);
-
-        try {
-            const res = await fetch("/api/assistant", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    message: userMessage,
-                    history: messages.slice(-10) // Send last 10 messages for context
-                }),
-            });
-
-            if (!res.ok) throw new Error("Failed to get response");
-
-            const data = await res.json();
-            setMessages((prev) => [...prev, { role: "assistant", content: data.response }]);
-        } catch {
-            setMessages((prev) => [
-                ...prev,
-                { role: "assistant", content: "عذراً، حدث خطأ. يرجى المحاولة مرة أخرى." },
-            ]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const filteredActivities = activities.filter((a) =>
+        a.name.includes(searchQuery)
+    );
 
     return (
-        <div className="min-h-screen bg-background flex flex-col">
+        <div className="min-h-screen bg-background pb-24">
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-gradient-to-b from-emerald-900/80 to-emerald-800/60 backdrop-blur-xl border-b border-white/10">
+            <header className="sticky top-0 z-50 bg-gradient-to-b from-emerald-900/80 to-background backdrop-blur-xl border-b border-white/10">
                 <div className="container max-w-4xl mx-auto px-4 py-4">
                     <div className="flex items-center gap-4">
                         <Link href="/">
@@ -73,108 +238,83 @@ export default function SmartAssistant() {
                             </div>
                             <div>
                                 <h1 className="text-lg font-bold text-white">المساعد الذكي</h1>
-                                <p className="text-emerald-200/70 text-xs">اسألني عن أي شيء إسلامي</p>
+                                <p className="text-emerald-200/70 text-xs">اختر نشاطك للحصول على الأدعية والسنن</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </header>
 
-            {/* Messages */}
-            <main className="flex-1 container max-w-4xl mx-auto px-4 py-6 overflow-y-auto pb-32">
-                {messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                        <div className="p-4 bg-emerald-500/10 rounded-full mb-4">
-                            <Bot className="w-12 h-12 text-emerald-500" />
+            <main className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
+                {/* Search */}
+                <Input
+                    type="text"
+                    placeholder="ابحث عن نشاط..."
+                    className="bg-card border-border"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+
+                {/* Activity Grid or Suggestions */}
+                {selectedActivity ? (
+                    <div className="space-y-4">
+                        <Button
+                            variant="ghost"
+                            className="gap-2 text-muted-foreground"
+                            onClick={() => setSelectedActivity(null)}
+                        >
+                            <ArrowRight className="w-4 h-4" />
+                            العودة للقائمة
+                        </Button>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className={`p-3 rounded-xl ${selectedActivity.color}`}>
+                                <selectedActivity.icon className="w-6 h-6" />
+                            </div>
+                            <h2 className="text-xl font-bold">{selectedActivity.name}</h2>
                         </div>
-                        <h2 className="text-xl font-bold text-foreground mb-2">مرحباً بك!</h2>
-                        <p className="text-muted-foreground max-w-sm">
-                            أنا مساعدك الذكي للأسئلة الإسلامية. اسألني عن الصلاة، الزكاة، الصيام، أو أي موضوع ديني آخر.
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 mt-6 max-w-sm">
-                            {["ما هي أركان الإسلام؟", "كيف أصلي صلاة الاستخارة؟", "ما حكم صيام يوم عرفة؟", "اشرح لي سورة الفاتحة"].map((q) => (
-                                <button
-                                    key={q}
-                                    onClick={() => { setInput(q); }}
-                                    className="p-3 bg-card border border-border rounded-xl text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors text-right"
-                                >
-                                    {q}
-                                </button>
+
+                        <div className="space-y-3">
+                            {selectedActivity.suggestions.map((suggestion, i) => (
+                                <Card key={i} className="p-4 border-l-4 border-l-emerald-500">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full ${suggestion.type === "dua" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                                                suggestion.type === "sunnah" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
+                                                    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                            }`}>
+                                            {suggestion.type === "dua" ? "دعاء" : suggestion.type === "sunnah" ? "سنة" : "ذكر"}
+                                        </span>
+                                        <span className="text-sm font-medium">{suggestion.title}</span>
+                                    </div>
+                                    <p className="text-base leading-loose font-arabic text-foreground/90">
+                                        {suggestion.text}
+                                    </p>
+                                    {suggestion.source && (
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                            {suggestion.source}
+                                        </p>
+                                    )}
+                                </Card>
                             ))}
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        {messages.map((msg, i) => (
-                            <div
-                                key={i}
-                                className={cn(
-                                    "flex gap-3",
-                                    msg.role === "user" ? "flex-row-reverse" : ""
-                                )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {filteredActivities.map((activity) => (
+                            <button
+                                key={activity.id}
+                                onClick={() => setSelectedActivity(activity)}
+                                className="flex flex-col items-center justify-center gap-3 p-4 bg-card border border-border rounded-xl hover:border-primary/50 transition-colors"
                             >
-                                <div className={cn(
-                                    "p-2 rounded-full h-fit",
-                                    msg.role === "user" ? "bg-primary/10" : "bg-emerald-500/10"
-                                )}>
-                                    {msg.role === "user" ? (
-                                        <User className="w-5 h-5 text-primary" />
-                                    ) : (
-                                        <Bot className="w-5 h-5 text-emerald-500" />
-                                    )}
+                                <div className={`p-3 rounded-xl ${activity.color}`}>
+                                    <activity.icon className="w-6 h-6" />
                                 </div>
-                                <div className={cn(
-                                    "max-w-[80%] p-4 rounded-2xl",
-                                    msg.role === "user"
-                                        ? "bg-primary text-primary-foreground rounded-tr-none"
-                                        : "bg-card border border-border rounded-tl-none"
-                                )}>
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                                </div>
-                            </div>
+                                <span className="text-sm font-medium text-center">{activity.name}</span>
+                            </button>
                         ))}
-                        {isLoading && (
-                            <div className="flex gap-3">
-                                <div className="p-2 bg-emerald-500/10 rounded-full h-fit">
-                                    <Bot className="w-5 h-5 text-emerald-500" />
-                                </div>
-                                <div className="bg-card border border-border rounded-2xl rounded-tl-none p-4">
-                                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                                </div>
-                            </div>
-                        )}
-                        <div ref={messagesEndRef} />
                     </div>
                 )}
             </main>
-
-            {/* Input */}
-            <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-lg border-t border-border" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
-                <div className="container max-w-4xl mx-auto px-4 py-3">
-                    <div className="flex gap-2">
-                        <Textarea
-                            placeholder="اكتب سؤالك هنا..."
-                            className="min-h-[44px] max-h-32 resize-none bg-card border-border"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSend();
-                                }
-                            }}
-                        />
-                        <Button
-                            size="icon"
-                            className="h-11 w-11 shrink-0 bg-emerald-600 hover:bg-emerald-700"
-                            onClick={handleSend}
-                            disabled={!input.trim() || isLoading}
-                        >
-                            <Send className="w-5 h-5" />
-                        </Button>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 }
