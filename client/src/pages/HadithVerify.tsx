@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { api } from "@shared/routes";
 import { Loader2, Search, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,32 +6,47 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
+interface VerificationResult {
+    text: string;
+    grade: string;
+    score: number;
+    narrator: string;
+    source: string;
+}
+
 export default function HadithVerify() {
     const [text, setText] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [results, setResults] = useState<VerificationResult[] | null>(null);
     const { toast } = useToast();
 
-    const verifyMutation = useMutation({
-        mutationFn: async (hadithText: string) => {
-            const res = await fetch(api.hadith.verification.path, {
+    const handleVerify = async () => {
+        if (!text.trim()) return;
+
+        setIsLoading(true);
+        try {
+            const res = await fetch("/api/hadith/verification", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: hadithText }),
+                body: JSON.stringify({ text }),
             });
 
             if (!res.ok) {
                 throw new Error("Failed to verify hadith");
             }
 
-            return api.hadith.verification.responses[200].parse(await res.json());
-        },
-        onError: () => {
+            const data = await res.json();
+            setResults(data.results || []);
+        } catch {
             toast({
                 title: "خطأ",
                 description: "حدث خطأ أثناء التحقق من الحديث. يرجى المحاولة مرة أخرى.",
                 variant: "destructive",
             });
-        },
-    });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -94,10 +107,10 @@ export default function HadithVerify() {
 
                     <Button
                         className="w-full h-12 text-lg font-medium"
-                        onClick={() => verifyMutation.mutate(text)}
-                        disabled={!text.trim() || verifyMutation.isPending}
+                        onClick={handleVerify}
+                        disabled={!text.trim() || isLoading}
                     >
-                        {verifyMutation.isPending ? (
+                        {isLoading ? (
                             <>
                                 <Loader2 className="w-5 h-5 ml-2 animate-spin" />
                                 جاري التحقق...
@@ -111,14 +124,14 @@ export default function HadithVerify() {
                     </Button>
                 </Card>
 
-                {verifyMutation.data && (
+                {results && results.length > 0 && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex items-center gap-2 text-muted-foreground px-2">
                             <Search className="w-4 h-4" />
                             <span className="text-sm font-medium">نتيجة البحث</span>
                         </div>
 
-                        {verifyMutation.data.results.map((result, i) => {
+                        {results.map((result, i) => {
                             const Icon = getStatusIcon(result.grade);
                             return (
                                 <Card key={i} className={`p-5 border-l-4 space-y-3 ${getStatusColor(result.grade)}`}>
@@ -145,6 +158,13 @@ export default function HadithVerify() {
                             );
                         })}
                     </div>
+                )}
+
+                {results && results.length === 0 && (
+                    <Card className="p-6 text-center text-muted-foreground">
+                        <HelpCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>لم يتم العثور على نتائج مطابقة</p>
+                    </Card>
                 )}
             </div>
         </div>
