@@ -100,6 +100,7 @@ import WardPage from "@/pages/Ward";
 import ProtectionPage from "@/pages/Protection";
 import ZakatPage from "@/pages/Zakat";
 import QiblaPage from "@/pages/Qibla";
+import HadithVerify from "@/pages/HadithVerify";
 import HadithCollectionsPage from "@/pages/HadithCollections";
 
 import TafseerPage from "@/pages/Tafseer";
@@ -126,6 +127,7 @@ function Router() {
         <Route path="/tasbeeh" component={TasbeehPage} />
         <Route path="/ward" component={WardPage} />
         <Route path="/protection" component={ProtectionPage} />
+        <Route path="/hadith-verify" component={HadithVerify} />
         <Route path="/zakat" component={ZakatPage} />
         <Route path="/qibla" component={QiblaPage} />
         <Route path="/hadith-collections" component={HadithCollectionsPage} />
