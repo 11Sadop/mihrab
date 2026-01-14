@@ -87,13 +87,12 @@ export async function registerRoutes(
             const response = await fetch(dorarUrl);
             const text = await response.text();
 
-            // Parse JSONP response (dorar returns callback wrapper)
+            // Parse JSON response
             let jsonData;
             try {
-                // Try to parse as regular JSON first
                 jsonData = JSON.parse(text);
             } catch {
-                // If JSONP, extract JSON from callback
+                // Try to extract JSON from JSONP callback
                 const match = text.match(/\{[\s\S]*\}/);
                 if (match) {
                     jsonData = JSON.parse(match[0]);
@@ -102,29 +101,100 @@ export async function registerRoutes(
                 }
             }
 
-            // Parse Dorar's HTML response into structured data
             const ahadith: any[] = [];
 
-            if (jsonData.ahadith) {
-                // Extract hadiths from HTML if needed
+            if (jsonData.ahadith && typeof jsonData.ahadith === 'string') {
                 const htmlContent = jsonData.ahadith;
-                // Parse the HTML content (simplified parsing)
-                const hadithMatches = htmlContent.matchAll(/<div class="hadith"[^>]*>([\s\S]*?)<\/div>/g);
 
-                for (const match of hadithMatches) {
+                // Split by hadith containers - looking for patterns in Dorar HTML
+                // Common patterns: <div class="border-bottom..."> or result blocks
+                const resultBlocks = htmlContent.split(/<div[^>]*class="[^"]*hadith[^"]*"[^>]*>/gi);
+
+                // Alternative: split by common separator patterns
+                const altBlocks = htmlContent.split(/<div[^>]*class="[^"]*border-bottom[^"]*"[^>]*>/gi);
+
+                const blocks = resultBlocks.length > 1 ? resultBlocks : altBlocks.length > 1 ? altBlocks : [htmlContent];
+
+                for (const block of blocks) {
+                    if (!block.trim()) continue;
+
+                    // Extract hadith text (usually in main-text or hadith-text class, or just plain text)
+                    let hadithText = "";
+                    const textMatch = block.match(/<span[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+                    if (textMatch) {
+                        hadithText = textMatch[1].replace(/<[^>]*>/g, '').trim();
+                    } else {
+                        // Fallback: get first significant text content
+                        const plainText = block.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                        if (plainText.length > 20) {
+                            hadithText = plainText.substring(0, 500);
+                        }
+                    }
+
+                    if (!hadithText || hadithText.length < 10) continue;
+
+                    // Extract grade (درجة الحديث)
+                    let grade = "غير محدد";
+                    const gradeMatch = block.match(/(?:صحيح|حسن|ضعيف|موضوع|إسناده صحيح|رجاله ثقات|رجاله رجال الصحيح|منكر|لا أصل له)/i);
+                    if (gradeMatch) {
+                        grade = gradeMatch[0];
+                    }
+
+                    // Extract narrator (الراوي)
+                    let rawi = "غير معروف";
+                    const rawiMatch = block.match(/الراوي[:\s]*([^<\n]+)/i);
+                    if (rawiMatch) {
+                        rawi = rawiMatch[1].replace(/<[^>]*>/g, '').trim();
+                    }
+
+                    // Extract source/book (المصدر)
+                    let book = "غير محدد";
+                    const bookMatch = block.match(/(?:المصدر|الكتاب)[:\s]*([^<\n]+)/i);
+                    if (bookMatch) {
+                        book = bookMatch[1].replace(/<[^>]*>/g, '').trim();
+                    }
+
+                    // Extract mohdith (المحدث)
+                    let mohdith = "";
+                    const mohdithMatch = block.match(/(?:المحدث|قال)[:\s]*([^<\n]+)/i);
+                    if (mohdithMatch) {
+                        mohdith = mohdithMatch[1].replace(/<[^>]*>/g, '').trim();
+                    }
+
                     ahadith.push({
-                        hadith: match[1].replace(/<[^>]*>/g, '').trim(),
-                        grade: "صحيح",
-                        rawi: "راوي",
-                        book: "المصدر"
+                        hadith: hadithText,
+                        grade: grade,
+                        rawi: rawi,
+                        book: book,
+                        mohdith: mohdith
                     });
                 }
             }
 
+            // If parsing failed, return raw data info
+            if (ahadith.length === 0 && jsonData.ahadith) {
+                // Try simpler extraction - just get text chunks
+                const plainHtml = jsonData.ahadith;
+                const simpleText = plainHtml.replace(/<[^>]*>/g, '\n').split('\n').filter((line: string) => line.trim().length > 30);
+
+                for (let i = 0; i < Math.min(simpleText.length, 10); i++) {
+                    const line = simpleText[i].trim();
+                    if (line.length > 30) {
+                        ahadith.push({
+                            hadith: line,
+                            grade: "انظر المصدر",
+                            rawi: "-",
+                            book: "موقع الدرر السنية",
+                            mohdith: ""
+                        });
+                    }
+                }
+            }
+
             res.json({
-                results: ahadith.length > 0 ? ahadith : (jsonData.results || []),
-                ahadith: ahadith.length > 0 ? ahadith : (jsonData.ahadith || []),
-                count: ahadith.length || jsonData.count || 0
+                results: ahadith,
+                ahadith: ahadith,
+                count: ahadith.length
             });
         } catch (error: any) {
             console.error("Dorar API error:", error.message);
