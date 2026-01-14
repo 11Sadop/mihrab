@@ -107,7 +107,7 @@ import TafseerPage from "@/pages/Tafseer";
 import SupportPage from "@/pages/Support";
 import StatsPage from "@/pages/Stats";
 import NotFound from "@/pages/not-found";
-import AssistantPage from "@/pages/AssistantPage";
+import SmartAssistant from "@/pages/SmartAssistant";
 
 function Router() {
   useVisitorTracking();
@@ -135,7 +135,7 @@ function Router() {
         <Route path="/tafseer" component={TafseerPage} />
         <Route path="/support" component={SupportPage} />
         <Route path="/settings" component={SettingsPage} />
-        <Route path="/assistant" component={AssistantPage} />
+        <Route path="/assistant" component={SmartAssistant} />
         <Route path="/admin/stats" component={StatsPage} />
         <Route component={NotFound} />
       </Switch>

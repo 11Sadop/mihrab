@@ -1,172 +1,203 @@
-import { useState } from "react";
-import { Loader2, Search, AlertCircle, CheckCircle, XCircle, HelpCircle, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, Search, ArrowRight, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 
-interface VerificationResult {
-    text: string;
+interface HadithResult {
+    hadith: string;
     grade: string;
-    score: number;
-    narrator: string;
-    source: string;
+    rawi: string;
+    book: string;
 }
 
 export default function HadithVerify() {
-    const [text, setText] = useState("");
+    const [query, setQuery] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [results, setResults] = useState<VerificationResult[] | null>(null);
-    const { toast } = useToast();
+    const [results, setResults] = useState<HadithResult[]>([]);
+    const [authenticOnly, setAuthenticOnly] = useState(false);
+    const [searchCount, setSearchCount] = useState(0);
 
-    const handleVerify = async () => {
-        if (!text.trim()) return;
+    // Auto-refresh when returning to page
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && query.trim()) {
+                handleSearch();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [query]);
+
+    const handleSearch = async () => {
+        if (!query.trim()) return;
 
         setIsLoading(true);
         try {
-            const res = await fetch("/api/hadith/verification", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text }),
-            });
+            // Using Dorar al-Saniya API
+            const url = `https://dorar-hadith-api.herokuapp.com/api/search?value=${encodeURIComponent(query)}${authenticOnly ? '&sahih=true' : ''}`;
 
-            if (!res.ok) {
-                throw new Error("Failed to verify hadith");
-            }
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Failed to search");
 
             const data = await res.json();
-            setResults(data.results || []);
-        } catch {
-            toast({
-                title: "خطأ",
-                description: "حدث خطأ أثناء التحقق من الحديث. يرجى المحاولة مرة أخرى.",
-                variant: "destructive",
-            });
+
+            // Parse results
+            const parsedResults: HadithResult[] = (data.ahadith || []).map((item: any) => ({
+                hadith: item.hadith || item.text || "",
+                grade: item.grade || item.degree || "غير محدد",
+                rawi: item.rawi || item.narrator || "غير معروف",
+                book: item.book || item.source || "المصدر غير محدد",
+            }));
+
+            setResults(parsedResults);
+            setSearchCount(data.count || parsedResults.length);
+        } catch (error) {
+            console.error("Search error:", error);
+            // Fallback: try local API
+            try {
+                const localRes = await fetch("/api/hadith/verification", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: query, authenticOnly }),
+                });
+                if (localRes.ok) {
+                    const localData = await localRes.json();
+                    setResults(localData.results || []);
+                    setSearchCount(localData.count || 0);
+                }
+            } catch {
+                setResults([]);
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "sahih": return "text-emerald-500 bg-emerald-50 border-emerald-200";
-            case "hasan": return "text-blue-500 bg-blue-50 border-blue-200";
-            case "daif": return "text-orange-500 bg-orange-50 border-orange-200";
-            case "fabrication": return "text-red-500 bg-red-50 border-red-200";
-            default: return "text-slate-500 bg-slate-50 border-slate-200";
+    const getGradeStyle = (grade: string) => {
+        const lowerGrade = grade.toLowerCase();
+        if (lowerGrade.includes("صحيح") || lowerGrade.includes("sahih")) {
+            return "bg-emerald-600 text-white";
         }
-    };
-
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case "sahih": return CheckCircle;
-            case "hasan": return CheckCircle;
-            case "daif": return AlertCircle;
-            case "fabrication": return XCircle;
-            default: return HelpCircle;
+        if (lowerGrade.includes("حسن") || lowerGrade.includes("hasan")) {
+            return "bg-blue-600 text-white";
         }
-    };
-
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case "sahih": return "صحيح";
-            case "hasan": return "حسن";
-            case "daif": return "ضعيف";
-            case "fabrication": return "موضوع (مكذوب)";
-            default: return "غير معروف";
+        if (lowerGrade.includes("ضعيف") || lowerGrade.includes("daif")) {
+            return "bg-amber-600 text-white";
         }
+        if (lowerGrade.includes("موضوع") || lowerGrade.includes("fabricat")) {
+            return "bg-red-600 text-white";
+        }
+        return "bg-slate-600 text-white";
     };
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            <div className="container max-w-lg mx-auto px-4 py-6 space-y-6">
+        <div className="min-h-screen bg-background pb-24">
+            {/* Header */}
+            <header className="sticky top-0 z-50 bg-gradient-to-b from-violet-900/80 to-violet-800/60 backdrop-blur-xl border-b border-white/10">
+                <div className="container max-w-4xl mx-auto px-4 py-6">
+                    <div className="flex items-center gap-4 mb-4">
+                        <Link href="/">
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                                <ArrowRight className="w-5 h-5" />
+                            </Button>
+                        </Link>
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white text-center">
+                        التحقق من صحة الحديث
+                    </h1>
+                    <p className="text-violet-200/80 text-center text-sm mt-2">
+                        أدخل نص الحديث أو جزء منه للتحقق من صحته.
+                    </p>
+                </div>
+            </header>
 
-                {/* Header */}
-                <div className="flex items-center gap-4">
-                    <Link href="/">
-                        <Button variant="ghost" size="icon" className="rounded-xl">
-                            <ArrowRight className="w-5 h-5" />
+            <main className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
+                {/* Search Box */}
+                <div className="bg-[#1a2332] rounded-2xl p-4 sm:p-6 border border-white/5 space-y-4">
+                    <div className="relative">
+                        <Input
+                            type="text"
+                            placeholder="سبحان الله والحمدلله ولا اله الا الله..."
+                            className="w-full h-12 bg-[#0f1620] border-white/10 text-white placeholder:text-slate-500 pr-12 text-lg rounded-xl"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        />
+                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                        <Button
+                            className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
+                            onClick={handleSearch}
+                            disabled={!query.trim() || isLoading}
+                        >
+                            {isLoading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                "تحقق"
+                            )}
                         </Button>
-                    </Link>
-                    <h1 className="text-xl font-bold">التحقق من صحة الحديث</h1>
+
+                        <div className="flex items-center gap-2">
+                            <Checkbox
+                                id="authentic"
+                                checked={authenticOnly}
+                                onCheckedChange={(checked) => setAuthenticOnly(!!checked)}
+                                className="border-white/30 data-[state=checked]:bg-emerald-600"
+                            />
+                            <label htmlFor="authentic" className="text-sm text-slate-400 cursor-pointer">
+                                الأحاديث الصحيحة فقط
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
-                <Card className="p-6 border-2 border-primary/10 bg-card/50 backdrop-blur-sm space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                            نص الحديث
-                        </label>
-                        <Textarea
-                            placeholder="اكتب نص الحديث هنا للتحقق من صحته..."
-                            className="min-h-[150px] resize-none text-lg leading-relaxed bg-background/50 focus:bg-background transition-colors"
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                        />
+                {/* Results */}
+                {searchCount > 0 && (
+                    <div className="text-center text-slate-400 text-sm">
+                        نتائج البحث ({searchCount})
                     </div>
+                )}
 
-                    <Button
-                        className="w-full h-12 text-lg font-medium"
-                        onClick={handleVerify}
-                        disabled={!text.trim() || isLoading}
-                    >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="w-5 h-5 ml-2 animate-spin" />
-                                جاري التحقق...
-                            </>
-                        ) : (
-                            <>
-                                <Search className="w-5 h-5 ml-2" />
-                                تحقق
-                            </>
-                        )}
-                    </Button>
-                </Card>
+                <div className="space-y-4">
+                    {results.map((result, i) => (
+                        <div
+                            key={i}
+                            className="bg-[#1a2332] rounded-2xl p-5 border border-white/5 space-y-4 hover:border-white/10 transition-colors"
+                        >
+                            {/* Grade Badge */}
+                            <div className="flex items-center gap-2">
+                                <span className={`px-3 py-1 rounded-lg text-xs font-bold ${getGradeStyle(result.grade)}`}>
+                                    {result.grade.includes("صحيح") && <CheckCircle className="w-3 h-3 inline ml-1" />}
+                                    {result.grade}
+                                </span>
+                            </div>
 
-                {results && results.length > 0 && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center gap-2 text-muted-foreground px-2">
-                            <Search className="w-4 h-4" />
-                            <span className="text-sm font-medium">نتيجة البحث</span>
+                            {/* Hadith Text */}
+                            <p className="text-white/90 text-lg leading-loose font-arabic">
+                                {result.hadith}
+                            </p>
+
+                            {/* Metadata */}
+                            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400 pt-3 border-t border-white/5">
+                                <span>الراوي: {result.rawi}</span>
+                                <span>المصدر: {result.book}</span>
+                            </div>
                         </div>
+                    ))}
+                </div>
 
-                        {results.map((result, i) => {
-                            const Icon = getStatusIcon(result.grade);
-                            return (
-                                <Card key={i} className={`p-5 border-l-4 space-y-3 ${getStatusColor(result.grade)}`}>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <Icon className="w-5 h-5" />
-                                            <span className="font-bold">{getStatusLabel(result.grade)}</span>
-                                        </div>
-                                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/50">
-                                            {Math.round(result.score * 100)}% تطابق
-                                        </span>
-                                    </div>
-
-                                    <p className="text-lg leading-loose font-arabic text-foreground/90">
-                                        {result.text}
-                                    </p>
-
-                                    <div className="flex flex-wrap gap-2 text-xs pt-2 border-t border-black/5">
-                                        <span className="font-bold text-foreground/70">الراوي: {result.narrator}</span>
-                                        <span className="mx-1">•</span>
-                                        <span className="text-foreground/60">{result.source}</span>
-                                    </div>
-                                </Card>
-                            );
-                        })}
+                {/* Empty State */}
+                {!isLoading && results.length === 0 && query && (
+                    <div className="text-center py-12 text-slate-500">
+                        <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>لم يتم العثور على نتائج</p>
                     </div>
                 )}
-
-                {results && results.length === 0 && (
-                    <Card className="p-6 text-center text-muted-foreground">
-                        <HelpCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>لم يتم العثور على نتائج مطابقة</p>
-                    </Card>
-                )}
-            </div>
+            </main>
         </div>
     );
 }

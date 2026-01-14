@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Clock, BookOpen, Fingerprint, Settings } from "lucide-react";
+import { Home, Clock, BookOpen, Fingerprint, Settings, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Navigation() {
@@ -10,6 +10,7 @@ export function Navigation() {
     { href: "/prayer-times", icon: Clock, label: "الصلوات" },
     { href: "/tafseer", icon: BookOpen, label: "التفسير" },
     { href: "/tasbeeh", icon: Fingerprint, label: "التسبيح" },
+    { href: "/assistant", icon: Sparkles, label: "المساعد" },
     { href: "/settings", icon: Settings, label: "الإعدادات" },
   ];
 
@@ -20,11 +21,11 @@ export function Navigation() {
           const isActive = location === href;
           return (
             <Link key={href} href={href} className="flex-1">
-              <div 
+              <div
                 className={cn(
                   "flex flex-col items-center justify-center h-full w-full space-y-1 transition-colors duration-200 cursor-pointer",
-                  isActive 
-                    ? "text-primary" 
+                  isActive
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
