@@ -4,18 +4,17 @@ import { useDailyHadith } from "@/hooks/use-content";
 import { usePrayerTimes, getNextPrayer } from "@/hooks/use-prayer-times";
 import {
   Loader2,
-  Moon,
   Sun,
   Book,
-  Fingerprint,
   Calculator,
   Compass,
   Shield,
-  BookOpen,
   Heart,
-  Quote
+  Quote,
+  Search,
+  Library,
+  ChevronLeft
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
@@ -23,101 +22,157 @@ export default function Home() {
   const nextPrayer = prayerData ? getNextPrayer(prayerData.timings) : null;
   const { data: dailyHadith, isLoading: isHadithLoading } = useDailyHadith();
 
-  // Grid items typically displayed Right-to-Left in RTL layout.
-  // We list them in the order they should appear in the DOM.
-  const menuItems = [
-    { href: "/adhkar", label: "أذكار الصباح والمساء", icon: Heart, color: "text-rose-500 bg-rose-50" },
-    { href: "/hadith-collections", label: "كتب الحديث", icon: Book, color: "text-amber-500 bg-amber-50" },
-    { href: "/duas", label: "أدعية مختارة", icon: Sun, color: "text-sky-500 bg-sky-50" },
-    { href: "/tasbeeh", label: "المسبحة الإلكترونية", icon: Fingerprint, color: "text-emerald-500 bg-emerald-50" },
-
-    { href: "/qibla", label: "القبلة", icon: Compass, color: "text-indigo-500 bg-indigo-50" },
-    { href: "/zakat", label: "حاسبة الزكاة", icon: Calculator, color: "text-violet-500 bg-violet-50" },
-    { href: "/ward", label: "الورد اليومي", icon: Shield, color: "text-teal-500 bg-teal-50" },
-    { href: "/tafseer", label: "تفسير القرآن", icon: BookOpen, color: "text-cyan-500 bg-cyan-50" },
-  ];
-
   return (
-    <main className="container max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 md:px-8 space-y-6 pt-4 min-h-[85vh] pb-24">
+    <main className="container max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pb-24 space-y-5 pt-4">
 
-      {/* Next Prayer Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c4a3e] to-[#052e26] text-white shadow-xl shadow-primary/20">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      {/* 1. Next Prayer Hero - Green Gradient */}
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#10b981] to-[#047857] text-white shadow-xl shadow-emerald-900/10">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
-        <div className="relative p-6 sm:p-8 text-center space-y-2">
+        <div className="relative p-6 text-center space-y-1">
           {isPrayerLoading || isRequestingLocation ? (
             <div className="h-32 flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-white/50" />
             </div>
           ) : nextPrayer ? (
             <>
-              <p className="text-white/80 font-medium tracking-wide text-sm uppercase">الصلاة القادمة</p>
-              <h2 className="text-5xl font-bold font-display tracking-tight mt-1 text-white">{nextPrayer.name}</h2>
-              <div className="text-3xl font-mono font-medium opacity-90 mt-2 text-white/90" dir="ltr">{nextPrayer.time}</div>
+              <p className="text-emerald-100 font-medium tracking-wide text-xs sm:text-sm uppercase mb-1">الصلاة القادمة</p>
+              <h2 className="text-4xl sm:text-5xl font-bold font-display tracking-tight text-white mb-2">{nextPrayer.name}</h2>
+              <div className="text-3xl sm:text-4xl font-mono font-medium opacity-90 text-white" dir="ltr">{nextPrayer.time}</div>
+
               {prayerData?.date?.hijri && (
-                <div className="mt-4 pt-4 border-t border-white/10 text-xs sm:text-sm text-white/70">
-                  {prayerData.date.hijri.day} {prayerData.date.hijri.month.ar} {prayerData.date.hijri.year} هـ
+                <div className="mt-4 pt-4 border-t border-white/10 text-xs text-emerald-50 opacity-80 font-medium">
+                  {prayerData.date.hijri.day} {prayerData.date.hijri.month.en} {prayerData.date.hijri.year}
                 </div>
               )}
             </>
           ) : (
             <div className="text-center py-8">
-              <p className="text-white/80">يرجى تفعيل الموقع لحساب أوقات الصلاة</p>
+              <p className="text-white/80">يرجى تفعيل الموقع</p>
               <Link href="/settings" className="mt-2 inline-block text-xs underline text-white/70 hover:text-white">الإعدادات</Link>
             </div>
           )}
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {menuItems.map((item) => (
-          <Link key={item.href} href={item.href}>
-            <div className="group relative flex flex-col items-center justify-center p-4 h-28 bg-white dark:bg-card border border-border/50 rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
-              <div className={cn("p-3 rounded-xl mb-3 transition-colors", item.color)}>
-                <item.icon className="w-6 h-6" />
+      {/* 2. Top Stacked Cards (Books & Verification) */}
+      <section className="grid gap-3">
+        {/* Authentic Books Card */}
+        <Link href="/hadith-collections">
+          <div className="bg-[#0f172a] hover:bg-[#1e293b] text-white p-4 rounded-2xl flex items-center justify-between group transition-colors cursor-pointer border border-white/5">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-[#1e293b] rounded-xl text-emerald-400">
+                <Library className="w-6 h-6" />
               </div>
-              <span className="text-xs font-medium text-foreground/80 group-hover:text-foreground text-center line-clamp-1">
-                {item.label}
-              </span>
+              <div>
+                <h3 className="font-bold text-sm sm:text-base">كتب الحديث الصحيحة</h3>
+                <p className="text-xs text-slate-400 mt-0.5">صحيح البخاري ومسلم</p>
+              </div>
+            </div>
+            <ChevronLeft className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
+          </div>
+        </Link>
+
+        {/* Verification Card (Renamed) */}
+        <div className="bg-[#0f172a] text-white p-4 rounded-2xl flex items-center justify-between border border-white/5 opacity-80 cursor-not-allowed">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-[#1e293b] rounded-xl text-amber-400">
+              <Search className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm sm:text-base">التحقق من صحة الحديث</h3>
+              <p className="text-xs text-slate-400 mt-0.5">تأكد من صحة الأحاديث</p>
+            </div>
+          </div>
+          <ChevronLeft className="w-5 h-5 text-slate-500" />
+        </div>
+      </section>
+
+      {/* 3. Large Gradient Cards (Adhkar & Duas) */}
+      <section className="grid grid-cols-2 gap-3">
+        {/* Duas - Blue/Purple */}
+        <Link href="/duas">
+          <div className="relative overflow-hidden h-32 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-4 flex flex-col items-center justify-center text-center shadow-lg shadow-blue-900/10 cursor-pointer hover:scale-[1.02] transition-transform">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10 flex flex-col items-center gap-2">
+              <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                <p className="text-xl font-bold text-white">د</p>
+              </div>
+              <span className="font-bold text-white text-sm">الأدعية</span>
+            </div>
+          </div>
+        </Link>
+
+        {/* Adhkar - Orange */}
+        <Link href="/adhkar">
+          <div className="relative overflow-hidden h-32 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 p-4 flex flex-col items-center justify-center text-center shadow-lg shadow-orange-900/10 cursor-pointer hover:scale-[1.02] transition-transform">
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/3" />
+            <div className="relative z-10 flex flex-col items-center gap-2">
+              <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                <p className="text-xl font-bold text-white">أ</p>
+              </div>
+              <span className="font-bold text-white text-sm">الأذكار</span>
+            </div>
+          </div>
+        </Link>
+      </section>
+
+      {/* 4. Daily Hadith */}
+      <section className="bg-[#0f172a] rounded-2xl p-6 border border-white/5 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <Quote className="w-16 h-16 text-white" />
+        </div>
+
+        <div className="relative z-10 space-y-4">
+          <h3 className="text-emerald-400 font-bold text-sm flex items-center gap-2">
+            <Quote className="w-4 h-4" />
+            حديث اليوم
+          </h3>
+
+          {isHadithLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+            </div>
+          ) : dailyHadith ? (
+            <div className="space-y-3">
+              <p className="text-white/90 text-sm sm:text-base leading-loose font-arabic text-center">
+                {dailyHadith.arabicText || dailyHadith.text}
+              </p>
+              {dailyHadith.translation && (
+                <p className="text-xs text-slate-400 text-center italic border-t border-white/5 pt-3">
+                  "{dailyHadith.translation}"
+                </p>
+              )}
+              <div className="flex justify-center">
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-full font-medium">
+                  {dailyHadith.source}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-center text-slate-500 text-sm">لا يوجد حديث</p>
+          )}
+        </div>
+      </section>
+
+      {/* 5. Bottom Grid (Protection, Wird, Qibla, Zakat) */}
+      <section className="grid grid-cols-2 gap-3">
+        {[
+          { href: "/adhkar?category=protection", label: "أذكار الوقاية", icon: Shield, color: "text-indigo-400 bg-indigo-500/10" },
+          { href: "/ward", label: "الورد اليومي", icon: Book, color: "text-emerald-400 bg-emerald-500/10" },
+          { href: "/qibla", label: "اتجاه القبلة", icon: Compass, color: "text-teal-400 bg-teal-500/10" },
+          { href: "/zakat", label: "حاسبة الزكاة", icon: Calculator, color: "text-amber-400 bg-amber-500/10" },
+        ].map((item) => (
+          <Link key={item.label} href={item.href}>
+            <div className="bg-[#0f172a] hover:bg-[#1e293b] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 h-24 border border-white/5 transition-colors cursor-pointer group">
+              <div className={cn("p-2 rounded-lg transition-transform group-hover:scale-110", item.color)}>
+                <item.icon className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-slate-300">{item.label}</span>
             </div>
           </Link>
         ))}
-      </section>
-
-      {/* Daily Hadith Section */}
-      <section className="bg-white dark:bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
-        <div className="flex items-center gap-2 mb-4 border-b border-border/50 pb-3">
-          <div className="p-1.5 bg-primary/10 rounded-lg">
-            <Quote className="w-4 h-4 text-primary" />
-          </div>
-          <h2 className="font-bold text-lg text-foreground">حديث اليوم</h2>
-        </div>
-
-        {isHadithLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : dailyHadith ? (
-          <div className="space-y-4">
-            <p className="font-arabic text-lg leading-loose text-center text-foreground/90">
-              {dailyHadith.arabicText || dailyHadith.text}
-            </p>
-            {dailyHadith.translation && (
-              <p className="text-sm text-muted-foreground leading-relaxed text-center italic px-4 border-t border-border/30 pt-4">
-                "{dailyHadith.translation}"
-              </p>
-            )}
-            <div className="flex justify-center mt-3">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-primary/80 bg-primary/5 px-3 py-1 rounded-full">
-                {dailyHadith.source}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground text-sm py-4">لا يوجد حديث اليوم</p>
-        )}
       </section>
 
     </main>
