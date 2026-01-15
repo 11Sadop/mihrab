@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useDailyHadith } from "@/hooks/use-content";
+import { useDailyHadith, useManualHadithRefresh } from "@/hooks/use-content";
 import { usePrayerTimes, getNextPrayer } from "@/hooks/use-prayer-times";
 import {
   Loader2,
@@ -18,11 +18,21 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 export default function Home() {
   const { data: prayerData, isLoading: isPrayerLoading, isRequestingLocation } = usePrayerTimes();
   const nextPrayer = prayerData ? getNextPrayer(prayerData.timings) : null;
-  const { data: dailyHadith, isLoading: isHadithLoading, refetch: refetchHadith, isRefetching } = useDailyHadith();
+  const { data: dailyHadith, isLoading: isHadithLoading } = useDailyHadith();
+  const manualRefresh = useManualHadithRefresh();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await manualRefresh();
+    setIsRefreshing(false);
+  };
+
 
   return (
     <main className="container max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pb-24 space-y-5 pt-4">
@@ -99,30 +109,30 @@ export default function Home() {
         </Link>
       </section>
 
-      {/* 3. Large Gradient Cards (Adhkar & Duas) - SWAPPED as per RTL screenshot */}
+      {/* 3. Large Gradient Cards (Adhkar & Duas) - RTL: Adhkar RIGHT, Duas LEFT */}
       <section className="grid grid-cols-2 gap-3">
-        {/* Adhkar - Orange (RIGHT in RTL = FIRST in DOM) */}
-        <Link href="/adhkar">
-          <div className="relative overflow-hidden h-32 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 p-4 flex flex-col items-center justify-center text-center shadow-lg shadow-orange-900/10 cursor-pointer hover:scale-[1.02] transition-transform">
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/3" />
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                <p className="text-xl font-bold text-white">أ</p>
-              </div>
-              <span className="font-bold text-white text-sm">الأذكار</span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Duas - Blue/Purple (LEFT in RTL = SECOND in DOM) */}
+        {/* Duas - Orange/Red (LEFT in RTL = FIRST in DOM) */}
         <Link href="/duas">
-          <div className="relative overflow-hidden h-32 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-4 flex flex-col items-center justify-center text-center shadow-lg shadow-blue-900/10 cursor-pointer hover:scale-[1.02] transition-transform">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+          <div className="relative overflow-hidden h-32 rounded-2xl bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 p-4 flex flex-col items-center justify-center text-center shadow-lg shadow-orange-900/20 cursor-pointer hover:scale-[1.02] transition-transform">
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/3" />
             <div className="relative z-10 flex flex-col items-center gap-2">
               <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                 <p className="text-xl font-bold text-white">د</p>
               </div>
               <span className="font-bold text-white text-sm">الأدعية</span>
+            </div>
+          </div>
+        </Link>
+
+        {/* Adhkar - Teal/Cyan (RIGHT in RTL = SECOND in DOM) */}
+        <Link href="/adhkar">
+          <div className="relative overflow-hidden h-32 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-600 to-teal-700 p-4 flex flex-col items-center justify-center text-center shadow-lg shadow-teal-900/20 cursor-pointer hover:scale-[1.02] transition-transform">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10 flex flex-col items-center gap-2">
+              <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                <p className="text-xl font-bold text-white">أ</p>
+              </div>
+              <span className="font-bold text-white text-sm">الأذكار</span>
             </div>
           </div>
         </Link>
@@ -145,10 +155,10 @@ export default function Home() {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
-              onClick={() => refetchHadith()}
-              disabled={isRefetching}
+              onClick={handleRefresh}
+              disabled={isRefreshing}
             >
-              <RotateCcw className={cn("w-4 h-4", isRefetching && "animate-spin")} />
+              <RotateCcw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
             </Button>
           </div>
 

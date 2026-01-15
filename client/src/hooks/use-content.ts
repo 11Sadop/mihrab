@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 
 // Adhkar Hooks
@@ -63,6 +63,14 @@ function setCachedHadith(data: any) {
   }
 }
 
+function clearCachedHadith() {
+  try {
+    localStorage.removeItem(HADITH_CACHE_KEY);
+  } catch {
+    // Ignore
+  }
+}
+
 export function useDailyHadith() {
   return useQuery({
     queryKey: [api.hadith.daily.path],
@@ -73,10 +81,10 @@ export function useDailyHadith() {
         return cached.data;
       }
 
-      // Fetch new hadith
-      const res = await fetch(api.hadith.daily.path);
+      // Fetch new hadith using refresh endpoint to get random hadith
+      const res = await fetch(api.hadith.refresh.path, { method: 'POST' });
       if (!res.ok) throw new Error("Failed to fetch daily hadith");
-      const data = api.hadith.daily.responses[200].parse(await res.json());
+      const data = await res.json();
 
       // Cache the result
       setCachedHadith(data);
@@ -89,16 +97,14 @@ export function useDailyHadith() {
   });
 }
 
-// Manual refresh function for Daily Hadith
-export async function refreshDailyHadith() {
-  try {
-    const res = await fetch(api.hadith.refresh.path, { method: 'POST' });
-    if (!res.ok) throw new Error("Failed to refresh hadith");
-    const data = await res.json();
-    setCachedHadith(data);
-    return data;
-  } catch (error) {
-    throw error;
-  }
-}
+// For manual refresh - this clears cache and forces new fetch
+export function useManualHadithRefresh() {
+  const queryClient = useQueryClient();
 
+  return async () => {
+    // Clear cache
+    clearCachedHadith();
+    // Force refetch
+    await queryClient.invalidateQueries({ queryKey: [api.hadith.daily.path] });
+  };
+}
