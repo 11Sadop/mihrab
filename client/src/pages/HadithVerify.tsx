@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Loader2, Search, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Loader2, Search, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,294 +10,217 @@ interface HadithResult {
     grade: string;
     rawi: string;
     source: string;
+    mohdith?: string;
 }
 
-// Sample hadiths database for searching
-const hadithDatabase: HadithResult[] = [
-    {
-        hadith: "عليكم بهذه الخمس : سبحان الله ، والحمد لله ، ولا إله إلا الله ، والله أكبر ، ولا حول ولا قوة إلا بالله .",
-        grade: "صحيح",
-        rawi: "أبو موسى الأشعري",
-        source: "الجامع الصغير"
-    },
-    {
-        hadith: "أفضل الكلام : سبحان الله والحمد لله ولا إله إلا الله والله أكبر .",
-        grade: "إسناده صحيح",
-        rawi: "رجل من الصحابة",
-        source: "المسند الرابع"
-    },
-    {
-        hadith: "سبحان الله والحمد لله ولا إله إلا الله والله أكبر تملأ الميزان",
-        grade: "رجاله رجال الصحيح",
-        rawi: "أبو مالك الأشعري",
-        source: "صحيح مسلم"
-    },
-    {
-        hadith: "كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن: سبحان الله وبحمده، سبحان الله العظيم",
-        grade: "صحيح",
-        rawi: "أبو هريرة",
-        source: "صحيح البخاري"
-    },
-    {
-        hadith: "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى، فمن كانت هجرته إلى الله ورسوله فهجرته إلى الله ورسوله، ومن كانت هجرته لدنيا يصيبها أو امرأة ينكحها فهجرته إلى ما هاجر إليه",
-        grade: "صحيح",
-        rawi: "عمر بن الخطاب",
-        source: "صحيح البخاري"
-    },
-    {
-        hadith: "من كذب علي متعمدًا فليتبوأ مقعده من النار",
-        grade: "صحيح متواتر",
-        rawi: "أبو هريرة وغيره",
-        source: "متفق عليه"
-    },
-    {
-        hadith: "المسلم من سلم المسلمون من لسانه ويده، والمهاجر من هجر ما نهى الله عنه",
-        grade: "صحيح",
-        rawi: "عبدالله بن عمرو",
-        source: "صحيح البخاري"
-    },
-    {
-        hadith: "لا يؤمن أحدكم حتى يحب لأخيه ما يحب لنفسه",
-        grade: "صحيح",
-        rawi: "أنس بن مالك",
-        source: "متفق عليه"
-    },
-    {
-        hadith: "الطهور شطر الإيمان، والحمد لله تملأ الميزان، وسبحان الله والحمد لله تملآن ما بين السماوات والأرض",
-        grade: "صحيح",
-        rawi: "أبو مالك الأشعري",
-        source: "صحيح مسلم"
-    },
-    {
-        hadith: "الصلاة نور، والصدقة برهان، والصبر ضياء، والقرآن حجة لك أو عليك",
-        grade: "صحيح",
-        rawi: "أبو مالك الأشعري",
-        source: "صحيح مسلم"
-    },
-    {
-        hadith: "خيركم من تعلم القرآن وعلمه",
-        grade: "صحيح",
-        rawi: "عثمان بن عفان",
-        source: "صحيح البخاري"
-    },
-    {
-        hadith: "الدين النصيحة، قلنا: لمن؟ قال: لله ولكتابه ولرسوله ولأئمة المسلمين وعامتهم",
-        grade: "صحيح",
-        rawi: "تميم الداري",
-        source: "صحيح مسلم"
-    },
-    {
-        hadith: "من رأى منكم منكرًا فليغيره بيده، فإن لم يستطع فبلسانه، فإن لم يستطع فبقلبه، وذلك أضعف الإيمان",
-        grade: "صحيح",
-        rawi: "أبو سعيد الخدري",
-        source: "صحيح مسلم"
-    },
-    {
-        hadith: "من حسن إسلام المرء تركه ما لا يعنيه",
-        grade: "حسن",
-        rawi: "أبو هريرة",
-        source: "جامع الترمذي"
-    },
-    {
-        hadith: "لا ضرر ولا ضرار",
-        grade: "صحيح",
-        rawi: "عبادة بن الصامت",
-        source: "سنن ابن ماجه"
-    },
-    {
-        hadith: "البر حسن الخلق، والإثم ما حاك في نفسك وكرهت أن يطلع عليه الناس",
-        grade: "صحيح",
-        rawi: "النواس بن سمعان",
-        source: "صحيح مسلم"
-    },
-    {
-        hadith: "اتق الله حيثما كنت، وأتبع السيئة الحسنة تمحها، وخالق الناس بخلق حسن",
-        grade: "حسن",
-        rawi: "أبو ذر ومعاذ بن جبل",
-        source: "جامع الترمذي"
-    },
-    {
-        hadith: "الحياء من الإيمان",
-        grade: "صحيح",
-        rawi: "أبو هريرة",
-        source: "متفق عليه"
-    },
-    {
-        hadith: "الدنيا سجن المؤمن وجنة الكافر",
-        grade: "صحيح",
-        rawi: "أبو هريرة",
-        source: "صحيح مسلم"
-    },
-    {
-        hadith: "إن الله لا ينظر إلى صوركم وأموالكم، ولكن ينظر إلى قلوبكم وأعمالكم",
-        grade: "صحيح",
-        rawi: "أبو هريرة",
-        source: "صحيح مسلم"
-    },
-    {
-        hadith: "أحب الأعمال إلى الله أدومها وإن قل",
-        grade: "صحيح",
-        rawi: "عائشة",
-        source: "متفق عليه"
-    },
-    {
-        hadith: "الظلم ظلمات يوم القيامة",
-        grade: "صحيح",
-        rawi: "عبدالله بن عمر",
-        source: "متفق عليه"
-    },
-    {
-        hadith: "لا يدخل الجنة قاطع رحم",
-        grade: "صحيح",
-        rawi: "جبير بن مطعم",
-        source: "متفق عليه"
-    },
-    {
-        hadith: "من صام رمضان إيمانًا واحتسابًا غفر له ما تقدم من ذنبه",
-        grade: "صحيح",
-        rawi: "أبو هريرة",
-        source: "متفق عليه"
-    },
-    {
-        hadith: "صلوا كما رأيتموني أصلي",
-        grade: "صحيح",
-        rawi: "مالك بن الحويرث",
-        source: "صحيح البخاري"
-    },
-    {
-        hadith: "تسحروا فإن في السحور بركة",
-        grade: "صحيح",
-        rawi: "أنس بن مالك",
-        source: "متفق عليه"
-    },
-    // أحاديث ضعيفة
-    {
-        hadith: "اختلاف أمتي رحمة",
-        grade: "لا أصل له",
-        rawi: "-",
-        source: "السلسلة الضعيفة"
-    },
-    {
-        hadith: "حب الوطن من الإيمان",
-        grade: "موضوع",
-        rawi: "-",
-        source: "الموضوعات"
-    },
-];
+// Function to fetch from Dorar using JSONP (bypasses CORS)
+function fetchDorarHadiths(query: string): Promise<HadithResult[]> {
+    return new Promise((resolve, reject) => {
+        const callbackName = `dorarCallback_${Date.now()}`;
+        const encodedQuery = encodeURIComponent(query);
 
-function searchHadiths(query: string, authenticOnly: boolean): HadithResult[] {
-    if (!query.trim()) return [];
+        // Create script element for JSONP
+        const script = document.createElement('script');
+        script.src = `https://dorar.net/dorar_api.json?skey=${encodedQuery}&callback=${callbackName}`;
 
-    const words = query.trim().split(/\s+/);
+        // Set timeout for the request
+        const timeout = setTimeout(() => {
+            cleanup();
+            reject(new Error('Request timeout'));
+        }, 10000);
 
-    let results = hadithDatabase.filter(h => {
-        return words.some(word => h.hadith.includes(word));
-    });
-
-    // Sort by relevance
-    results.sort((a, b) => {
-        const scoreA = words.filter(w => a.hadith.includes(w)).length;
-        const scoreB = words.filter(w => b.hadith.includes(w)).length;
-        return scoreB - scoreA;
-    });
-
-    // Sort by grade
-    results.sort((a, b) => {
-        const gradeOrder = (grade: string) => {
-            const g = grade.toLowerCase();
-            if (g.includes("صحيح متواتر")) return 0;
-            if (g.includes("صحيح") && !g.includes("ضعيف")) return 1;
-            if (g.includes("إسناده صحيح")) return 2;
-            if (g.includes("رجاله رجال الصحيح")) return 3;
-            if (g.includes("حسن")) return 4;
-            if (g.includes("ضعيف")) return 10;
-            if (g.includes("موضوع") || g.includes("لا أصل")) return 11;
-            return 5;
+        // Cleanup function
+        const cleanup = () => {
+            clearTimeout(timeout);
+            delete (window as any)[callbackName];
+            if (script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
         };
-        return gradeOrder(a.grade) - gradeOrder(b.grade);
-    });
 
-    // Filter if authenticOnly
-    if (authenticOnly) {
-        results = results.filter(r => {
-            const g = r.grade.toLowerCase();
-            return (g.includes("صحيح") || g.includes("حسن") || g.includes("رجال") || g.includes("إسناده"))
-                && !g.includes("ضعيف") && !g.includes("موضوع") && !g.includes("لا أصل");
-        });
+        // Define callback function
+        (window as any)[callbackName] = (data: any) => {
+            cleanup();
+
+            try {
+                const results: HadithResult[] = [];
+
+                if (data && data.ahadith && data.ahadith.result) {
+                    const html = data.ahadith.result;
+
+                    // Parse HTML to extract hadiths
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    // Try to find hadith containers
+                    const hadithContainers = doc.querySelectorAll('.hadith-info, .border-bottom, [class*="hadith"]');
+
+                    if (hadithContainers.length > 0) {
+                        hadithContainers.forEach((container) => {
+                            const text = container.textContent?.trim();
+                            if (text && text.length > 20) {
+                                // Extract parts
+                                const gradeMatch = text.match(/(صحيح|حسن|ضعيف|موضوع|إسناده صحيح|رجاله رجال الصحيح)/);
+                                const rawiMatch = text.match(/الراوي\s*:\s*([^،\n]+)/);
+                                const sourceMatch = text.match(/المصدر\s*:\s*([^،\n]+)/);
+
+                                results.push({
+                                    hadith: text.substring(0, 500),
+                                    grade: gradeMatch ? gradeMatch[1] : "انظر المصدر",
+                                    rawi: rawiMatch ? rawiMatch[1].trim() : "غير محدد",
+                                    source: sourceMatch ? sourceMatch[1].trim() : "الدرر السنية"
+                                });
+                            }
+                        });
+                    } else {
+                        // Fallback: split by line breaks and extract text
+                        const lines = html.replace(/<[^>]*>/g, '\n').split('\n').filter((line: string) => line.trim().length > 30);
+
+                        for (let i = 0; i < Math.min(lines.length, 20); i++) {
+                            const line = lines[i].trim();
+                            if (line.length > 30) {
+                                const gradeMatch = line.match(/(صحيح|حسن|ضعيف|موضوع|إسناده صحيح|رجاله رجال الصحيح|لا أصل له)/);
+
+                                results.push({
+                                    hadith: line,
+                                    grade: gradeMatch ? gradeMatch[1] : "انظر المصدر",
+                                    rawi: "غير محدد",
+                                    source: "الدرر السنية"
+                                });
+                            }
+                        }
+                    }
+                }
+
+                resolve(results);
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        // Handle script error
+        script.onerror = () => {
+            cleanup();
+            reject(new Error('Failed to load script'));
+        };
+
+        // Add script to document
+        document.head.appendChild(script);
+    });
+}
+
+// Alternative: Use server proxy
+async function fetchFromServer(query: string): Promise<HadithResult[]> {
+    const encodedQuery = encodeURIComponent(query);
+    const response = await fetch(`/api/hadith/search?q=${encodedQuery}`);
+
+    if (!response.ok) {
+        throw new Error('Server error');
     }
 
-    return results;
-}
-
-function highlightText(text: string, query: string): React.ReactNode {
-    if (!query.trim()) return text;
-
-    const words = query.trim().split(/\s+/);
-    let result = text;
-
-    words.forEach(word => {
-        if (word.length > 1) {
-            result = result.replace(new RegExp(word, 'g'), `<mark class="bg-emerald-400/30 text-white px-0.5 rounded">${word}</mark>`);
-        }
-    });
-
-    return <span dangerouslySetInnerHTML={{ __html: result }} />;
+    const data = await response.json();
+    return (data.ahadith || data.results || []).map((item: any) => ({
+        hadith: item.hadith || item.text || "",
+        grade: item.grade || "غير محدد",
+        rawi: item.rawi || "غير معروف",
+        source: item.book || item.source || "غير محدد",
+        mohdith: item.mohdith || ""
+    }));
 }
 
 function getGradeBadge(grade: string) {
     const g = grade.toLowerCase();
 
     if (g.includes("صحيح") || g.includes("إسناده صحيح") || g.includes("رجال")) {
-        return {
-            bg: "bg-emerald-600",
-            text: "text-white",
-            icon: true
-        };
+        return { bg: "bg-emerald-600", text: "text-white", icon: true };
     }
     if (g.includes("حسن")) {
-        return {
-            bg: "bg-blue-600",
-            text: "text-white",
-            icon: true
-        };
+        return { bg: "bg-blue-600", text: "text-white", icon: true };
     }
     if (g.includes("ضعيف")) {
-        return {
-            bg: "bg-orange-600",
-            text: "text-white",
-            icon: false
-        };
+        return { bg: "bg-orange-600", text: "text-white", icon: false };
     }
     if (g.includes("موضوع") || g.includes("لا أصل")) {
-        return {
-            bg: "bg-red-600",
-            text: "text-white",
-            icon: false
-        };
+        return { bg: "bg-red-600", text: "text-white", icon: false };
     }
-    return {
-        bg: "bg-slate-600",
-        text: "text-white",
-        icon: false
-    };
+    return { bg: "bg-slate-600", text: "text-white", icon: false };
+}
+
+function highlightText(text: string, query: string): React.ReactNode {
+    if (!query.trim()) return text;
+
+    const words = query.trim().split(/\s+/).filter(w => w.length > 1);
+    let result = text;
+
+    words.forEach(word => {
+        result = result.replace(new RegExp(word, 'g'), `<mark class="bg-emerald-400/30 text-white px-0.5 rounded">${word}</mark>`);
+    });
+
+    return <span dangerouslySetInnerHTML={{ __html: result }} />;
 }
 
 export default function HadithVerify() {
     const [query, setQuery] = useState("");
     const [authenticOnly, setAuthenticOnly] = useState(false);
-    const [hasSearched, setHasSearched] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [results, setResults] = useState<HadithResult[]>([]);
+    const [error, setError] = useState("");
+    const [hasSearched, setHasSearched] = useState(false);
 
-    const results = hasSearched ? searchHadiths(query, authenticOnly) : [];
-
-    const handleSearch = () => {
+    const handleSearch = useCallback(async () => {
         if (!query.trim()) return;
+
         setIsLoading(true);
-        setTimeout(() => {
-            setHasSearched(true);
+        setError("");
+        setResults([]);
+        setHasSearched(true);
+
+        try {
+            // Try server proxy first
+            let data = await fetchFromServer(query);
+
+            // If no results, try JSONP
+            if (data.length === 0) {
+                data = await fetchDorarHadiths(query);
+            }
+
+            // Filter if authenticOnly
+            if (authenticOnly) {
+                data = data.filter(r => {
+                    const g = r.grade.toLowerCase();
+                    return (g.includes("صحيح") || g.includes("حسن") || g.includes("رجال") || g.includes("إسناده"))
+                        && !g.includes("ضعيف") && !g.includes("موضوع") && !g.includes("لا أصل");
+                });
+            }
+
+            // Sort by grade
+            data.sort((a, b) => {
+                const gradeOrder = (grade: string) => {
+                    const g = grade.toLowerCase();
+                    if (g.includes("صحيح متواتر")) return 0;
+                    if (g.includes("صحيح") && !g.includes("ضعيف")) return 1;
+                    if (g.includes("إسناده صحيح")) return 2;
+                    if (g.includes("رجاله رجال")) return 3;
+                    if (g.includes("حسن")) return 4;
+                    if (g.includes("ضعيف")) return 10;
+                    if (g.includes("موضوع") || g.includes("لا أصل")) return 11;
+                    return 5;
+                };
+                return gradeOrder(a.grade) - gradeOrder(b.grade);
+            });
+
+            setResults(data);
+
+            if (data.length === 0) {
+                setError("لم يتم العثور على نتائج. جرب كلمات مختلفة.");
+            }
+        } catch (err) {
+            console.error("Search error:", err);
+            setError("حدث خطأ في البحث. جرب مرة أخرى.");
+        } finally {
             setIsLoading(false);
-        }, 300);
-    };
+        }
+    }, [query, authenticOnly]);
 
     return (
         <div className="min-h-screen bg-[#0a0f14] pb-24">
@@ -330,10 +253,7 @@ export default function HadithVerify() {
                             placeholder="سبحان الله والحمدلله ولا اله الا الله..."
                             className="w-full h-12 bg-[#1a2332] border-white/10 text-white placeholder:text-slate-500 pr-12 text-base rounded-lg"
                             value={query}
-                            onChange={(e) => {
-                                setQuery(e.target.value);
-                                if (hasSearched) setHasSearched(false);
-                            }}
+                            onChange={(e) => setQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         />
                         <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
@@ -356,13 +276,7 @@ export default function HadithVerify() {
                             <Checkbox
                                 id="authentic"
                                 checked={authenticOnly}
-                                onCheckedChange={(checked) => {
-                                    setAuthenticOnly(!!checked);
-                                    if (hasSearched) {
-                                        setHasSearched(false);
-                                        setTimeout(() => setHasSearched(true), 50);
-                                    }
-                                }}
+                                onCheckedChange={(checked) => setAuthenticOnly(!!checked)}
                                 className="border-white/30 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
                             />
                             <label htmlFor="authentic" className="text-sm text-slate-400 cursor-pointer">
@@ -372,15 +286,23 @@ export default function HadithVerify() {
                     </div>
                 </div>
 
+                {/* Error State */}
+                {error && !isLoading && (
+                    <div className="bg-orange-900/20 border border-orange-500/20 rounded-xl p-4 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-orange-300">{error}</p>
+                    </div>
+                )}
+
                 {/* Results Count */}
-                {hasSearched && (
+                {hasSearched && results.length > 0 && (
                     <div className="text-center text-slate-400 text-sm">
                         نتائج البحث ({results.length})
                     </div>
                 )}
 
                 {/* Results */}
-                {hasSearched && (
+                {results.length > 0 && (
                     <div className="space-y-3">
                         {results.map((result, i) => {
                             const badge = getGradeBadge(result.grade);
@@ -407,6 +329,7 @@ export default function HadithVerify() {
                                         <div className="text-xs text-slate-400 space-y-0.5">
                                             <div>الراوي: {result.rawi}</div>
                                             <div>المصدر: {result.source}</div>
+                                            {result.mohdith && <div>المحدث: {result.mohdith}</div>}
                                         </div>
                                     </div>
                                 </div>
@@ -417,16 +340,18 @@ export default function HadithVerify() {
 
                 {/* Loading State */}
                 {isLoading && (
-                    <div className="flex justify-center py-8">
-                        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                    <div className="flex flex-col items-center justify-center py-12 gap-4">
+                        <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
+                        <p className="text-slate-400 text-sm">جاري البحث في الدرر السنية...</p>
                     </div>
                 )}
 
-                {/* Empty State */}
-                {hasSearched && !isLoading && results.length === 0 && (
-                    <div className="text-center py-12 text-slate-500">
+                {/* Empty State - Before Search */}
+                {!hasSearched && !isLoading && (
+                    <div className="text-center py-8 text-slate-500">
                         <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>لم يتم العثور على نتائج</p>
+                        <p>أدخل نص الحديث للبحث</p>
+                        <p className="text-sm mt-2">سيتم البحث في موسوعة الدرر السنية</p>
                     </div>
                 )}
             </main>
