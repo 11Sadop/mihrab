@@ -1,108 +1,393 @@
-import { useState } from "react";
-import { Loader2, Search, ArrowRight } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Loader2, Search, ArrowRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 
-interface HadithResult {
+interface HadithData {
     hadith: string;
     grade: string;
     rawi: string;
     mohdith: string;
     book: string;
-    bookPage?: string;
+}
+
+// Local database of verified hadiths for reliable search
+const hadithDatabase: HadithData[] = [
+    // أحاديث صحيحة مشهورة
+    {
+        hadith: "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى، فمن كانت هجرته إلى الله ورسوله فهجرته إلى الله ورسوله، ومن كانت هجرته لدنيا يصيبها أو امرأة ينكحها فهجرته إلى ما هاجر إليه",
+        grade: "صحيح",
+        rawi: "عمر بن الخطاب",
+        mohdith: "البخاري",
+        book: "صحيح البخاري"
+    },
+    {
+        hadith: "من كذب علي متعمدًا فليتبوأ مقعده من النار",
+        grade: "صحيح متواتر",
+        rawi: "أبو هريرة وغيره",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "المسلم من سلم المسلمون من لسانه ويده، والمهاجر من هجر ما نهى الله عنه",
+        grade: "صحيح",
+        rawi: "عبدالله بن عمرو",
+        mohdith: "البخاري",
+        book: "صحيح البخاري"
+    },
+    {
+        hadith: "لا يؤمن أحدكم حتى يحب لأخيه ما يحب لنفسه",
+        grade: "صحيح",
+        rawi: "أنس بن مالك",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "من صلى البردين دخل الجنة",
+        grade: "صحيح",
+        rawi: "أبو موسى الأشعري",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "الطهور شطر الإيمان، والحمد لله تملأ الميزان، وسبحان الله والحمد لله تملآن أو تملأ ما بين السماوات والأرض",
+        grade: "صحيح",
+        rawi: "أبو مالك الأشعري",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "الصلاة نور، والصدقة برهان، والصبر ضياء، والقرآن حجة لك أو عليك",
+        grade: "صحيح",
+        rawi: "أبو مالك الأشعري",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن: سبحان الله وبحمده، سبحان الله العظيم",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "خيركم من تعلم القرآن وعلمه",
+        grade: "صحيح",
+        rawi: "عثمان بن عفان",
+        mohdith: "البخاري",
+        book: "صحيح البخاري"
+    },
+    {
+        hadith: "الدين النصيحة، قلنا: لمن؟ قال: لله ولكتابه ولرسوله ولأئمة المسلمين وعامتهم",
+        grade: "صحيح",
+        rawi: "تميم الداري",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "من رأى منكم منكرًا فليغيره بيده، فإن لم يستطع فبلسانه، فإن لم يستطع فبقلبه، وذلك أضعف الإيمان",
+        grade: "صحيح",
+        rawi: "أبو سعيد الخدري",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "من حسن إسلام المرء تركه ما لا يعنيه",
+        grade: "حسن",
+        rawi: "أبو هريرة",
+        mohdith: "الترمذي",
+        book: "جامع الترمذي"
+    },
+    {
+        hadith: "لا ضرر ولا ضرار",
+        grade: "صحيح",
+        rawi: "عبادة بن الصامت",
+        mohdith: "ابن ماجه",
+        book: "سنن ابن ماجه"
+    },
+    {
+        hadith: "البر حسن الخلق، والإثم ما حاك في نفسك وكرهت أن يطلع عليه الناس",
+        grade: "صحيح",
+        rawi: "النواس بن سمعان",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "اتق الله حيثما كنت، وأتبع السيئة الحسنة تمحها، وخالق الناس بخلق حسن",
+        grade: "حسن",
+        rawi: "أبو ذر ومعاذ بن جبل",
+        mohdith: "الترمذي",
+        book: "جامع الترمذي"
+    },
+    {
+        hadith: "الحياء من الإيمان",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "ما ملأ آدمي وعاء شرًّا من بطنه، بحسب ابن آدم أكلات يقمن صلبه",
+        grade: "صحيح",
+        rawi: "المقدام بن معديكرب",
+        mohdith: "الترمذي",
+        book: "جامع الترمذي"
+    },
+    {
+        hadith: "الدنيا سجن المؤمن وجنة الكافر",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "إن الله لا ينظر إلى صوركم وأموالكم، ولكن ينظر إلى قلوبكم وأعمالكم",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "كل أمتي يدخلون الجنة إلا من أبى، قالوا: ومن يأبى يا رسول الله؟ قال: من أطاعني دخل الجنة، ومن عصاني فقد أبى",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "البخاري",
+        book: "صحيح البخاري"
+    },
+    {
+        hadith: "أحب الأعمال إلى الله أدومها وإن قل",
+        grade: "صحيح",
+        rawi: "عائشة",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "أفضل الصيام بعد رمضان شهر الله المحرم، وأفضل الصلاة بعد الفريضة صلاة الليل",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    // أحاديث ضعيفة وموضوعة للتحذير
+    {
+        hadith: "من لم تنهه صلاته عن الفحشاء والمنكر لم يزدد من الله إلا بعدًا",
+        grade: "ضعيف",
+        rawi: "ابن عباس",
+        mohdith: "الطبراني",
+        book: "المعجم الكبير"
+    },
+    {
+        hadith: "اختلاف أمتي رحمة",
+        grade: "لا أصل له",
+        rawi: "-",
+        mohdith: "الألباني",
+        book: "السلسلة الضعيفة"
+    },
+    {
+        hadith: "حب الوطن من الإيمان",
+        grade: "موضوع",
+        rawi: "-",
+        mohdith: "الصغاني",
+        book: "الموضوعات"
+    },
+    {
+        hadith: "أنا مدينة العلم وعلي بابها",
+        grade: "موضوع",
+        rawi: "-",
+        mohdith: "ابن الجوزي",
+        book: "الموضوعات"
+    },
+    {
+        hadith: "الجنة تحت أقدام الأمهات",
+        grade: "ضعيف",
+        rawi: "-",
+        mohdith: "العراقي",
+        book: "المغني عن حمل الأسفار"
+    },
+    {
+        hadith: "أدبني ربي فأحسن تأديبي",
+        grade: "لا أصل له",
+        rawi: "-",
+        mohdith: "السخاوي",
+        book: "المقاصد الحسنة"
+    },
+    // المزيد من الأحاديث الصحيحة
+    {
+        hadith: "إن من أحبكم إلي وأقربكم مني مجلسًا يوم القيامة أحاسنكم أخلاقًا",
+        grade: "صحيح",
+        rawi: "جابر بن عبدالله",
+        mohdith: "الترمذي",
+        book: "جامع الترمذي"
+    },
+    {
+        hadith: "المؤمن القوي خير وأحب إلى الله من المؤمن الضعيف، وفي كل خير",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "لا تحاسدوا، ولا تناجشوا، ولا تباغضوا، ولا تدابروا، وكونوا عباد الله إخوانًا",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+    {
+        hadith: "الظلم ظلمات يوم القيامة",
+        grade: "صحيح",
+        rawi: "عبدالله بن عمر",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "لا يدخل الجنة قاطع رحم",
+        grade: "صحيح",
+        rawi: "جبير بن مطعم",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "من صام رمضان إيمانًا واحتسابًا غفر له ما تقدم من ذنبه",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "من قام رمضان إيمانًا واحتسابًا غفر له ما تقدم من ذنبه",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "من قام ليلة القدر إيمانًا واحتسابًا غفر له ما تقدم من ذنبه",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "الصوم جُنة، فإذا كان يوم صوم أحدكم فلا يرفث ولا يصخب",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "تسحروا فإن في السحور بركة",
+        grade: "صحيح",
+        rawi: "أنس بن مالك",
+        mohdith: "البخاري ومسلم",
+        book: "متفق عليه"
+    },
+    {
+        hadith: "من لم يدع قول الزور والعمل به فليس لله حاجة في أن يدع طعامه وشرابه",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "البخاري",
+        book: "صحيح البخاري"
+    },
+    {
+        hadith: "رب صائم ليس له من صيامه إلا الجوع، ورب قائم ليس له من قيامه إلا السهر",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        mohdith: "ابن ماجه",
+        book: "سنن ابن ماجه"
+    },
+    {
+        hadith: "صلوا كما رأيتموني أصلي",
+        grade: "صحيح",
+        rawi: "مالك بن الحويرث",
+        mohdith: "البخاري",
+        book: "صحيح البخاري"
+    },
+    {
+        hadith: "خذوا عني مناسككم",
+        grade: "صحيح",
+        rawi: "جابر بن عبدالله",
+        mohdith: "مسلم",
+        book: "صحيح مسلم"
+    },
+];
+
+function searchHadiths(query: string, authenticOnly: boolean): HadithData[] {
+    if (!query.trim()) return [];
+
+    const normalizedQuery = query.trim().toLowerCase();
+    const words = normalizedQuery.split(/\s+/);
+
+    let results = hadithDatabase.filter(h => {
+        // Check if hadith text contains the search words
+        const hadithLower = h.hadith.toLowerCase();
+        return words.some(word => hadithLower.includes(word));
+    });
+
+    // Sort by relevance (more matching words = higher)
+    results.sort((a, b) => {
+        const scoreA = words.filter(w => a.hadith.toLowerCase().includes(w)).length;
+        const scoreB = words.filter(w => b.hadith.toLowerCase().includes(w)).length;
+        return scoreB - scoreA;
+    });
+
+    // Then sort by grade
+    results.sort((a, b) => {
+        const gradeOrder = (grade: string) => {
+            const g = grade.toLowerCase();
+            if (g.includes("صحيح متواتر")) return 0;
+            if (g.includes("صحيح") && !g.includes("ضعيف")) return 1;
+            if (g.includes("حسن")) return 2;
+            if (g.includes("ضعيف")) return 10;
+            if (g.includes("موضوع") || g.includes("لا أصل")) return 11;
+            return 5;
+        };
+        return gradeOrder(a.grade) - gradeOrder(b.grade);
+    });
+
+    // Filter if authenticOnly
+    if (authenticOnly) {
+        results = results.filter(r => {
+            const g = r.grade.toLowerCase();
+            return (g.includes("صحيح") || g.includes("حسن")) && !g.includes("ضعيف") && !g.includes("موضوع") && !g.includes("لا أصل");
+        });
+    }
+
+    return results;
 }
 
 export default function HadithVerify() {
     const [query, setQuery] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [results, setResults] = useState<HadithResult[]>([]);
     const [authenticOnly, setAuthenticOnly] = useState(false);
-    const [searchCount, setSearchCount] = useState(0);
+    const [hasSearched, setHasSearched] = useState(false);
 
-    const handleSearch = async () => {
+    const results = useMemo(() => {
+        if (!hasSearched) return [];
+        return searchHadiths(query, authenticOnly);
+    }, [query, authenticOnly, hasSearched]);
+
+    const handleSearch = () => {
         if (!query.trim()) return;
-
-        setIsLoading(true);
-        setResults([]);
-
-        try {
-            // Using Dorar.net API
-            const encodedQuery = encodeURIComponent(query);
-            const url = `https://dorar.net/dorar_api.json?skey=${encodedQuery}`;
-
-            // Fetch through proxy to avoid CORS
-            const proxyUrl = `/api/hadith/search?q=${encodedQuery}`;
-
-            const res = await fetch(proxyUrl);
-            if (!res.ok) throw new Error("Failed to search");
-
-            const data = await res.json();
-
-            // Parse and sort results
-            let parsedResults: HadithResult[] = (data.ahadith || data.results || []).map((item: any) => ({
-                hadith: item.hadith || item.text || "",
-                grade: item.grade || item.takhrij || "غير محدد",
-                rawi: item.rawi || item.narrator || "غير معروف",
-                mohdith: item.mohdith || item.scholar || "",
-                book: item.book || item.source || "المصدر غير محدد",
-                bookPage: item.page || "",
-            }));
-
-            // Sort: Sahih first, then Hasan, then others (weak at bottom)
-            parsedResults.sort((a, b) => {
-                const gradeOrder = (grade: string) => {
-                    const g = grade.toLowerCase();
-                    if (g.includes("صحيح") && !g.includes("ضعيف")) return 1;
-                    if (g.includes("إسناده صحيح")) return 2;
-                    if (g.includes("حسن")) return 3;
-                    if (g.includes("رجاله رجال الصحيح")) return 4;
-                    if (g.includes("ضعيف")) return 10;
-                    if (g.includes("موضوع")) return 11;
-                    return 5;
-                };
-                return gradeOrder(a.grade) - gradeOrder(b.grade);
-            });
-
-            // Filter if authenticOnly
-            if (authenticOnly) {
-                parsedResults = parsedResults.filter(r => {
-                    const g = r.grade.toLowerCase();
-                    return g.includes("صحيح") || g.includes("حسن") || g.includes("رجال الصحيح");
-                });
-            }
-
-            setResults(parsedResults);
-            setSearchCount(parsedResults.length);
-        } catch (error) {
-            console.error("Search error:", error);
-            setResults([]);
-            setSearchCount(0);
-        } finally {
-            setIsLoading(false);
-        }
+        setHasSearched(true);
     };
 
     const getGradeBorderColor = (grade: string) => {
         const g = grade.toLowerCase();
         if (g.includes("صحيح") && !g.includes("ضعيف")) return "border-l-emerald-500";
-        if (g.includes("إسناده صحيح")) return "border-l-lime-500";
         if (g.includes("حسن")) return "border-l-blue-500";
-        if (g.includes("رجاله رجال الصحيح")) return "border-l-teal-500";
         if (g.includes("ضعيف")) return "border-l-orange-500";
-        if (g.includes("موضوع")) return "border-l-red-500";
+        if (g.includes("موضوع") || g.includes("لا أصل")) return "border-l-red-500";
         return "border-l-slate-500";
     };
 
     const getGradeBadgeColor = (grade: string) => {
         const g = grade.toLowerCase();
         if (g.includes("صحيح") && !g.includes("ضعيف")) return "bg-emerald-600 text-white";
-        if (g.includes("إسناده صحيح")) return "bg-lime-600 text-white";
         if (g.includes("حسن")) return "bg-blue-600 text-white";
-        if (g.includes("رجاله رجال الصحيح")) return "bg-teal-600 text-white";
         if (g.includes("ضعيف")) return "bg-orange-600 text-white";
-        if (g.includes("موضوع")) return "bg-red-600 text-white";
+        if (g.includes("موضوع") || g.includes("لا أصل")) return "bg-red-600 text-white";
         return "bg-slate-600 text-white";
     };
 
@@ -123,7 +408,7 @@ export default function HadithVerify() {
                         التحقق من صحة الحديث
                     </h1>
                     <p className="text-slate-400 text-center text-sm">
-                        أدخل نص الحديث أو جزء منه للتحقق من صحته.
+                        ابحث في قاعدة بيانات الأحاديث المُحققة
                     </p>
                 </div>
             </header>
@@ -134,10 +419,13 @@ export default function HadithVerify() {
                     <div className="relative">
                         <Input
                             type="text"
-                            placeholder="سبحان الله والحمدلله ولا اله الا الله..."
+                            placeholder="ابحث: النيات، الأعمال، الصوم، الإيمان..."
                             className="w-full h-12 bg-[#1a2332] border-white/10 text-white placeholder:text-slate-500 pr-12 text-base rounded-lg"
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                            onChange={(e) => {
+                                setQuery(e.target.value);
+                                if (hasSearched) setHasSearched(false);
+                            }}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         />
                         <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
@@ -147,20 +435,19 @@ export default function HadithVerify() {
                         <Button
                             className="h-9 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm"
                             onClick={handleSearch}
-                            disabled={!query.trim() || isLoading}
+                            disabled={!query.trim()}
                         >
-                            {isLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                "تحقق"
-                            )}
+                            بحث
                         </Button>
 
                         <div className="flex items-center gap-2">
                             <Checkbox
                                 id="authentic"
                                 checked={authenticOnly}
-                                onCheckedChange={(checked) => setAuthenticOnly(!!checked)}
+                                onCheckedChange={(checked) => {
+                                    setAuthenticOnly(!!checked);
+                                    if (hasSearched) setHasSearched(true);
+                                }}
                                 className="border-white/30 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
                             />
                             <label htmlFor="authentic" className="text-sm text-slate-400 cursor-pointer">
@@ -170,10 +457,18 @@ export default function HadithVerify() {
                     </div>
                 </div>
 
+                {/* Info Box */}
+                <div className="bg-blue-900/20 border border-blue-500/20 rounded-lg p-3 flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-blue-300/80 text-sm">
+                        هذه قاعدة بيانات محلية تحتوي على أشهر الأحاديث المُحققة. للبحث الشامل، يُنصح بالرجوع إلى موقع الدرر السنية.
+                    </p>
+                </div>
+
                 {/* Results Count */}
-                {searchCount > 0 && (
+                {hasSearched && (
                     <div className="text-center text-slate-400 text-sm">
-                        نتائج البحث ({searchCount})
+                        نتائج البحث ({results.length})
                     </div>
                 )}
 
@@ -200,7 +495,7 @@ export default function HadithVerify() {
                                 {/* Metadata */}
                                 <div className="text-xs text-slate-500 space-y-1 pt-2 border-t border-white/5">
                                     <div>الراوي: {result.rawi}</div>
-                                    <div>المصدر: {result.book}{result.bookPage && ` (ص${result.bookPage})`}</div>
+                                    <div>المصدر: {result.book}</div>
                                     {result.mohdith && <div>المحدث: {result.mohdith}</div>}
                                 </div>
                             </div>
@@ -208,18 +503,33 @@ export default function HadithVerify() {
                     ))}
                 </div>
 
-                {/* Loading State */}
-                {isLoading && (
-                    <div className="flex justify-center py-8">
-                        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                {/* Empty State */}
+                {hasSearched && results.length === 0 && (
+                    <div className="text-center py-12 text-slate-500">
+                        <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>لم يتم العثور على نتائج لـ "{query}"</p>
+                        <p className="text-sm mt-2">جرب كلمات مثل: الأعمال، النيات، الصوم، الصلاة...</p>
                     </div>
                 )}
 
-                {/* Empty State */}
-                {!isLoading && results.length === 0 && query && searchCount === 0 && (
-                    <div className="text-center py-12 text-slate-500">
-                        <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>لم يتم العثور على نتائج</p>
+                {/* Examples (before search) */}
+                {!hasSearched && (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground text-center">أمثلة للبحث:</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {["الأعمال بالنيات", "كذب علي", "صام رمضان", "الطهور", "القرآن", "الظلم"].map((example) => (
+                                <button
+                                    key={example}
+                                    onClick={() => {
+                                        setQuery(example);
+                                        setHasSearched(true);
+                                    }}
+                                    className="p-3 bg-[#131a24] border border-white/5 rounded-xl text-sm text-slate-400 hover:text-white hover:border-emerald-500/50 transition-colors text-center"
+                                >
+                                    {example}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </main>
