@@ -1,151 +1,303 @@
 import { useState } from "react";
-import { Loader2, Search, ArrowRight, Book, AlertCircle } from "lucide-react";
+import { Loader2, Search, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 
 interface HadithResult {
-    number: number;
-    arab: string;
-    id: string;
-    book: string;
+    hadith: string;
+    grade: string;
+    rawi: string;
+    source: string;
 }
 
-// Available hadith books from the API
-const HADITH_BOOKS = [
-    { id: "bukhari", name: "صحيح البخاري", count: 6638 },
-    { id: "muslim", name: "صحيح مسلم", count: 4930 },
-    { id: "abu-daud", name: "سنن أبي داود", count: 4419 },
-    { id: "tirmidzi", name: "جامع الترمذي", count: 3625 },
-    { id: "nasai", name: "سنن النسائي", count: 5364 },
-    { id: "ibnu-majah", name: "سنن ابن ماجه", count: 4285 },
-    { id: "ahmad", name: "مسند أحمد", count: 4305 },
-    { id: "malik", name: "موطأ مالك", count: 1587 },
-    { id: "darimi", name: "سنن الدارمي", count: 2949 },
+// Sample hadiths database for searching
+const hadithDatabase: HadithResult[] = [
+    {
+        hadith: "عليكم بهذه الخمس : سبحان الله ، والحمد لله ، ولا إله إلا الله ، والله أكبر ، ولا حول ولا قوة إلا بالله .",
+        grade: "صحيح",
+        rawi: "أبو موسى الأشعري",
+        source: "الجامع الصغير"
+    },
+    {
+        hadith: "أفضل الكلام : سبحان الله والحمد لله ولا إله إلا الله والله أكبر .",
+        grade: "إسناده صحيح",
+        rawi: "رجل من الصحابة",
+        source: "المسند الرابع"
+    },
+    {
+        hadith: "سبحان الله والحمد لله ولا إله إلا الله والله أكبر تملأ الميزان",
+        grade: "رجاله رجال الصحيح",
+        rawi: "أبو مالك الأشعري",
+        source: "صحيح مسلم"
+    },
+    {
+        hadith: "كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن: سبحان الله وبحمده، سبحان الله العظيم",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        source: "صحيح البخاري"
+    },
+    {
+        hadith: "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى، فمن كانت هجرته إلى الله ورسوله فهجرته إلى الله ورسوله، ومن كانت هجرته لدنيا يصيبها أو امرأة ينكحها فهجرته إلى ما هاجر إليه",
+        grade: "صحيح",
+        rawi: "عمر بن الخطاب",
+        source: "صحيح البخاري"
+    },
+    {
+        hadith: "من كذب علي متعمدًا فليتبوأ مقعده من النار",
+        grade: "صحيح متواتر",
+        rawi: "أبو هريرة وغيره",
+        source: "متفق عليه"
+    },
+    {
+        hadith: "المسلم من سلم المسلمون من لسانه ويده، والمهاجر من هجر ما نهى الله عنه",
+        grade: "صحيح",
+        rawi: "عبدالله بن عمرو",
+        source: "صحيح البخاري"
+    },
+    {
+        hadith: "لا يؤمن أحدكم حتى يحب لأخيه ما يحب لنفسه",
+        grade: "صحيح",
+        rawi: "أنس بن مالك",
+        source: "متفق عليه"
+    },
+    {
+        hadith: "الطهور شطر الإيمان، والحمد لله تملأ الميزان، وسبحان الله والحمد لله تملآن ما بين السماوات والأرض",
+        grade: "صحيح",
+        rawi: "أبو مالك الأشعري",
+        source: "صحيح مسلم"
+    },
+    {
+        hadith: "الصلاة نور، والصدقة برهان، والصبر ضياء، والقرآن حجة لك أو عليك",
+        grade: "صحيح",
+        rawi: "أبو مالك الأشعري",
+        source: "صحيح مسلم"
+    },
+    {
+        hadith: "خيركم من تعلم القرآن وعلمه",
+        grade: "صحيح",
+        rawi: "عثمان بن عفان",
+        source: "صحيح البخاري"
+    },
+    {
+        hadith: "الدين النصيحة، قلنا: لمن؟ قال: لله ولكتابه ولرسوله ولأئمة المسلمين وعامتهم",
+        grade: "صحيح",
+        rawi: "تميم الداري",
+        source: "صحيح مسلم"
+    },
+    {
+        hadith: "من رأى منكم منكرًا فليغيره بيده، فإن لم يستطع فبلسانه، فإن لم يستطع فبقلبه، وذلك أضعف الإيمان",
+        grade: "صحيح",
+        rawi: "أبو سعيد الخدري",
+        source: "صحيح مسلم"
+    },
+    {
+        hadith: "من حسن إسلام المرء تركه ما لا يعنيه",
+        grade: "حسن",
+        rawi: "أبو هريرة",
+        source: "جامع الترمذي"
+    },
+    {
+        hadith: "لا ضرر ولا ضرار",
+        grade: "صحيح",
+        rawi: "عبادة بن الصامت",
+        source: "سنن ابن ماجه"
+    },
+    {
+        hadith: "البر حسن الخلق، والإثم ما حاك في نفسك وكرهت أن يطلع عليه الناس",
+        grade: "صحيح",
+        rawi: "النواس بن سمعان",
+        source: "صحيح مسلم"
+    },
+    {
+        hadith: "اتق الله حيثما كنت، وأتبع السيئة الحسنة تمحها، وخالق الناس بخلق حسن",
+        grade: "حسن",
+        rawi: "أبو ذر ومعاذ بن جبل",
+        source: "جامع الترمذي"
+    },
+    {
+        hadith: "الحياء من الإيمان",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        source: "متفق عليه"
+    },
+    {
+        hadith: "الدنيا سجن المؤمن وجنة الكافر",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        source: "صحيح مسلم"
+    },
+    {
+        hadith: "إن الله لا ينظر إلى صوركم وأموالكم، ولكن ينظر إلى قلوبكم وأعمالكم",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        source: "صحيح مسلم"
+    },
+    {
+        hadith: "أحب الأعمال إلى الله أدومها وإن قل",
+        grade: "صحيح",
+        rawi: "عائشة",
+        source: "متفق عليه"
+    },
+    {
+        hadith: "الظلم ظلمات يوم القيامة",
+        grade: "صحيح",
+        rawi: "عبدالله بن عمر",
+        source: "متفق عليه"
+    },
+    {
+        hadith: "لا يدخل الجنة قاطع رحم",
+        grade: "صحيح",
+        rawi: "جبير بن مطعم",
+        source: "متفق عليه"
+    },
+    {
+        hadith: "من صام رمضان إيمانًا واحتسابًا غفر له ما تقدم من ذنبه",
+        grade: "صحيح",
+        rawi: "أبو هريرة",
+        source: "متفق عليه"
+    },
+    {
+        hadith: "صلوا كما رأيتموني أصلي",
+        grade: "صحيح",
+        rawi: "مالك بن الحويرث",
+        source: "صحيح البخاري"
+    },
+    {
+        hadith: "تسحروا فإن في السحور بركة",
+        grade: "صحيح",
+        rawi: "أنس بن مالك",
+        source: "متفق عليه"
+    },
+    // أحاديث ضعيفة
+    {
+        hadith: "اختلاف أمتي رحمة",
+        grade: "لا أصل له",
+        rawi: "-",
+        source: "السلسلة الضعيفة"
+    },
+    {
+        hadith: "حب الوطن من الإيمان",
+        grade: "موضوع",
+        rawi: "-",
+        source: "الموضوعات"
+    },
 ];
+
+function searchHadiths(query: string, authenticOnly: boolean): HadithResult[] {
+    if (!query.trim()) return [];
+
+    const words = query.trim().split(/\s+/);
+
+    let results = hadithDatabase.filter(h => {
+        return words.some(word => h.hadith.includes(word));
+    });
+
+    // Sort by relevance
+    results.sort((a, b) => {
+        const scoreA = words.filter(w => a.hadith.includes(w)).length;
+        const scoreB = words.filter(w => b.hadith.includes(w)).length;
+        return scoreB - scoreA;
+    });
+
+    // Sort by grade
+    results.sort((a, b) => {
+        const gradeOrder = (grade: string) => {
+            const g = grade.toLowerCase();
+            if (g.includes("صحيح متواتر")) return 0;
+            if (g.includes("صحيح") && !g.includes("ضعيف")) return 1;
+            if (g.includes("إسناده صحيح")) return 2;
+            if (g.includes("رجاله رجال الصحيح")) return 3;
+            if (g.includes("حسن")) return 4;
+            if (g.includes("ضعيف")) return 10;
+            if (g.includes("موضوع") || g.includes("لا أصل")) return 11;
+            return 5;
+        };
+        return gradeOrder(a.grade) - gradeOrder(b.grade);
+    });
+
+    // Filter if authenticOnly
+    if (authenticOnly) {
+        results = results.filter(r => {
+            const g = r.grade.toLowerCase();
+            return (g.includes("صحيح") || g.includes("حسن") || g.includes("رجال") || g.includes("إسناده"))
+                && !g.includes("ضعيف") && !g.includes("موضوع") && !g.includes("لا أصل");
+        });
+    }
+
+    return results;
+}
+
+function highlightText(text: string, query: string): React.ReactNode {
+    if (!query.trim()) return text;
+
+    const words = query.trim().split(/\s+/);
+    let result = text;
+
+    words.forEach(word => {
+        if (word.length > 1) {
+            result = result.replace(new RegExp(word, 'g'), `<mark class="bg-emerald-400/30 text-white px-0.5 rounded">${word}</mark>`);
+        }
+    });
+
+    return <span dangerouslySetInnerHTML={{ __html: result }} />;
+}
+
+function getGradeBadge(grade: string) {
+    const g = grade.toLowerCase();
+
+    if (g.includes("صحيح") || g.includes("إسناده صحيح") || g.includes("رجال")) {
+        return {
+            bg: "bg-emerald-600",
+            text: "text-white",
+            icon: true
+        };
+    }
+    if (g.includes("حسن")) {
+        return {
+            bg: "bg-blue-600",
+            text: "text-white",
+            icon: true
+        };
+    }
+    if (g.includes("ضعيف")) {
+        return {
+            bg: "bg-orange-600",
+            text: "text-white",
+            icon: false
+        };
+    }
+    if (g.includes("موضوع") || g.includes("لا أصل")) {
+        return {
+            bg: "bg-red-600",
+            text: "text-white",
+            icon: false
+        };
+    }
+    return {
+        bg: "bg-slate-600",
+        text: "text-white",
+        icon: false
+    };
+}
 
 export default function HadithVerify() {
     const [query, setQuery] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [results, setResults] = useState<HadithResult[]>([]);
-    const [searchedBooks, setSearchedBooks] = useState<string[]>([]);
-    const [error, setError] = useState("");
+    const [authenticOnly, setAuthenticOnly] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const searchHadith = async () => {
+    const results = hasSearched ? searchHadiths(query, authenticOnly) : [];
+
+    const handleSearch = () => {
         if (!query.trim()) return;
-
         setIsLoading(true);
-        setResults([]);
-        setSearchedBooks([]);
-        setError("");
-        setHasSearched(true);
-
-        const allResults: HadithResult[] = [];
-        const booksSearched: string[] = [];
-
-        try {
-            // Search in Bukhari and Muslim first (most authentic)
-            const priorityBooks = ["bukhari", "muslim"];
-            const otherBooks = ["abu-daud", "tirmidzi", "nasai", "ibnu-majah"];
-
-            for (const bookId of [...priorityBooks, ...otherBooks]) {
-                const book = HADITH_BOOKS.find(b => b.id === bookId);
-                if (!book) continue;
-
-                try {
-                    // Search in batches of 100 hadiths
-                    const batchSize = 100;
-                    const batches = Math.min(5, Math.ceil(book.count / batchSize)); // Limit to 5 batches per book
-
-                    for (let batch = 0; batch < batches && allResults.length < 20; batch++) {
-                        const start = batch * batchSize + 1;
-                        const end = Math.min(start + batchSize - 1, book.count);
-
-                        const response = await fetch(
-                            `https://api.hadith.gading.dev/books/${bookId}?range=${start}-${end}`
-                        );
-
-                        if (!response.ok) continue;
-
-                        const data = await response.json();
-
-                        if (data.data?.hadiths) {
-                            // Search in the Arabic text
-                            const matches = data.data.hadiths.filter((h: any) =>
-                                h.arab && h.arab.includes(query)
-                            );
-
-                            for (const match of matches) {
-                                if (allResults.length >= 20) break;
-                                allResults.push({
-                                    number: match.number,
-                                    arab: match.arab,
-                                    id: match.id,
-                                    book: book.name
-                                });
-                            }
-                        }
-                    }
-
-                    booksSearched.push(book.name);
-
-                    // Stop if we have enough results
-                    if (allResults.length >= 20) break;
-
-                } catch (bookError) {
-                    console.error(`Error searching ${bookId}:`, bookError);
-                }
-            }
-
-            setResults(allResults);
-            setSearchedBooks(booksSearched);
-
-            if (allResults.length === 0) {
-                setError("لم يتم العثور على نتائج. جرب كلمات بحث أخرى.");
-            }
-
-        } catch (err) {
-            console.error("Search error:", err);
-            setError("حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.");
-        } finally {
+        setTimeout(() => {
+            setHasSearched(true);
             setIsLoading(false);
-        }
+        }, 300);
     };
-
-    // Quick search without API - search featured hadiths
-    const featuredHadiths: HadithResult[] = [
-        {
-            number: 1,
-            arab: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى، فَمَنْ كَانَتْ هِجْرَتُهُ إِلَى دُنْيَا يُصِيبُهَا أَوْ إِلَى امْرَأَةٍ يَنْكِحُهَا فَهِجْرَتُهُ إِلَى مَا هَاجَرَ إِلَيْهِ",
-            id: "أول حديث في صحيح البخاري",
-            book: "صحيح البخاري"
-        },
-        {
-            number: 45,
-            arab: "الْمُسْلِمُ مَنْ سَلِمَ الْمُسْلِمُونَ مِنْ لِسَانِهِ وَيَدِهِ، وَالْمُهَاجِرُ مَنْ هَجَرَ مَا نَهَى اللَّهُ عَنْهُ",
-            id: "تعريف المسلم",
-            book: "صحيح البخاري"
-        },
-        {
-            number: 13,
-            arab: "لا يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ",
-            id: "حب الخير للآخرين",
-            book: "صحيح البخاري"
-        },
-        {
-            number: 52,
-            arab: "إِنَّ الْحَلَالَ بَيِّنٌ وَإِنَّ الْحَرَامَ بَيِّنٌ وَبَيْنَهُمَا مُشْتَبِهَاتٌ لَا يَعْلَمُهُنَّ كَثِيرٌ مِنَ النَّاسِ",
-            id: "الحلال والحرام",
-            book: "صحيح البخاري"
-        },
-        {
-            number: 6018,
-            arab: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ، وَمَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ فَلْيُكْرِمْ جَارَهُ، وَمَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ فَلْيُكْرِمْ ضَيْفَهُ",
-            id: "إكرام الجار والضيف",
-            book: "صحيح البخاري"
-        },
-    ];
 
     return (
         <div className="min-h-screen bg-[#0a0f14] pb-24">
@@ -164,7 +316,7 @@ export default function HadithVerify() {
                         التحقق من صحة الحديث
                     </h1>
                     <p className="text-slate-400 text-center text-sm">
-                        ابحث في أكثر من 40,000 حديث من الكتب التسعة
+                        أدخل نص الحديث أو جزء منه للتحقق من صحته.
                     </p>
                 </div>
             </header>
@@ -175,170 +327,106 @@ export default function HadithVerify() {
                     <div className="relative">
                         <Input
                             type="text"
-                            placeholder="ابحث بالنص العربي: الأعمال، النيات، الصلاة..."
+                            placeholder="سبحان الله والحمدلله ولا اله الا الله..."
                             className="w-full h-12 bg-[#1a2332] border-white/10 text-white placeholder:text-slate-500 pr-12 text-base rounded-lg"
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && searchHadith()}
+                            onChange={(e) => {
+                                setQuery(e.target.value);
+                                if (hasSearched) setHasSearched(false);
+                            }}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         />
                         <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
                     </div>
 
-                    <Button
-                        className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg"
-                        onClick={searchHadith}
-                        disabled={!query.trim() || isLoading}
-                    >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin ml-2" />
-                                جاري البحث...
-                            </>
-                        ) : (
-                            <>
-                                <Search className="w-4 h-4 ml-2" />
-                                بحث في الأحاديث
-                            </>
-                        )}
-                    </Button>
-                </div>
+                    <div className="flex flex-wrap items-center gap-4">
+                        <Button
+                            className="h-9 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm"
+                            onClick={handleSearch}
+                            disabled={!query.trim() || isLoading}
+                        >
+                            {isLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                "تحقق"
+                            )}
+                        </Button>
 
-                {/* Books being searched */}
-                {isLoading && (
-                    <div className="bg-[#131a24] rounded-xl p-4 border border-white/5">
-                        <p className="text-sm text-slate-400 text-center mb-2">جاري البحث في:</p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                            {HADITH_BOOKS.slice(0, 6).map((book) => (
-                                <span
-                                    key={book.id}
-                                    className="text-xs bg-emerald-900/30 text-emerald-400 px-2 py-1 rounded"
-                                >
-                                    {book.name}
-                                </span>
-                            ))}
+                        <div className="flex items-center gap-2">
+                            <Checkbox
+                                id="authentic"
+                                checked={authenticOnly}
+                                onCheckedChange={(checked) => {
+                                    setAuthenticOnly(!!checked);
+                                    if (hasSearched) {
+                                        setHasSearched(false);
+                                        setTimeout(() => setHasSearched(true), 50);
+                                    }
+                                }}
+                                className="border-white/30 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                            />
+                            <label htmlFor="authentic" className="text-sm text-slate-400 cursor-pointer">
+                                الأحاديث الصحيحة فقط
+                            </label>
                         </div>
                     </div>
-                )}
+                </div>
 
-                {/* Error State */}
-                {error && !isLoading && (
-                    <div className="bg-orange-900/20 border border-orange-500/20 rounded-xl p-4 flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="text-orange-300">{error}</p>
-                            <p className="text-sm text-slate-400 mt-1">
-                                جرب البحث بكلمات من متن الحديث بالعربية
-                            </p>
-                        </div>
+                {/* Results Count */}
+                {hasSearched && (
+                    <div className="text-center text-slate-400 text-sm">
+                        نتائج البحث ({results.length})
                     </div>
                 )}
 
                 {/* Results */}
-                {results.length > 0 && (
-                    <div className="space-y-4">
-                        <div className="text-center">
-                            <p className="text-sm text-slate-400">
-                                نتائج البحث ({results.length})
-                            </p>
-                            {searchedBooks.length > 0 && (
-                                <p className="text-xs text-slate-500 mt-1">
-                                    تم البحث في: {searchedBooks.join("، ")}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-3">
-                            {results.map((result, i) => (
+                {hasSearched && (
+                    <div className="space-y-3">
+                        {results.map((result, i) => {
+                            const badge = getGradeBadge(result.grade);
+                            return (
                                 <div
                                     key={i}
-                                    className="bg-[#131a24] rounded-lg border border-white/5 border-l-4 border-l-emerald-500 overflow-hidden"
+                                    className="bg-[#3d3d2a] rounded-lg overflow-hidden"
                                 >
                                     <div className="p-4 space-y-3">
-                                        {/* Book & Number Badge */}
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded">
-                                                صحيح
-                                            </span>
-                                            <span className="text-xs text-slate-400">
-                                                <Book className="w-3 h-3 inline ml-1" />
-                                                {result.book} - رقم {result.number}
+                                        {/* Grade Badge */}
+                                        <div className="flex items-center gap-2">
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${badge.bg} ${badge.text}`}>
+                                                {badge.icon && <CheckCircle2 className="w-3 h-3" />}
+                                                {result.grade}
                                             </span>
                                         </div>
 
                                         {/* Hadith Text */}
-                                        <p className="text-white/90 text-base leading-loose font-arabic" dir="rtl">
-                                            {result.arab}
+                                        <p className="text-white text-base leading-loose font-arabic" dir="rtl">
+                                            {highlightText(result.hadith, query)}
                                         </p>
 
-                                        {/* Translation hint */}
-                                        {result.id && (
-                                            <p className="text-xs text-slate-500 pt-2 border-t border-white/5">
-                                                {result.id.substring(0, 150)}...
-                                            </p>
-                                        )}
+                                        {/* Metadata */}
+                                        <div className="text-xs text-slate-400 space-y-0.5">
+                                            <div>الراوي: {result.rawi}</div>
+                                            <div>المصدر: {result.source}</div>
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })}
                     </div>
                 )}
 
-                {/* Featured Hadiths - Before Search */}
-                {!hasSearched && !isLoading && (
-                    <div className="space-y-4">
-                        <div className="text-center">
-                            <p className="text-sm text-slate-400">أحاديث مشهورة من صحيح البخاري</p>
-                        </div>
+                {/* Loading State */}
+                {isLoading && (
+                    <div className="flex justify-center py-8">
+                        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                    </div>
+                )}
 
-                        <div className="space-y-3">
-                            {featuredHadiths.map((hadith, i) => (
-                                <div
-                                    key={i}
-                                    className="bg-[#131a24] rounded-lg border border-white/5 border-l-4 border-l-emerald-500 overflow-hidden cursor-pointer hover:border-emerald-500/30 transition-colors"
-                                    onClick={() => {
-                                        // Extract a search term from the hadith
-                                        const words = hadith.arab.split(" ");
-                                        setQuery(words.slice(0, 2).join(" "));
-                                    }}
-                                >
-                                    <div className="p-4 space-y-3">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded">
-                                                صحيح
-                                            </span>
-                                            <span className="text-xs text-slate-400">
-                                                <Book className="w-3 h-3 inline ml-1" />
-                                                {hadith.book} - رقم {hadith.number}
-                                            </span>
-                                        </div>
-
-                                        <p className="text-white/90 text-base leading-loose font-arabic" dir="rtl">
-                                            {hadith.arab}
-                                        </p>
-
-                                        <p className="text-xs text-slate-500 pt-2 border-t border-white/5">
-                                            {hadith.id}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Available Books */}
-                        <div className="bg-[#131a24] rounded-xl p-4 border border-white/5">
-                            <h3 className="text-sm font-medium text-white mb-3 text-center">الكتب المتوفرة للبحث</h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {HADITH_BOOKS.map((book) => (
-                                    <div
-                                        key={book.id}
-                                        className="bg-[#1a2332] rounded-lg p-2 text-center"
-                                    >
-                                        <p className="text-xs text-white">{book.name}</p>
-                                        <p className="text-xs text-emerald-400">{book.count.toLocaleString()} حديث</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                {/* Empty State */}
+                {hasSearched && !isLoading && results.length === 0 && (
+                    <div className="text-center py-12 text-slate-500">
+                        <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>لم يتم العثور على نتائج</p>
                     </div>
                 )}
             </main>
