@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 
 // Adhkar Hooks
@@ -33,78 +33,20 @@ export function useDuas(category?: string) {
   });
 }
 
-// Daily Hadith Hook - Caches for 24 hours, only refresh manually
-const HADITH_CACHE_KEY = "daily_hadith_cache";
-const HADITH_CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in ms
-
-interface CachedHadith {
-  data: any;
-  timestamp: number;
-}
-
-function getCachedHadith(): CachedHadith | null {
-  try {
-    const cached = localStorage.getItem(HADITH_CACHE_KEY);
-    if (!cached) return null;
-    return JSON.parse(cached);
-  } catch {
-    return null;
-  }
-}
-
-function setCachedHadith(data: any) {
-  try {
-    localStorage.setItem(HADITH_CACHE_KEY, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
-  } catch {
-    // Ignore storage errors
-  }
-}
-
-function clearCachedHadith() {
-  try {
-    localStorage.removeItem(HADITH_CACHE_KEY);
-  } catch {
-    // Ignore
-  }
-}
-
+// Daily Hadith Hook - Refreshes on each page load
 export function useDailyHadith() {
   return useQuery({
     queryKey: [api.hadith.daily.path],
     queryFn: async () => {
-      // Check localStorage cache first
-      const cached = getCachedHadith();
-      if (cached && (Date.now() - cached.timestamp) < HADITH_CACHE_EXPIRY) {
-        return cached.data;
-      }
-
-      // Fetch new hadith using refresh endpoint to get random hadith
-      const res = await fetch(api.hadith.refresh.path, { method: 'POST' });
+      // Use refresh endpoint to get a different hadith on each load
+      const res = await fetch(api.hadith.refresh.path, {
+        method: 'POST',
+        cache: 'no-store'
+      });
       if (!res.ok) throw new Error("Failed to fetch daily hadith");
-      const data = await res.json();
-
-      // Cache the result
-      setCachedHadith(data);
-      return data;
+      return api.hadith.daily.responses[200].parse(await res.json());
     },
-    staleTime: HADITH_CACHE_EXPIRY, // 24 hours
-    gcTime: HADITH_CACHE_EXPIRY,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 0, // Always refetch on page load
+    gcTime: 1000 * 60 * 5, // 5 minutes cache
   });
-}
-
-// For manual refresh - this clears cache and forces new fetch
-export function useManualHadithRefresh() {
-  const queryClient = useQueryClient();
-
-  return async () => {
-    // Clear cache
-    clearCachedHadith();
-    // Force refetch
-    await queryClient.invalidateQueries({ queryKey: [api.hadith.daily.path] });
-  };
 }

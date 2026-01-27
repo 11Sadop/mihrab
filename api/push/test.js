@@ -1,67 +1,78 @@
 // api/push/test.js
-// Quick test endpoint to send a notification to all registered tokens
+// Test endpoint to manually trigger a notification
+
+import admin from 'firebase-admin';
+
+// Initialize Firebase Admin (only once)
+if (!admin.apps.length) {
+    try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+        if (serviceAccount.project_id) {
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount)
+            });
+            console.log('✅ Firebase Admin initialized for test');
+        } else {
+            console.error('❌ FIREBASE_SERVICE_ACCOUNT not configured');
+        }
+    } catch (error) {
+        console.error('❌ Firebase Admin init error:', error.message);
+    }
+}
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'POST only' });
-    }
+    res.setHeader('Access-Control-Allow-Origin', '*');
 
+    const debugInfo = {
+        timestamp: new Date().toISOString(),
+        firebaseInitialized: admin.apps.length > 0,
+        envVars: {
+            hasFirebaseServiceAccount: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+            hasVercelKV: !!process.env.KV_REST_API_URL,
+            vercelUrl: process.env.VERCEL_URL || 'not set'
+        }
+    };
+
+    // Get tokens count
     try {
-        // Use the request host header to build the base URL
-        const host = req.headers.host || 'mihrabapp.com';
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const baseUrl = protocol + '://' + host;
-        
-        console.log('Using baseUrl:', baseUrl);
-        
-        // Get all tokens from register endpoint
-        const tokensRes = await fetch(baseUrl + '/api/push/register', {
-            method: 'GET'
-        });
-        
-        if (!tokensRes.ok) {
-            const text = await tokensRes.text();
-            console.error('Register endpoint error:', text);
-            return res.status(500).json({ error: 'Failed to get tokens', status: tokensRes.status });
-        }
-        
+        const baseUrl = process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : 'http://localhost:3000';
+
+        const tokensRes = await fetch(`${baseUrl}/api/push/register`);
         const tokensData = await tokensRes.json();
-        const tokens = tokensData.tokens || [];
-
-        if (tokens.length === 0) {
-            return res.status(400).json({
-                error: 'No tokens registered',
-                message: 'Enable notifications in the app first'
-            });
-        }
-
-        // Send test notification
-        const sendRes = await fetch(baseUrl + '/api/push/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                tokens: tokens,
-                title: 'Test Notification',
-                body: 'Notifications are working!',
-                data: { type: 'test' }
-            })
-        });
-
-        if (!sendRes.ok) {
-            const text = await sendRes.text();
-            console.error('Send endpoint error:', text);
-            return res.status(500).json({ error: 'Failed to send', status: sendRes.status });
-        }
-
-        const result = await sendRes.json();
-
-        return res.status(200).json({
-            success: true,
-            tokensCount: tokens.length,
-            ...result
-        });
-    } catch (error) {
-        console.error('Test error:', error);
-        return res.status(500).json({ error: error.message });
+        debugInfo.tokensCount = tokensData.count || 0;
+        debugInfo.tokensFetched = true;
+    } catch (e) {
+        debugInfo.tokensError = e.message;
+        debugInfo.tokensFetched = false;
     }
+
+    // Try to send test notification if tokens exist and method is POST
+    if (req.method === 'POST' && debugInfo.tokensCount > 0) {
+        try {
+            const baseUrl = process.env.VERCEL_URL
+                ? `https://${process.env.VERCEL_URL}`
+                : 'http://localhost:3000';
+
+            const sendRes = await fetch(`${baseUrl}/api/push/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tokens: (await (await fetch(`${baseUrl}/api/push/register`)).json()).tokens,
+                    title: '🧪 إشعار تجريبي',
+                    body: 'هذا إشعار تجريبي من محراب - ' + new Date().toLocaleTimeString('ar-SA'),
+                    data: { type: 'test' }
+                })
+            });
+
+            debugInfo.sendResult = await sendRes.json();
+            debugInfo.testNotificationSent = true;
+        } catch (e) {
+            debugInfo.sendError = e.message;
+            debugInfo.testNotificationSent = false;
+        }
+    }
+
+    return res.status(200).json(debugInfo);
 }

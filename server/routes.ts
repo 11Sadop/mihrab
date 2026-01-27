@@ -73,110 +73,6 @@ export async function registerRoutes(
         res.json(result);
     });
 
-    // Hadith Search Proxy (Dorar.net API)
-    app.get("/api/hadith/search", async (req, res) => {
-        const query = req.query.q as string;
-        if (!query) {
-            return res.status(400).json({ error: "Query parameter 'q' is required" });
-        }
-
-        try {
-            const encodedQuery = encodeURIComponent(query);
-            const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodedQuery}`;
-
-            const response = await fetch(dorarUrl, {
-                headers: {
-                    'Accept': '*/*',
-                    'User-Agent': 'Mozilla/5.0'
-                }
-            });
-            const text = await response.text();
-
-            // Parse JSONP response
-            let jsonData;
-            try {
-                jsonData = JSON.parse(text);
-            } catch {
-                const match = text.match(/\{[\s\S]*\}/);
-                if (match) {
-                    jsonData = JSON.parse(match[0]);
-                } else {
-                    throw new Error("Could not parse response");
-                }
-            }
-
-            const ahadith: any[] = [];
-
-            if (jsonData.ahadith && jsonData.ahadith.result) {
-                const htmlContent = jsonData.ahadith.result;
-
-                // Split by hadith dividers and parse each
-                const sections = htmlContent.split(/<div[^>]*class="[^"]*border-bottom[^"]*"[^>]*>/gi);
-
-                for (const section of sections) {
-                    if (!section || section.length < 50) continue;
-
-                    // Clean HTML tags to get text
-                    const cleanText = section.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-
-                    if (cleanText.length < 20) continue;
-
-                    // Extract grade
-                    const gradePatterns = [
-                        /الحكم\s*:\s*([^،\n]+)/,
-                        /(صحيح|حسن|ضعيف|موضوع|إسناده صحيح|رجاله ثقات|رجاله رجال الصحيح)/
-                    ];
-                    let grade = "انظر الحكم";
-                    for (const pattern of gradePatterns) {
-                        const match = cleanText.match(pattern);
-                        if (match) {
-                            grade = match[1].trim();
-                            break;
-                        }
-                    }
-
-                    // Extract narrator
-                    const rawiMatch = cleanText.match(/الراوي\s*:\s*([^،\n]+)/);
-                    const rawi = rawiMatch ? rawiMatch[1].trim() : "غير محدد";
-
-                    // Extract source/book
-                    const sourceMatch = cleanText.match(/المصدر\s*:\s*([^،\n]+)/);
-                    const source = sourceMatch ? sourceMatch[1].trim() : "الدرر السنية";
-
-                    // Extract mohdith
-                    const mohdithMatch = cleanText.match(/المحدث\s*:\s*([^،\n]+)/);
-                    const mohdith = mohdithMatch ? mohdithMatch[1].trim() : "";
-
-                    // Get hadith text (first substantial text block)
-                    let hadithText = cleanText;
-                    const rawiIndex = cleanText.indexOf("الراوي");
-                    if (rawiIndex > 30) {
-                        hadithText = cleanText.substring(0, rawiIndex).trim();
-                    }
-
-                    if (hadithText.length > 20) {
-                        ahadith.push({
-                            hadith: hadithText.substring(0, 500),
-                            grade,
-                            rawi,
-                            book: source,
-                            mohdith
-                        });
-                    }
-                }
-            }
-
-            res.json({
-                results: ahadith,
-                ahadith: ahadith,
-                count: ahadith.length
-            });
-        } catch (error: any) {
-            console.error("Dorar API error:", error.message);
-            res.status(500).json({ error: "Failed to fetch from Dorar API", results: [], ahadith: [] });
-        }
-    });
-
     app.get(api.stats.visitors.path, async (req, res) => {
         const adminKey = req.query.key as string;
         if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'mihrab2024') {
@@ -304,7 +200,90 @@ export async function registerRoutes(
         }
     });
 
+    // Hadith Verification via Dorar Al-Sunniya API
+    app.get("/api/hadith/verify", async (req, res) => {
+        try {
+            const searchKey = req.query.skey as string;
+            const gradeFilter = req.query.grade as string;
+
+            if (!searchKey) {
+                return res.status(400).json({ error: "معامل البحث مطلوب" });
+            }
+
+            // Call Dorar Al-Sunniya API
+            const dorarUrl = `https://www.dorar.net/dorar_api.json?skey=${encodeURIComponent(searchKey)}`;
+            const response = await fetch(dorarUrl);
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch from Dorar API");
+            }
+
+            const data = await response.json();
+
+            // Parse Dorar response - it returns HTML in ahadith.result
+            let results: any[] = [];
+
+            if (data.ahadith && data.ahadith.result) {
+                // Parse the HTML result from Dorar
+                const htmlContent = data.ahadith.result;
+
+                // Simple regex parsing for hadith data
+                const hadithRegex = /<div class="hadith"[^>]*>([\s\S]*?)<\/div>/gi;
+                const matches = htmlContent.matchAll(hadithRegex);
+
+                for (const match of matches) {
+                    const hadithHtml = match[1];
+
+                    // Extract text
+                    const textMatch = hadithHtml.match(/<span class="text"[^>]*>(.*?)<\/span>/is);
+                    const narratorMatch = hadithHtml.match(/الراوي\s*:\s*([^<]+)/i);
+                    const scholarMatch = hadithHtml.match(/المحدث\s*:\s*([^<]+)/i);
+                    const sourceMatch = hadithHtml.match(/المصدر\s*:\s*([^<]+)/i);
+                    const gradeMatch = hadithHtml.match(/الدرجة?\s*:\s*([^<]+)/i);
+
+                    if (textMatch) {
+                        const result = {
+                            text: textMatch[1].replace(/<[^>]+>/g, '').trim(),
+                            narrator: narratorMatch ? narratorMatch[1].trim() : '',
+                            scholar: scholarMatch ? scholarMatch[1].trim() : '',
+                            source: sourceMatch ? sourceMatch[1].trim() : '',
+                            grade: gradeMatch ? gradeMatch[1].trim() : 'غير محدد'
+                        };
+
+                        // Filter by grade if requested
+                        if (gradeFilter === 'sahih') {
+                            const g = result.grade.toLowerCase();
+                            if (g.includes('صحيح') || g.includes('حسن') || g.includes('جيد')) {
+                                results.push(result);
+                            }
+                        } else {
+                            results.push(result);
+                        }
+                    }
+                }
+
+                // If regex didn't work, try simpler approach with the raw data
+                if (results.length === 0 && data.ahadith.data) {
+                    // Some versions return data array directly
+                    results = (data.ahadith.data || []).map((h: any) => ({
+                        text: h.hadith || h.text || '',
+                        narrator: h.rawi || h.narrator || '',
+                        scholar: h.mohadith || h.scholar || '',
+                        source: h.book || h.source || '',
+                        grade: h.grade || h.hukm || 'غير محدد'
+                    }));
+                }
+            }
+
+            res.json({ results, total: results.length });
+        } catch (e: any) {
+            console.error("Dorar API error:", e.message);
+            res.status(500).json({ error: "حدث خطأ أثناء البحث في الدرر السنية" });
+        }
+    });
+
     return httpServer;
+
 
 }
 

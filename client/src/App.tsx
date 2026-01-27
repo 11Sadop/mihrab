@@ -1,6 +1,6 @@
 import { initializeFirebaseMessaging } from './lib/firebase-push';
 import { Switch, Route } from "wouter";
-
+import HadithPage from "@/pages/HadithPage";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -100,14 +100,13 @@ import WardPage from "@/pages/Ward";
 import ProtectionPage from "@/pages/Protection";
 import ZakatPage from "@/pages/Zakat";
 import QiblaPage from "@/pages/Qibla";
-import HadithVerify from "@/pages/HadithVerify";
 import HadithCollectionsPage from "@/pages/HadithCollections";
-
+import HadithVerifyPage from "@/pages/HadithVerify";
 import TafseerPage from "@/pages/Tafseer";
 import SupportPage from "@/pages/Support";
 import StatsPage from "@/pages/Stats";
 import NotFound from "@/pages/not-found";
-import SmartAssistant from "@/pages/SmartAssistant";
+import AssistantPage from "@/pages/AssistantPage";
 
 function Router() {
   useVisitorTracking();
@@ -123,19 +122,18 @@ function Router() {
         <Route path="/prayer-times" component={PrayerTimes} />
         <Route path="/adhkar" component={AdhkarPage} />
         <Route path="/duas" component={DuasPage} />
-
+        <Route path="/hadith" component={HadithPage} />
         <Route path="/tasbeeh" component={TasbeehPage} />
         <Route path="/ward" component={WardPage} />
         <Route path="/protection" component={ProtectionPage} />
-        <Route path="/hadith-verify" component={HadithVerify} />
         <Route path="/zakat" component={ZakatPage} />
         <Route path="/qibla" component={QiblaPage} />
         <Route path="/hadith-collections" component={HadithCollectionsPage} />
-
+        <Route path="/hadith-verify" component={HadithVerifyPage} />
         <Route path="/tafseer" component={TafseerPage} />
         <Route path="/support" component={SupportPage} />
         <Route path="/settings" component={SettingsPage} />
-        <Route path="/assistant" component={SmartAssistant} />
+        <Route path="/assistant" component={AssistantPage} />
         <Route path="/admin/stats" component={StatsPage} />
         <Route component={NotFound} />
       </Switch>

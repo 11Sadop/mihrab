@@ -1,10 +1,17 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="dark">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta http-equiv="Permissions-Policy" content="accelerometer=*, gyroscope=*, magnetometer=*" />
+
+    <!-- Force Dark Mode Colors -->
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#0c4a3e" media="(prefers-color-scheme: light)">
+
     <title>محراب - مواقيت الصلاة والأذكار والأدعية | بوصلة القبلة وحاسبة الزكاة</title>
     <meta name="description"
         content="تطبيق محراب الإسلامي الشامل - مواقيت الصلاة الدقيقة، بوصلة القبلة، حاسبة الزكاة، أذكار الصباح والمساء، تفسير القرآن، أحاديث صحيحة، تسبيح إلكتروني، أدعية يومية. رفيقك الإسلامي اليومي." />
@@ -26,14 +33,27 @@
     <link rel="icon" type="image/png" href="/icon-512.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0c4a3e" />
+    <meta name="theme-color" content="#111827" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="محراب" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="محراب" />
-    <meta name="msapplication-TileColor" content="#0c4a3e" />
+    <meta name="msapplication-TileColor" content="#111827" />
     <meta name="msapplication-TileImage" content="/icon-512.png" />
+
+    <!-- Force dark background immediately -->
+    <style>
+        html,
+        body {
+            background-color: #111827 !important;
+        }
+
+        html.dark {
+            background-color: #111827 !important;
+        }
+    </style>
+
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -70,18 +90,19 @@
         href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
         rel="stylesheet">
 </head>
-<body>
+
+<body class="dark" style="background-color: #111827;">
     <script>
+        // Force dark mode on all devices
         (function () {
-            var savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                document.documentElement.classList.add('dark');
-            }
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
         })();
     </script>
     <div id="root">
         <div id="loading-fallback"
-            style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0c4a3e;color:white;font-family:sans-serif;text-align:center;">
+            style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111827;color:white;font-family:sans-serif;text-align:center;">
             <div
                 style="width:80px;height:80px;border:4px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 1s linear infinite;">
             </div>
@@ -98,13 +119,12 @@
     <script>
         // DEBUG: Show errors on screen
         window.onerror = function (msg, url, line, col, error) {
-            alert('Error: ' + msg);
             var fallback = document.getElementById('loading-fallback');
             if (fallback) {
-                fallback.innerHTML = '<div style="padding:20px;text-align:center;color:white;direction:rtl;">' +
+                fallback.innerHTML = '<div style="padding:20px;text-align:center;color:white;direction:rtl;background:#111827;">' +
                     '<h2>حدث خطأ</h2>' +
                     '<p style="font-size:14px;opacity:0.8;">يرجى تحديث الصفحة</p>' +
-                    '<button onclick="location.reload()" style="margin-top:20px;padding:10px 30px;background:white;color:#0c4a3e;border:none;border-radius:8px;font-size:16px;cursor:pointer;">تحديث الصفحة</button>' +
+                    '<button onclick="location.reload()" style="margin-top:20px;padding:10px 30px;background:white;color:#111827;border:none;border-radius:8px;font-size:16px;cursor:pointer;">تحديث الصفحة</button>' +
                     '<p style="font-size:10px;margin-top:20px;opacity:0.5;user-select:all;">' + msg + '</p>' +
                     '</div>';
             }
@@ -120,7 +140,6 @@
         if ('caches' in window) {
             caches.keys().then(function (names) {
                 names.forEach(function (name) {
-                    // Unconditionally delete all caches to clear corruption
                     if (name.indexOf('mihrab-app-v') !== -1 && name !== 'mihrab-app-v75') {
                         console.log('Deleting cache: ' + name);
                         caches.delete(name);
@@ -131,4 +150,5 @@
     </script>
     <script type="module" src="/src/main.tsx"></script>
 </body>
+
 </html>

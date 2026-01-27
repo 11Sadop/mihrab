@@ -77,26 +77,6 @@ async function sendSettingsToServiceWorker(settings: NotificationSettings): Prom
     }
 }
 
-// ===== FIX: Global deduplication for notifications =====
-const recentNotifications = new Set<string>();
-const NOTIFICATION_DEBOUNCE_MS = 60000; // 1 minute debounce
-
-function getNotificationKey(title: string, body: string): string {
-    return `${title}::${body}`;
-}
-
-function canSendNotification(title: string, body: string): boolean {
-    const key = getNotificationKey(title, body);
-    if (recentNotifications.has(key)) {
-        return false;
-    }
-    recentNotifications.add(key);
-    setTimeout(() => {
-        recentNotifications.delete(key);
-    }, NOTIFICATION_DEBOUNCE_MS);
-    return true;
-}
-
 export async function schedulePrayerNotificationsInSW(
     prayerTimes: Record<string, string>,
     iqamaTimes: Record<string, string>
@@ -212,9 +192,6 @@ export function useNotifications() {
         if (!('Notification' in window)) return;
         const currentSettings = getStoredSettings();
         if (Notification.permission !== 'granted' || !currentSettings.enabled) return;
-
-        // Prevent duplicate notifications
-        if (!canSendNotification(title, body)) return;
 
         try {
             const notification = new Notification(title, {
@@ -342,9 +319,6 @@ export function usePrayerNotifications(prayerTimings: Record<string, string> | n
         if (!isNotificationSupported) return;
         const settings = getStoredSettings();
         if (Notification.permission !== 'granted' || !settings.enabled) return;
-
-        // Prevent duplicate notifications
-        if (!canSendNotification(title, body)) return;
 
         try {
             new Notification(title, {

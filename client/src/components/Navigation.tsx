@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Clock, BookOpen, Fingerprint, Settings, Sparkles } from "lucide-react";
+import { Home, Clock, BookOpen, Fingerprint, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Navigation() {
@@ -10,7 +10,6 @@ export function Navigation() {
     { href: "/prayer-times", icon: Clock, label: "الصلوات" },
     { href: "/tafseer", icon: BookOpen, label: "التفسير" },
     { href: "/tasbeeh", icon: Fingerprint, label: "التسبيح" },
-    { href: "/assistant", icon: Sparkles, label: "المساعد" },
     { href: "/settings", icon: Settings, label: "الإعدادات" },
   ];
 
