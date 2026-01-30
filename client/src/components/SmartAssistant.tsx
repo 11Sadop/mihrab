@@ -172,4 +172,3 @@ export const SmartAssistant: React.FC = () => {
     </div>
   );
 };
-```
