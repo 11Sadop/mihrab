@@ -20,7 +20,7 @@ export const SmartAssistant: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-md mx-auto p-4 bg-white dark:bg-gray-900 rounded-2xl shadow-xl">
+    <div className="w-full max-w-2xl mx-auto p-4 bg-white dark:bg-gray-900 rounded-2xl shadow-xl">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-emerald-600 mb-2">المساعد الإسلامي الذكي 🤖</h2>
         <p className="text-gray-500 text-sm">بماذا تشعر أو ماذا تفعل الآن؟</p>

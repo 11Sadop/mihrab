@@ -38,16 +38,13 @@ export function useDailyHadith() {
   return useQuery({
     queryKey: [api.hadith.daily.path],
     queryFn: async () => {
-      // Use refresh endpoint to get a different hadith on each load
-      const res = await fetch(api.hadith.refresh.path, {
-        method: 'POST',
-        cache: 'no-store'
-      });
+      // Use daily endpoint for consistent result throughout the day
+      const res = await fetch(api.hadith.daily.path);
       if (!res.ok) throw new Error("Failed to fetch daily hadith");
       return api.hadith.daily.responses[200].parse(await res.json());
     },
-    staleTime: 0, // Always refetch on page load
-    gcTime: 1000 * 60 * 5, // 5 minutes cache
+    staleTime: 1000 * 60 * 60, // 1 hour cache
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours cache
   });
 }
 

@@ -1,6 +1,6 @@
 import { Header } from "@/components/Header";
 import { useState } from "react";
-import { Search, Loader2, Check, Star, AlertTriangle } from "lucide-react";
+import { Search, Loader2, Check, X, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -91,7 +91,7 @@ export default function HadithVerifyPage() {
                 bg: "bg-red-500/10",
                 text: "text-red-500",
                 border: "border-red-500/30",
-                icon: Star,
+                icon: X,
             };
         }
         return {

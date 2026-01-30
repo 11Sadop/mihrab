@@ -1,6 +1,6 @@
 import { Header } from "@/components/Header";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, Star } from "lucide-react";
 import { ProtectionHadithResponse } from "@shared/routes";
 
 export default function ProtectionPage() {
@@ -11,10 +11,10 @@ export default function ProtectionPage() {
   return (
     <div className="min-h-screen pb-32 bg-background">
       <Header title="أذكار الوقاية" subtitle="حصن المسلم من العين والحسد" />
-      
+
       <main className="container max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 p-4 rounded-2xl flex items-start gap-3 flex-row-reverse">
-          <ShieldCheck className="w-5 h-5 text-indigo-600 mt-0.5" />
+          <Star className="w-5 h-5 text-indigo-600 mt-0.5" />
           <p className="text-sm text-indigo-800 dark:text-indigo-300 text-right">
             أذكار وأحاديث مأثورة للوقاية من العين والحسد والشرور.
           </p>
