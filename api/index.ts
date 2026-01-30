@@ -70,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // GET /api/adhkar
     if (path === '/api/adhkar' && method === 'GET') {
       const category = req.query.category as string | undefined;
-      const result = category 
+      const result = category
         ? await sql`SELECT * FROM adhkar WHERE category = ${category}`
         : await sql`SELECT * FROM adhkar`;
       return res.json(toCamelCase(result));
@@ -90,12 +90,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Get total count of hadiths
       const countResult = await sql`SELECT count(*) as count FROM hadiths`;
       const totalCount = Number(countResult[0]?.count) || 1;
-      
+
       // Use date to determine which hadith to show (rotates daily)
       const today = new Date();
       const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
       const hadithIndex = dayOfYear % totalCount;
-      
+
       const result = await sql`SELECT * FROM hadiths LIMIT 1 OFFSET ${hadithIndex}`;
       if (result.length === 0) {
         // Fallback to first hadith if offset fails
@@ -196,13 +196,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (key !== 'mihrab2024') {
         return res.status(403).json({ error: 'Unauthorized' });
       }
-      
+
       const today = new Date().toISOString().split('T')[0];
-      
+
       const totalResult = await sql`SELECT COALESCE(SUM(visit_count), 0)::int as total FROM page_visits`;
       const todayResult = await sql`SELECT COALESCE(SUM(visit_count), 0)::int as today FROM page_visits WHERE visit_date = ${today}`;
       const pagesResult = await sql`SELECT page, SUM(visit_count)::int as count FROM page_visits GROUP BY page ORDER BY count DESC`;
-      
+
       const last7Days: { date: string; count: number }[] = [];
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
@@ -211,7 +211,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const dayResult = await sql`SELECT COALESCE(SUM(visit_count), 0)::int as count FROM page_visits WHERE visit_date = ${dateStr}`;
         last7Days.push({ date: dateStr, count: Number(dayResult[0]?.count) || 0 });
       }
-      
+
       return res.json({
         totalVisits: Number(totalResult[0]?.total) || 0,
         todayVisits: Number(todayResult[0]?.today) || 0,
@@ -227,7 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const offset = (page - 1) * limit;
       const bookNum = req.query.book ? parseInt(req.query.book as string) : null;
       const search = req.query.search as string || '';
-      
+
       // Get books list - separate query to ensure it works
       let booksResult: any[] = [];
       try {
@@ -235,7 +235,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (e) {
         console.error('Books query error:', e);
       }
-      
+
       let result, countResult;
       if (search) {
         const searchPattern = `%${search}%`;
@@ -248,11 +248,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         result = await sql`SELECT * FROM bukhari_hadiths LIMIT ${limit} OFFSET ${offset}`;
         countResult = await sql`SELECT count(*) as count FROM bukhari_hadiths`;
       }
-      
-      return res.json({ 
-        hadiths: toCamelCase(result), 
-        total: Number(countResult[0]?.count) || 0, 
-        books: toCamelCase(booksResult) 
+
+      return res.json({
+        hadiths: toCamelCase(result),
+        total: Number(countResult[0]?.count) || 0,
+        books: toCamelCase(booksResult)
       });
     }
 
@@ -263,7 +263,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const offset = (page - 1) * limit;
       const bookNum = req.query.book ? parseInt(req.query.book as string) : null;
       const search = req.query.search as string || '';
-      
+
       // Get books list - separate query to ensure it works
       let booksResult: any[] = [];
       try {
@@ -271,7 +271,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (e) {
         console.error('Books query error:', e);
       }
-      
+
       let result, countResult;
       if (search) {
         const searchPattern = `%${search}%`;
@@ -284,33 +284,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         result = await sql`SELECT * FROM muslim_hadiths LIMIT ${limit} OFFSET ${offset}`;
         countResult = await sql`SELECT count(*) as count FROM muslim_hadiths`;
       }
-      
-      return res.json({ 
-        hadiths: toCamelCase(result), 
-        total: Number(countResult[0]?.count) || 0, 
-        books: toCamelCase(booksResult) 
+
+      return res.json({
+        hadiths: toCamelCase(result),
+        total: Number(countResult[0]?.count) || 0,
+        books: toCamelCase(booksResult)
       });
     }
 
-    // GET /api/hadith/verification
-    if (path === '/api/hadith/verification' && method === 'GET') {
-      const search = req.query.q as string;
-      if (!search || search.trim().length < 3) {
-        return res.status(400).json({ error: "Search text too short" });
+    // GET /api/hadith/verify (Dorar.net Proxy)
+    if ((path === '/api/hadith/verify' || path === '/api/hadith/verification') && method === 'GET') {
+      const skey = req.query.skey as string || req.query.q as string;
+      const grade = req.query.grade as string;
+
+      if (!skey) {
+        return res.status(400).json({ error: "Search text is required" });
       }
-      // Use improved search that handles tashkeel and alef variations
-      const result = await sql`
-        SELECT * FROM verification_hadiths 
-        WHERE translate(
-          regexp_replace(text, '[\u064B-\u065F\u0670]', '', 'g'),
-          'أإآ', 'ااا'
-        ) ILIKE '%' || translate(
-          regexp_replace(${search}, '[\u064B-\u065F\u0670]', '', 'g'),
-          'أإآ', 'ااا'
-        ) || '%'
-        LIMIT 100
-      `;
-      return res.json(toCamelCase(result));
+
+      try {
+        let dorarUrl = 'https://dorar.net/dorar_api.json?skey=' + encodeURIComponent(skey);
+        if (grade === 'sahih') dorarUrl += '&d[]=1';
+
+        const response = await fetch(dorarUrl);
+        const data: any = await response.json();
+        const html = data?.ahadith?.result || '';
+
+        const results: any[] = [];
+
+        // Primary Regex (Detailed)
+        // Extract text and grade if possible
+        const regex = /<div class="hadith-text">([\s\S]*?)<\/div>[\s\S]*?<span class="info-subtitle">حكم المحدث:<\/span>\s*<span[^>]*>([\s\S]*?)<\/span>/g;
+
+        let m;
+        while ((m = regex.exec(html)) !== null) {
+          const text = m[1].replace(/<[^>]+>/g, '').trim();
+          const grade = m[2].replace(/<[^>]+>/g, '').trim();
+          results.push({
+            text: text.substring(0, 300) + (text.length > 300 ? '...' : ''),
+            grade: grade,
+            source: "الدرر السنية",
+            narrator: "انظر المصدر",
+            scholar: "انظر المصدر"
+          });
+        }
+
+        // Fallback Regex (Simple - from Guide)
+        if (results.length === 0) {
+          const fallbackRegex = /<span[^>]*primary[^>]*>([^<]+)/g;
+          let m2;
+          while ((m2 = fallbackRegex.exec(html)) !== null && results.length < 10) {
+            if (m2[1].length > 20) {
+              results.push({
+                text: m2[1].trim(),
+                grade: 'راجع المصدر',
+                source: 'dorar.net',
+                narrator: "غير متوفر",
+                scholar: "غير متوفر"
+              });
+            }
+          }
+        }
+
+        res.json({ results });
+
+      } catch (e: any) {
+        console.error('Dorar Proxy Error:', e);
+        res.status(500).json({ error: e.message });
+      }
+      return;
     }
 
     // GET /api/hadith/verification/stats
@@ -320,7 +361,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const hasan = await sql`SELECT count(*) as count FROM verification_hadiths WHERE status = 'حسن'`;
       const daif = await sql`SELECT count(*) as count FROM verification_hadiths WHERE status = 'ضعيف'`;
       const mawdu = await sql`SELECT count(*) as count FROM verification_hadiths WHERE status = 'موضوع'`;
-      return res.json({ 
+      return res.json({
         total: Number(total[0]?.count) || 0,
         byGrade: {
           'صحيح': Number(sahih[0]?.count) || 0,
@@ -360,7 +401,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stack: error?.stack,
       name: error?.name
     });
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Internal server error",
       details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
