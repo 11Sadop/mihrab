@@ -1,6 +1,6 @@
 import { initializeFirebaseMessaging } from './lib/firebase-push';
 import { Switch, Route } from "wouter";
-import HadithPage from "@/pages/HadithPage";
+
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -122,7 +122,7 @@ function Router() {
         <Route path="/prayer-times" component={PrayerTimes} />
         <Route path="/adhkar" component={AdhkarPage} />
         <Route path="/duas" component={DuasPage} />
-        <Route path="/hadith" component={HadithPage} />
+        <Route path="/hadith" component={HadithCollectionsPage} />
         <Route path="/tasbeeh" component={TasbeehPage} />
         <Route path="/ward" component={WardPage} />
         <Route path="/protection" component={ProtectionPage} />
