@@ -305,32 +305,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let dorarUrl = 'https://dorar.net/dorar_api.json?skey=' + encodeURIComponent(skey);
         if (grade === 'sahih') dorarUrl += '&d[]=1';
 
-        const response = await fetch(dorarUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'application/json'
-          }
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second max timeout
 
         let html = '';
-        if (response.ok) {
-          const data: any = await response.json();
-          html = data?.ahadith?.result || '';
+        try {
+          const response = await fetch(dorarUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+              'Accept': 'application/json'
+            },
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data: any = await response.json();
+            html = data?.ahadith?.result || '';
+          }
+        } catch (e) {
+          console.log("Dorar fetch failed or timed out, using fallback");
         }
 
         const results: any[] = [];
 
-        // Static Fallback Data (if API fails or returns nothing)
+        // EXPANDED Static Fallback Data
         const STATIC_FALLBACKS: Record<string, any[]> = {
           'نية': [{ text: "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى...", grade: "صحيح", source: "البخاري" }],
-          'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري" }],
-          'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده", grade: "صحيح", source: "مسلم" }]
+          'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري" }, { text: "أول ما يحاسب به العبد يوم القيامة الصلاة", grade: "صحيح", source: "الطبراني" }],
+          'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده", grade: "صحيح", source: "مسلم" }, { text: "الطهور شطر الإيمان", grade: "صحيح", source: "مسلم" }],
+          'زكاة': [{ text: "بني الإسلام على خمس... وإيتاء الزكاة", grade: "صحيح", source: "متفق عليه" }],
+          'حج': [{ text: "من حج لله فلم يرفث ولم يفسق رجع كيوم ولدته أمه", grade: "صحيح", source: "البخاري" }],
+          'صوم': [{ text: "من صام رمضان إيماناً واحتساباً غفر له ما تقدم من ذنبه", grade: "متفق عليه" }],
+          'قرآن': [{ text: "خيركم من تعلم القرآن وعلمه", grade: "صحيح", source: "البخاري" }],
+          'ذكر': [{ text: "ألا بذكر الله تطمئن القلوب", grade: "قرآن كريم", source: "الرعد" }, { text: "مثل الذي يذكر ربه والذي لا يذكر ربه مثل الحي والميت", grade: "صحيح", source: "البخاري" }],
+          'دعاء': [{ text: "الدعاء هو العبادة", grade: "صحيح", source: "الترمذي" }],
+          'أم': [{ text: "الجنة تحت أقدام الأمهات (حديث ضعيف، والصحيح: الزم رجلها فثم الجنة)", grade: "ضعيف/صحيح المعنى", source: "النسائي" }],
+          'أب': [{ text: "رغم أنف، ثم رغم أنف، ثم رغم أنف، قيل: من يا رسول الله؟ قال: من أدرك أبويه عند الكبر...", grade: "صحيح", source: "مسلم" }],
+          'بر': [{ text: "البر حسن الخلق", grade: "صحيح", source: "مسلم" }],
+          'جار': [{ text: "ما زال جبريل يوصيني بالجار حتى ظننت أنه سيورثه", grade: "متفق عليه" }],
+          'سفر': [{ text: "ثلاث دعوات مستجابات: دعوة المظلوم، ودعوة المسافر...", grade: "حسن", source: "الترمذي" }],
+          'مرض': [{ text: "ما من مسلم يصيبه أذى شوكة فما فوقها إلا كفر الله بها سيئاته", grade: "متفق عليه" }],
+          'جمعة': [{ text: "خير يوم طلعت عليه الشمس يوم الجمعة", grade: "صحيح", source: "مسلم" }],
+          'وتر': [{ text: "اجعلوا آخر صلاتكم بالليل وتراً", grade: "متفق عليه" }],
+          'فجر': [{ text: "ركعتا الفجر خير من الدنيا وما فيها", grade: "صحيح", source: "مسلم" }],
+          'ضحى': [{ text: "يصبح على كل سلامى من أحدكم صدقة... ويجزئ من ذلك ركعتان يركعهما من الضحى", grade: "صحيح", source: "مسلم" }]
         };
 
-        // Check static fallback if query matches key
+        // Check static fallback if query matches key (Loose matching)
         for (const key in STATIC_FALLBACKS) {
-          if (skey.includes(key) && html.length < 100) {
-            results.push(...STATIC_FALLBACKS[key]);
+          if (skey.includes(key) || key.includes(skey)) {
+            // Prevent duplicates if API worked partially
+            if (results.length < 5) {
+              results.push(...STATIC_FALLBACKS[key]);
+            }
           }
         }
 
