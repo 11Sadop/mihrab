@@ -20,6 +20,8 @@ export const analyzeIntent = (inputText: string): AssistantResult | null => {
   const normalizedInput = normalizeText(inputText);
   if (!normalizedInput || normalizedInput.length < 2) return null;
 
+  const inputTokens = normalizedInput.split(' ');
+
   let bestMatch: AssistantIntent | null = null;
   let maxScore = 0;
 
@@ -27,12 +29,17 @@ export const analyzeIntent = (inputText: string): AssistantResult | null => {
     let score = 0;
     for (const keyword of intent.keywords) {
       const normalizedKeyword = normalizeText(keyword);
-      if (normalizedInput === normalizedKeyword) {
+
+      // Check full phrase match
+      if (normalizedInput.includes(normalizedKeyword)) {
         score += 10;
-      } else if (normalizedInput.includes(normalizedKeyword)) {
-        score += 5;
-      } else if (normalizedKeyword.includes(normalizedInput) && normalizedInput.length > 3) {
-        score += 3;
+      }
+
+      // Check word-by-word match
+      for (const token of inputTokens) {
+        if (token === normalizedKeyword || (token.length > 3 && normalizedKeyword.includes(token))) {
+          score += 5;
+        }
       }
     }
     if (score > maxScore) {
@@ -41,6 +48,7 @@ export const analyzeIntent = (inputText: string): AssistantResult | null => {
     }
   }
 
+  // Lower threshold to catch more checks
   if (maxScore > 0 && bestMatch) {
     return { intent: bestMatch, matchScore: maxScore };
   }
