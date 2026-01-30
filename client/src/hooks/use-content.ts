@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 
 // Adhkar Hooks
@@ -49,4 +49,12 @@ export function useDailyHadith() {
     staleTime: 0, // Always refetch on page load
     gcTime: 1000 * 60 * 5, // 5 minutes cache
   });
+}
+
+// Manual Refresh Hook
+export function useManualHadithRefresh() {
+  const queryClient = useQueryClient();
+  return async () => {
+    await queryClient.invalidateQueries({ queryKey: [api.hadith.daily.path] });
+  };
 }
