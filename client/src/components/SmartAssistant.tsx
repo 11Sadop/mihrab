@@ -52,21 +52,31 @@ export const SmartAssistant: React.FC = () => {
             <h3 className="text-xl font-bold text-emerald-800">{result.title}</h3>
           </div>
           {result.duas.map((dua, idx) => (
-            <div key={idx} className="bg-white p-3 rounded-lg mb-2">
-              <p>{dua.text}</p>
-              {dua.source && <span className="text-xs text-emerald-500">{dua.source}</span>}
+            <div key={idx} className="bg-white border border-gray-100 p-4 rounded-xl mb-3 shadow-sm">
+              <p className="text-gray-800 text-lg leading-relaxed font-arabic mb-2">{dua.text}</p>
+              {dua.source && <p className="text-xs text-emerald-600 font-bold">{dua.source}</p>}
             </div>
           ))}
           {result.sunan.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-bold text-indigo-600 mb-2">🌟 سنن:</h4>
-              <ul className="list-disc list-inside">
-                {result.sunan.map((s, i) => <li key={i}>{s}</li>)}
+            <div className="mt-6 border-t border-emerald-100 pt-4">
+              <h4 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
+                <span>🌟</span> سنن مهجورة:
+              </h4>
+              <ul className="space-y-2">
+                {result.sunan.map((s, i) => (
+                  <li key={i} className="flex items-start gap-2 text-gray-700 bg-white/50 p-2 rounded-lg">
+                    <span className="text-emerald-500 mt-1">•</span>
+                    <span className="leading-relaxed">{s}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           )}
           {result.alert && (
-            <div className="mt-4 bg-amber-50 p-3 rounded-lg text-amber-800">💡 {result.alert}</div>
+            <div className="mt-4 bg-amber-50 border border-amber-100 p-4 rounded-xl text-amber-900 flex items-start gap-3">
+              <span className="text-xl">💡</span>
+              <p className="text-sm font-medium leading-relaxed">{result.alert}</p>
+            </div>
           )}
         </div>
       )}

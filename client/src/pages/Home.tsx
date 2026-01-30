@@ -14,8 +14,7 @@ import {
   Search,
   Library,
   ChevronLeft,
-  RotateCcw,
-  Bot
+  RotateCcw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -71,22 +70,6 @@ export default function Home() {
 
       {/* 2. Top Stacked Cards (Books & Verification) */}
       <section className="grid gap-3">
-        {/* Smart Assistant Card */}
-        <Link href="/assistant">
-          <div className="bg-[#0f172a] hover:bg-[#1e293b] text-white p-4 rounded-2xl flex items-center justify-between group transition-colors cursor-pointer border border-white/5 border-l-4 border-l-emerald-500">
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-[#1e293b] rounded-xl text-emerald-400">
-                <Bot className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm sm:text-base">المساعد الذكي</h3>
-                <p className="text-xs text-slate-400 mt-0.5">اسأل وسأجيبك بالأذكار المناسبة</p>
-              </div>
-            </div>
-            <ChevronLeft className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
-          </div>
-        </Link>
-
         {/* Authentic Books Card */}
         <Link href="/hadith-collections">
           <div className="bg-[#0f172a] hover:bg-[#1e293b] text-white p-4 rounded-2xl flex items-center justify-between group transition-colors cursor-pointer border border-white/5">

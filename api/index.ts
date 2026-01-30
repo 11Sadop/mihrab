@@ -305,11 +305,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let dorarUrl = 'https://dorar.net/dorar_api.json?skey=' + encodeURIComponent(skey);
         if (grade === 'sahih') dorarUrl += '&d[]=1';
 
-        const response = await fetch(dorarUrl);
-        const data: any = await response.json();
-        const html = data?.ahadith?.result || '';
+        const response = await fetch(dorarUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json'
+          }
+        });
+
+        let html = '';
+        if (response.ok) {
+          const data: any = await response.json();
+          html = data?.ahadith?.result || '';
+        }
 
         const results: any[] = [];
+
+        // Static Fallback Data (if API fails or returns nothing)
+        const STATIC_FALLBACKS: Record<string, any[]> = {
+          'نية': [{ text: "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى...", grade: "صحيح", source: "البخاري" }],
+          'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري" }],
+          'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده", grade: "صحيح", source: "مسلم" }]
+        };
+
+        // Check static fallback if query matches key
+        for (const key in STATIC_FALLBACKS) {
+          if (skey.includes(key) && html.length < 100) {
+            results.push(...STATIC_FALLBACKS[key]);
+          }
+        }
 
         // Primary Regex (Detailed)
         // Extract text and grade if possible
