@@ -23,7 +23,7 @@ export const HadithVerifier: React.FC = () => {
         setResults([]);
 
         try {
-            let url = `/api/hadith/verify?skey=${encodeURIComponent(query)}`;
+            let url = `/api/hadith-search?skey=${encodeURIComponent(query)}`;
             if (filterSahih) {
                 url += '&grade=sahih';
             }

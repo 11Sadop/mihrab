@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { analyzeIntent } from '../utils/AssistantLogic';
 import { AssistantIntent } from '../data/SmartAssistantData';
-import { Quote, Book, ArrowRight, Search, Sparkles } from 'lucide-react';
+import { Quote, Book, ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const SmartAssistant: React.FC = () => {
@@ -107,8 +107,8 @@ export const SmartAssistant: React.FC = () => {
             {result.alert && (
               <div className="mb-8 relative overflow-hidden bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 rounded-2xl p-5 border border-amber-100 dark:border-amber-900/50">
                 <div className="flex items-start gap-3 relative z-10">
-                  <div className="bg-amber-100 dark:bg-amber-900/50 p-2 rounded-lg text-amber-600 dark:text-amber-400">
-                    <Sparkles className="w-6 h-6 fill-current" />
+                  <div className="bg-amber-100 dark:bg-amber-900/50 p-2.5 rounded-lg text-2xl">
+                    ☀️
                   </div>
                   <div>
                     <h4 className="font-bold text-amber-800 dark:text-amber-400 mb-1">فضل هذا العمل:</h4>
@@ -145,7 +145,7 @@ export const SmartAssistant: React.FC = () => {
                         )}
                         {dua.fadl && (
                           <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-800/50">
-                            <Sparkles className="w-3 h-3" />
+                            <span>☀️</span>
                             فضل: {dua.fadl}
                           </div>
                         )}
