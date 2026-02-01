@@ -37,7 +37,6 @@ export const SmartAssistant: React.FC = () => {
   return (
     <div className="w-full max-w-2xl mx-auto p-4 bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 transition-all duration-300">
 
-      {/* Header & Search Area - Hide when result is active for cleaner look, or keep? User wanted "Back" */}
       {!result ? (
         <>
           <div className="text-center mb-8">
@@ -104,7 +103,7 @@ export const SmartAssistant: React.FC = () => {
               </div>
             </div>
 
-            {/* Virtue Section (Fadl) */}
+            {/* Virtue Section (Fadl of the Action General) */}
             {result.alert && (
               <div className="mb-8 relative overflow-hidden bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 rounded-2xl p-5 border border-amber-100 dark:border-amber-900/50">
                 <div className="flex items-start gap-3 relative z-10">
@@ -130,17 +129,27 @@ export const SmartAssistant: React.FC = () => {
                 </h4>
                 <div className="grid gap-4">
                   {result.duas.map((dua, idx) => (
-                    <div key={idx} className="relative group overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 hover:border-emerald-500 dark:hover:border-emerald-600 rounded-2xl p-6 transition-all hover:shadow-lg">
-                      <p className="relative text-xl text-gray-800 dark:text-gray-100 leading-loose font-arabic text-center">
-                        "{dua.text}"
+                    <div key={idx} className="relative group bg-gradient-to-br from-emerald-50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-900/10 border-r-4 border-r-emerald-500 rounded-xl p-5 hover:shadow-md transition-all">
+                      <div className="absolute top-0 left-0 p-2 opacity-5">
+                        <Quote className="w-12 h-12 text-emerald-800" />
+                      </div>
+                      <p className="relative text-gray-800 dark:text-gray-200 text-lg leading-loose font-arabic mb-3">
+                        {dua.text}
                       </p>
-                      {dua.source && (
-                        <div className="mt-4 flex justify-end">
-                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+                        {dua.source && (
+                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-white/60 dark:bg-black/20 px-2 py-1 rounded-lg">
+                            <Book className="w-3 h-3" />
                             {dua.source}
-                          </span>
-                        </div>
-                      )}
+                          </div>
+                        )}
+                        {dua.fadl && (
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-800/50">
+                            <Sparkles className="w-3 h-3" />
+                            فضل: {dua.fadl}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -148,20 +157,44 @@ export const SmartAssistant: React.FC = () => {
 
               {/* Sunan Section */}
               {result.sunan.length > 0 && (
-                <div>
-                  <h4 className="font-bold text-gray-800 dark:text-gray-200 text-lg mb-4 flex items-center gap-2 mt-8">
-                    <Book className="w-5 h-5 text-indigo-500" />
-                    السنن المهجورة:
-                  </h4>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    {result.sunan.map((s, i) => (
-                      <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-100 transition-colors">
-                        <div className="w-8 h-8 flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full font-bold text-sm shrink-0">
-                          {i + 1}
+                <div className="mt-8">
+                  <div className="flex items-center gap-2 mb-4 bg-amber-50 dark:bg-amber-900/20 w-fit px-3 py-1.5 rounded-full border border-amber-100 dark:border-amber-800">
+                    <span className="text-lg">🌟</span>
+                    <h4 className="font-bold text-amber-800 dark:text-amber-400">سنن مهجورة حافظ عليها</h4>
+                  </div>
+
+                  <div className="grid gap-3">
+                    {result.sunan.map((s, i) => {
+                      const text = typeof s === 'string' ? s : s.text;
+                      const fadl = typeof s === 'string' ? null : s.fadl;
+                      return (
+                        <div key={i} className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors border border-transparent hover:border-amber-100/50">
+                          <div className="flex items-start gap-3">
+                            <div className="min-w-[24px] h-6 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-bold mt-0.5">
+                              {i + 1}
+                            </div>
+                            <span className="text-gray-700 dark:text-gray-300 leading-relaxed font-medium">{text}</span>
+                          </div>
+                          {fadl && (
+                            <div className="mr-9 text-xs text-amber-600/80 dark:text-amber-400/80 flex items-center gap-1">
+                              <span>✨</span> {fadl}
+                            </div>
+                          )}
                         </div>
-                        <span className="text-gray-700 dark:text-gray-300 font-medium">{s}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {result.alert && (
+                <div className="mt-6 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl flex gap-3">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-full h-fit">
+                    <span className="text-xl">💡</span>
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-indigo-900 dark:text-indigo-300 mb-1">هل تعلم؟</h5>
+                    <p className="text-sm text-indigo-800 dark:text-indigo-200 leading-relaxed">{result.alert}</p>
                   </div>
                 </div>
               )}

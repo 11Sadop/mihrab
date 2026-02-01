@@ -27,28 +27,36 @@ export const analyzeIntent = (inputText: string): AssistantResult | null => {
 
   for (const intent of SMART_ASSISTANT_DATA) {
     let score = 0;
+
+    // 1. Keyword Matching (High Priority)
     for (const keyword of intent.keywords) {
       const normalizedKeyword = normalizeText(keyword);
-
-      // Check full phrase match
-      if (normalizedInput.includes(normalizedKeyword)) {
-        score += 10;
-      }
-
-      // Check word-by-word match
+      if (normalizedInput.includes(normalizedKeyword)) score += 20;
       for (const token of inputTokens) {
-        if (token === normalizedKeyword || (token.length > 3 && normalizedKeyword.includes(token))) {
-          score += 5;
-        }
+        if (token === normalizedKeyword) score += 10;
       }
     }
+
+    // 2. Deep Content Matching (Medium Priority)
+    // Search in Duas
+    for (const dua of intent.duas) {
+      const normDua = normalizeText(dua.text);
+      if (normDua.includes(normalizedInput)) score += 15;
+    }
+
+    // Search in Sunan
+    for (const sunnah of intent.sunan) {
+      const text = typeof sunnah === 'string' ? sunnah : sunnah.text;
+      const normSunnah = normalizeText(text);
+      if (normSunnah.includes(normalizedInput)) score += 15;
+    }
+
     if (score > maxScore) {
       maxScore = score;
       bestMatch = intent;
     }
   }
 
-  // Lower threshold to catch more checks
   if (maxScore > 0 && bestMatch) {
     return { intent: bestMatch, matchScore: maxScore };
   }
