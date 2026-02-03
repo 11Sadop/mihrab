@@ -442,6 +442,91 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ]);
     }
 
+    // GET /api/hadith-search - Search hadiths via Dorar API
+    if (path === '/api/hadith-search' && method === 'GET') {
+      try {
+        const skey = req.query.skey as string;
+        const grade = req.query.grade as string;
+
+        if (!skey) {
+          return res.status(400).json({ error: 'Missing skey parameter' });
+        }
+
+        let url = 'https://dorar.net/dorar_api.json?skey=' + encodeURIComponent(skey);
+        if (grade === 'sahih') url += '&d[]=1';
+
+        console.log('[Hadith Search] Fetching:', url);
+
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Dorar API returned ' + response.status);
+        }
+
+        const data = await response.json();
+        const html = data?.ahadith?.result;
+
+        if (!html) {
+          return res.status(200).json({ results: [], message: 'لم يتم العثور على نتائج' });
+        }
+
+        const clean = (s: string) => {
+          if (!s) return '';
+          return s.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim();
+        };
+
+        const results: any[] = [];
+        const blocks = html.split(/<div class="hadith"[^>]*>/i);
+
+        for (let i = 1; i < blocks.length && results.length < 15; i++) {
+          const block = blocks[i];
+          if (!block || block.length < 50) continue;
+
+          // Extract text (before hadith-info div)
+          const infoSplit = block.split(/<div class="hadith-info"[^>]*>/i);
+          let text = clean(infoSplit[0]).replace(/^\d+\s*[-–]\s*/, '');
+
+          if (!text || text.length < 10) continue;
+
+          const infoSection = infoSplit.length > 1 ? infoSplit[1] : block;
+
+          // Helper to extract field value
+          const extractField = (fieldName: string) => {
+            const patterns = [
+              new RegExp(fieldName + '[:\\s]*</span>\\s*([^<]+)', 'i'),
+              new RegExp(fieldName + '[:\\s]+([^<\\n]+)', 'i'),
+              new RegExp('>' + fieldName + '[:\\s]*([^<]+)<', 'i')
+            ];
+            for (const pattern of patterns) {
+              const match = infoSection.match(pattern);
+              if (match && match[1]) return clean(match[1]);
+            }
+            return '';
+          };
+
+          results.push({
+            text: text.substring(0, 500),
+            narrator: extractField('الراوي') || 'غير محدد',
+            source: extractField('المصدر') || 'غير محدد',
+            scholar: extractField('المحدث') || '',
+            grade: extractField('خلاصة حكم المحدث') || extractField('الحكم') || extractField('الدرجة') || 'غير محدد'
+          });
+        }
+
+        console.log('[Hadith Search] Returning', results.length, 'results');
+        return res.status(200).json({ results, total: results.length });
+
+      } catch (e: any) {
+        console.error('[Hadith Search] Error:', e.message);
+        return res.status(500).json({ error: 'حدث خطأ أثناء البحث', details: e.message });
+      }
+    }
+
     console.log(`Route not found: ${method} ${path}`);
     return res.status(404).json({ error: "Not found", path, method });
   } catch (error: any) {
