@@ -28,16 +28,35 @@ export const HadithVerifier: React.FC = () => {
                 url += '&grade=sahih';
             }
 
+            console.log('[HadithVerifier] Calling:', url);
             const response = await fetch(url);
-            const data = await response.json();
+            console.log('[HadithVerifier] Response status:', response.status);
+
+            const text = await response.text();
+            console.log('[HadithVerifier] Raw response (first 500 chars):', text.substring(0, 500));
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (parseErr) {
+                console.error('[HadithVerifier] JSON parse error:', parseErr);
+                setError('خطأ في تحليل الرد من السيرفر');
+                return;
+            }
+
+            console.log('[HadithVerifier] Parsed data:', data);
+            console.log('[HadithVerifier] Results count:', data.results?.length || 0);
 
             if (data.error) {
-                setError(data.error);
+                setError(data.error + (data.details ? ` (${data.details})` : ''));
+            } else if (!data.results || data.results.length === 0) {
+                setError('لم يتم العثور على نتائج. جرب كلمات أخرى.');
             } else {
-                setResults(sortBySourcePriority(removeDuplicates(data.results || [])));
+                setResults(sortBySourcePriority(removeDuplicates(data.results)));
             }
-        } catch (err) {
-            setError('حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.');
+        } catch (err: any) {
+            console.error('[HadithVerifier] Fetch error:', err);
+            setError('حدث خطأ أثناء البحث: ' + (err?.message || 'خطأ غير معروف'));
         } finally {
             setLoading(false);
         }
