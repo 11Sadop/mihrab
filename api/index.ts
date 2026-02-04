@@ -552,7 +552,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
           }
 
-          // Fallback: look for common grade words anywhere in the info section
+          // Fallback: look for common grade words in the ENTIRE block (not just info section)
           if (!grade) {
             const gradeWords = [
               'إسناده صحيح على شرط',
@@ -564,6 +564,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               'متفق عليه',
               'صحيح لغيره',
               'حسن لغيره',
+              'ضعيف جداً',
               'ضعيف جدا',
               'صحيح',
               'حسن',
@@ -575,8 +576,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               'غريب'
             ];
 
+            // Search in entire block for grade words
+            const searchText = block.replace(/\\\//g, '/');
             for (const word of gradeWords) {
-              if (unescapedInfo.includes(word)) {
+              if (searchText.includes(word)) {
                 grade = word;
                 break;
               }
