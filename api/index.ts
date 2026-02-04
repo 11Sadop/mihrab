@@ -596,7 +596,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         console.log('[Hadith Search] Returning', results.length, 'results');
-        return res.status(200).json({ results, total: results.length });
+
+        // Add debug info to see raw HTML structure
+        const firstBlock = blocks[1] || '';
+        const infoStart = firstBlock.indexOf('hadith-info');
+        const debugInfo = infoStart > -1 ? firstBlock.substring(infoStart, infoStart + 500) : firstBlock.substring(0, 500);
+
+        return res.status(200).json({
+          results,
+          total: results.length,
+          debug: {
+            blocksFound: blocks.length - 1,
+            htmlLength: html.length,
+            sampleInfo: debugInfo
+          }
+        });
 
       } catch (e: any) {
         console.error('[Hadith Search] Error:', e.message);
