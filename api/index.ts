@@ -460,7 +460,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const response = await fetch(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json'
+            'Accept': 'application/json; charset=utf-8',
+            'Accept-Charset': 'utf-8',
+            'Accept-Language': 'ar,en'
           }
         });
 
@@ -468,7 +470,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           throw new Error('Dorar API returned ' + response.status);
         }
 
-        const data = await response.json();
+        // Read as text first to handle encoding properly
+        const textResponse = await response.text();
+        let data;
+        try {
+          data = JSON.parse(textResponse);
+        } catch (e) {
+          console.error('[Hadith Search] JSON parse error:', e);
+          return res.status(500).json({ error: 'Failed to parse Dorar response' });
+        }
+
         const html = data?.ahadith?.result;
 
         if (!html) {
