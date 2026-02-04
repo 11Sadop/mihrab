@@ -518,17 +518,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return '';
           };
 
-          // Try multiple ways to extract grade
-          let grade = extractField('خلاصة حكم المحدث');
-          if (!grade || grade === 'غير محدد') grade = extractField('خلاصة الحكم');
-          if (!grade || grade === 'غير محدد') grade = extractField('الحكم');
-          if (!grade || grade === 'غير محدد') grade = extractField('الدرجة');
-          if (!grade || grade === 'غير محدد') grade = extractField('التخريج');
+          // Try multiple ways to extract grade - Dorar format: <span class="info-subtitle">خلاصة حكم المحدث:</span>  <span >VALUE</span>
+          let grade = '';
 
-          // Last resort: look for common grade words in the info section
-          if (!grade || grade === 'غير محدد') {
-            const gradeMatch = infoSection.match(/(صحيح|حسن|ضعيف|موضوع|منكر|متفق عليه|إسناده صحيح|إسناده ضعيف|رجاله ثقات)/i);
-            if (gradeMatch) grade = gradeMatch[1];
+          // Pattern for Dorar: label</span>...<span...>VALUE</span>
+          const gradePattern = /خلاصة حكم المحدث[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i;
+          const gradeMatch = infoSection.match(gradePattern);
+          if (gradeMatch && gradeMatch[1]) {
+            grade = clean(gradeMatch[1]);
+          }
+
+          // Fallback: try other patterns
+          if (!grade) {
+            const fallbackPattern = /الحكم[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i;
+            const fallbackMatch = infoSection.match(fallbackPattern);
+            if (fallbackMatch && fallbackMatch[1]) grade = clean(fallbackMatch[1]);
+          }
+
+          // Last resort: look for common grade words anywhere in the info section
+          if (!grade) {
+            const wordMatch = infoSection.match(/(صحيح|حسن صحيح|حسن|ضعيف جدا|ضعيف|موضوع|منكر|متفق عليه|إسناده صحيح|إسناده ضعيف|رجاله ثقات|ثابت|مقطوع)/i);
+            if (wordMatch) grade = wordMatch[1];
           }
 
           results.push({
