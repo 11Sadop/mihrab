@@ -495,26 +495,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           const infoSection = infoSplit.length > 1 ? infoSplit[1] : block;
 
-          // Helper to extract field value
+          // Helper to extract field value with multiple patterns
           const extractField = (fieldName: string) => {
             const patterns = [
+              // Pattern 1: field: </span> value
               new RegExp(fieldName + '[:\\s]*</span>\\s*([^<]+)', 'i'),
-              new RegExp(fieldName + '[:\\s]+([^<\\n]+)', 'i'),
-              new RegExp('>' + fieldName + '[:\\s]*([^<]+)<', 'i')
+              // Pattern 2: field: value (no tags)
+              new RegExp(fieldName + '[:\\s]+([^<\\n،]+)', 'i'),
+              // Pattern 3: >field: value<
+              new RegExp('>' + fieldName + '[:\\s]*([^<]+)<', 'i'),
+              // Pattern 4: class="info-subtitle">field</span> value
+              new RegExp('info-subtitle[^>]*>' + fieldName + '[^<]*</span>\\s*([^<]+)', 'i'),
+              // Pattern 5: field followed by any text until next tag
+              new RegExp(fieldName + '</span>([^<]+)', 'i'),
             ];
             for (const pattern of patterns) {
               const match = infoSection.match(pattern);
-              if (match && match[1]) return clean(match[1]);
+              if (match && match[1] && match[1].trim().length > 0) {
+                return clean(match[1]);
+              }
             }
             return '';
           };
+
+          // Try multiple ways to extract grade
+          let grade = extractField('خلاصة حكم المحدث');
+          if (!grade || grade === 'غير محدد') grade = extractField('خلاصة الحكم');
+          if (!grade || grade === 'غير محدد') grade = extractField('الحكم');
+          if (!grade || grade === 'غير محدد') grade = extractField('الدرجة');
+          if (!grade || grade === 'غير محدد') grade = extractField('التخريج');
+
+          // Last resort: look for common grade words in the info section
+          if (!grade || grade === 'غير محدد') {
+            const gradeMatch = infoSection.match(/(صحيح|حسن|ضعيف|موضوع|منكر|متفق عليه|إسناده صحيح|إسناده ضعيف|رجاله ثقات)/i);
+            if (gradeMatch) grade = gradeMatch[1];
+          }
 
           results.push({
             text: text.substring(0, 500),
             narrator: extractField('الراوي') || 'غير محدد',
             source: extractField('المصدر') || 'غير محدد',
             scholar: extractField('المحدث') || '',
-            grade: extractField('خلاصة حكم المحدث') || extractField('الحكم') || extractField('الدرجة') || 'غير محدد'
+            grade: grade || 'غير محدد'
           });
         }
 
