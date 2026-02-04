@@ -518,27 +518,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return '';
           };
 
-          // Try multiple ways to extract grade - Dorar format: <span class="info-subtitle">خلاصة حكم المحدث:</span>  <span >VALUE</span>
+          // Try multiple ways to extract grade
+          // Dorar format: <span class="info-subtitle">خلاصة حكم المحدث:</span>  <span >VALUE</span>
+          // Note: in JSON, slashes are escaped as \/
           let grade = '';
 
-          // Pattern for Dorar: label</span>...<span...>VALUE</span>
-          const gradePattern = /خلاصة حكم المحدث[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i;
-          const gradeMatch = infoSection.match(gradePattern);
-          if (gradeMatch && gradeMatch[1]) {
-            grade = clean(gradeMatch[1]);
+          // Unescape the HTML (JSON escapes forward slashes)
+          const unescapedInfo = infoSection.replace(/\\\//g, '/');
+
+          // Pattern 1: Look for grade span after the label
+          const gradePatterns = [
+            /خلاصة حكم المحدث[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i,
+            /خلاصة حكم المحدث[:\s]*<\/span>\s*([^<]+)</i,
+            /حكم المحدث[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i,
+          ];
+
+          for (const pattern of gradePatterns) {
+            const match = unescapedInfo.match(pattern);
+            if (match && match[1] && match[1].trim()) {
+              grade = clean(match[1]);
+              break;
+            }
           }
 
-          // Fallback: try other patterns
+          // Fallback: look for common grade words anywhere in the info section
           if (!grade) {
-            const fallbackPattern = /الحكم[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i;
-            const fallbackMatch = infoSection.match(fallbackPattern);
-            if (fallbackMatch && fallbackMatch[1]) grade = clean(fallbackMatch[1]);
-          }
+            const gradeWords = [
+              'إسناده صحيح على شرط',
+              'إسناده صحيح',
+              'إسناده ضعيف',
+              'صحيح على شرط',
+              'حسن صحيح',
+              'رجاله ثقات',
+              'متفق عليه',
+              'صحيح لغيره',
+              'حسن لغيره',
+              'ضعيف جدا',
+              'صحيح',
+              'حسن',
+              'ضعيف',
+              'موضوع',
+              'منكر',
+              'ثابت',
+              'مقطوع',
+              'غريب'
+            ];
 
-          // Last resort: look for common grade words anywhere in the info section
-          if (!grade) {
-            const wordMatch = infoSection.match(/(صحيح|حسن صحيح|حسن|ضعيف جدا|ضعيف|موضوع|منكر|متفق عليه|إسناده صحيح|إسناده ضعيف|رجاله ثقات|ثابت|مقطوع)/i);
-            if (wordMatch) grade = wordMatch[1];
+            for (const word of gradeWords) {
+              if (unescapedInfo.includes(word)) {
+                grade = word;
+                break;
+              }
+            }
           }
 
           results.push({
