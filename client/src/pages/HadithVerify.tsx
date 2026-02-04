@@ -31,7 +31,7 @@ export default function HadithVerifyPage() {
         setHasSearched(true);
 
         try {
-            let url = `/api/hadith/verify?skey=${encodeURIComponent(query)}`;
+            let url = `/api/hadith-search?skey=${encodeURIComponent(query)}`;
             if (filterSahih) {
                 url += "&grade=sahih";
             }
@@ -59,12 +59,13 @@ export default function HadithVerifyPage() {
                 }
                 if (!found) setError(data.error);
             } else {
-                setResults(data);
-                if (data.length === 0) {
+                const resultsList = data.results || [];
+                setResults(resultsList);
+                if (resultsList.length === 0) {
                     // Second layer fallback if data is empty array
                     const FALLBACK_DB: any = {
-                        'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري" }],
-                        'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده", grade: "صحيح", source: "مسلم" }]
+                        'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري", narrator: "", scholar: "" }],
+                        'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده", grade: "صحيح", source: "مسلم", narrator: "", scholar: "" }]
                     };
                     for (const k in FALLBACK_DB) {
                         if (query.includes(k)) {
