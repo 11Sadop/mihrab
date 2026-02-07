@@ -40,6 +40,10 @@
     ],
     "rewrites": [
         {
+            "source": "/api/hadith-search",
+            "destination": "/api/hadith-search"
+        },
+        {
             "source": "/api/:path*",
             "destination": "/api"
         },
