@@ -6,7 +6,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ========== MAIN SERVICE WORKER ==========
-const CACHE_NAME = 'mihrab-app-v72';
+const CACHE_NAME = 'mihrab-app-v73';
 const urlsToCache = [
     '/manifest.json',
     '/icon-192.png',
@@ -39,6 +39,8 @@ self.addEventListener('activate', (event) => {
         }).then(() => {
             registerPeriodicSync();
             startNotificationChecker();
+            // Fetch prayer times on activation if not stored
+            fetchAndStorePrayerTimes();
         })
     );
 });
@@ -227,6 +229,66 @@ async function saveToIndexedDB(key, value) {
     }
 }
 
+// ========== FETCH PRAYER TIMES ==========
+async function fetchAndStorePrayerTimes() {
+    try {
+        // Check if we already have prayer times stored
+        await loadFromIndexedDB();
+        if (scheduledPrayerTimes && scheduledPrayerTimes.fajr) {
+            console.log('✅ Prayer times already stored');
+            return;
+        }
+
+        console.log('🔄 Fetching prayer times from API...');
+
+        // Default to Riyadh coordinates if not stored
+        const latitude = 24.7136;
+        const longitude = 46.6753;
+
+        const today = new Date();
+        const date = today.getDate() + '-' + (today.getMonth() + 1) + '-' + today.getFullYear();
+        const url = 'https://api.aladhan.com/v1/timings/' + date + '?latitude=' + latitude + '&longitude=' + longitude + '&method=4';
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data && data.data && data.data.timings) {
+            const timings = data.data.timings;
+
+            // Extract relevant prayer times
+            scheduledPrayerTimes = {
+                fajr: timings.Fajr ? timings.Fajr.split(' ')[0] : null,
+                dhuhr: timings.Dhuhr ? timings.Dhuhr.split(' ')[0] : null,
+                asr: timings.Asr ? timings.Asr.split(' ')[0] : null,
+                maghrib: timings.Maghrib ? timings.Maghrib.split(' ')[0] : null,
+                isha: timings.Isha ? timings.Isha.split(' ')[0] : null
+            };
+
+            // Calculate iqama times (prayer time + offset)
+            const iqamaOffsets = { fajr: 20, dhuhr: 15, asr: 15, maghrib: 10, isha: 15 };
+            scheduledIqamaTimes = {};
+
+            for (const prayer of Object.keys(scheduledPrayerTimes)) {
+                if (scheduledPrayerTimes[prayer]) {
+                    const [hours, minutes] = scheduledPrayerTimes[prayer].split(':').map(Number);
+                    const totalMinutes = hours * 60 + minutes + (iqamaOffsets[prayer] || 15);
+                    const newHours = Math.floor(totalMinutes / 60) % 24;
+                    const newMinutes = totalMinutes % 60;
+                    scheduledIqamaTimes[prayer] = newHours.toString().padStart(2, '0') + ':' + newMinutes.toString().padStart(2, '0');
+                }
+            }
+
+            // Save to IndexedDB
+            saveToIndexedDB('prayerTimes', scheduledPrayerTimes);
+            saveToIndexedDB('iqamaTimes', scheduledIqamaTimes);
+
+            console.log('✅ Prayer times fetched and stored:', scheduledPrayerTimes);
+        }
+    } catch (e) {
+        console.error('❌ Failed to fetch prayer times:', e);
+    }
+}
+
 // ========== ADHKAR ==========
 const morningAdhkar = [
     "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَـهَ إِلاَّ اللهُ وَحْدَهُ لاَ شَرِيكَ لَهُ",
@@ -252,6 +314,12 @@ async function checkNotifications() {
     await loadFromIndexedDB();
 
     if (!notificationSettings.enabled) return;
+
+    // If no prayer times stored, try to fetch them
+    if (!scheduledPrayerTimes || !scheduledPrayerTimes.fajr) {
+        await fetchAndStorePrayerTimes();
+    }
+
     if (!scheduledIqamaTimes) return;
 
     const now = new Date();
