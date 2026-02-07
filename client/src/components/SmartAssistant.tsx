@@ -177,7 +177,7 @@ export const SmartAssistant: React.FC = () => {
                           </div>
                           {fadl && (
                             <div className="mr-9 text-xs text-amber-600/80 dark:text-amber-400/80 flex items-center gap-1">
-                              <span>✨</span> {fadl}
+                              <span>🌙</span> {fadl}
                             </div>
                           )}
                         </div>

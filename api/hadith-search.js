@@ -161,6 +161,27 @@ export default async function handler(req, res) {
 
         console.log('[Hadith Search] Returning', results.length, 'results');
 
+        // Source priority for sorting - lower number = higher priority
+        const getSourcePriority = (source) => {
+            const s = source.toLowerCase();
+            if (s.includes('البخاري') || s.includes('bukhari')) return 1;
+            if (s.includes('مسلم') || s.includes('muslim')) return 2;
+            if (s.includes('أبي داود') || s.includes('أبو داود')) return 3;
+            if (s.includes('الترمذي')) return 4;
+            if (s.includes('النسائي')) return 5;
+            if (s.includes('ابن ماجه') || s.includes('ابن ماجة')) return 6;
+            if (s.includes('صحيح')) return 7;
+            if (s.includes('الألباني')) return 8;
+            return 10; // Other sources
+        };
+
+        // Sort results by source priority
+        results.sort((a, b) => {
+            const priorityA = getSourcePriority(a.source);
+            const priorityB = getSourcePriority(b.source);
+            return priorityA - priorityB;
+        });
+
         // Take sample from first block info section for debugging
         const firstBlock = blocks[1] || '';
         const infoStart = firstBlock.indexOf('hadith-info');
