@@ -71,11 +71,13 @@ async function sendSettingsToServiceWorker(settings: NotificationSettings): Prom
                 enabled: settings.enabled,
                 reminderMinutes: settings.reminderMinutes,
                 morningAdhkarEnabled: settings.morningAdhkar,
-                eveningAdhkarEnabled: settings.eveningAdhkar
+                eveningAdhkarEnabled: settings.eveningAdhkar,
+                iqamaNotification: settings.iqamaReminder,
             }
         });
     }
 }
+
 
 export async function schedulePrayerNotificationsInSW(
     prayerTimes: Record<string, string>,
@@ -106,23 +108,48 @@ export async function schedulePrayerNotificationsInSW(
                 enabled: settings.enabled,
                 reminderMinutes: settings.reminderMinutes,
                 morningAdhkarEnabled: settings.morningAdhkar,
-                eveningAdhkarEnabled: settings.eveningAdhkar
+                eveningAdhkarEnabled: settings.eveningAdhkar,
+                iqamaNotification: settings.iqamaReminder,
             }
         };
 
-        if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage(message);
-        } else {
-            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000));
-            const registration = await Promise.race([navigator.serviceWorker.ready, timeoutPromise]);
-            if (registration && registration.active) {
-                registration.active.postMessage(message);
+        // انتظر حتى يكون الـ SW controller جاهز تماماً
+        let sw: ServiceWorker | null = navigator.serviceWorker.controller;
+        if (!sw) {
+            const reg = await Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise<null>(r => setTimeout(() => r(null), 4000))
+            ]);
+            if (reg && (reg as ServiceWorkerRegistration).active) {
+                sw = (reg as ServiceWorkerRegistration).active;
             }
+        }
+
+        if (sw) {
+            sw.postMessage(message);
+            console.log('✅ Prayer times scheduled in SW');
+
+            // تفعيل Periodic Background Sync إذا متاح
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                if ('periodicSync' in reg) {
+                    const status = await navigator.permissions.query({
+                        name: 'periodic-background-sync' as PermissionName,
+                    });
+                    if (status.state === 'granted') {
+                        await (reg as any).periodicSync.register('check-prayer-times', {
+                            minInterval: 15 * 60 * 1000,
+                        });
+                        console.log('✅ Periodic Sync registered from client');
+                    }
+                }
+            } catch (_) { /* Periodic Sync not supported - SW fallback is active */ }
         }
     } catch (e) {
         console.warn('Failed to schedule prayer notifications in SW:', e);
     }
 }
+
 
 export function useNotifications() {
     const [permission, setPermission] = useState<NotificationPermission>('default');

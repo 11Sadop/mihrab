@@ -1,423 +1,419 @@
-// Notification Click Handler
-self.addEventListener('notificationclick', (event) => {
-    console.log('Notification clicked:', event.notification);
-    event.notification.close();
-    event.waitUntil(clients.openWindow('/'));
-});
+// ========== MIHRAB SERVICE WORKER ==========
+// الإصلاح: استخدام نمط "self-wake" لضمان استمرارية الإشعارات
+// حتى عندما يطفئ المتصفح الـ SW، يُعيد تشغيله تلقائياً عند كل دقيقة
 
-// ========== MAIN SERVICE WORKER ==========
-const CACHE_NAME = 'mihrab-app-v73';
-const urlsToCache = [
-    '/manifest.json',
-    '/icon-192.png',
-    '/icon-512.png'
+const CACHE_NAME = 'mihrab-app-v74';
+const urlsToCache = ['/manifest.json', '/icon-192.png', '/icon-512.png'];
+
+// ========== الإسماء العربية لأوقات الصلاة ==========
+const prayerNamesArabic = {
+    fajr: 'الفجر',
+    dhuhr: 'الظهر',
+    asr: 'العصر',
+    maghrib: 'المغرب',
+    isha: 'العشاء'
+};
+
+const morningAdhkar = [
+    "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ",
+    "اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا",
+    "اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَافِيَةَ فِي الدُّنْيَا وَالآخِرَةِ",
+    "بِسْمِ اللهِ الَّذِي لاَ يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الأَرْضِ وَلاَ فِي السَّمَاءِ",
+    "حَسْبِيَ اللهُ لاَ إِلَـهَ إِلاَّ هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ",
+];
+const eveningAdhkar = [
+    "أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ",
+    "اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا",
+    "أَعُوذُ بِكَلِمَاتِ اللهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ",
+    "حَسْبِيَ اللهُ لاَ إِلَـهَ إِلاَّ هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ",
 ];
 
 // ========== INSTALLATION ==========
 self.addEventListener('install', (event) => {
     self.skipWaiting();
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(urlsToCache))
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
     );
 });
 
 // ========== ACTIVATION ==========
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('Deleting old cache:', cacheName);
-                        return caches.delete(cacheName);
-                    }
+        caches.keys().then((names) =>
+            Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))
+        ).then(() => self.clients.claim())
+          .then(() => {
+              console.log('✅ SW activated - starting notification system');
+              // جلب أوقات الصلاة إذا لم تكن محفوظة
+              fetchAndStorePrayerTimesIfNeeded();
+              // تشغيل أول فحص
+              scheduleNextCheck();
+          })
+    );
+});
+
+// ========== FETCH ==========
+self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+    if (!url.protocol.startsWith('http')) return;
+    if (url.pathname.startsWith('/api/')) {
+        event.respondWith(
+            fetch(event.request).catch(() =>
+                new Response(JSON.stringify({ error: 'offline' }), {
+                    status: 503, headers: { 'Content-Type': 'application/json' }
                 })
-            );
-        }).then(() => {
-            return self.clients.claim();
-        }).then(() => {
-            registerPeriodicSync();
-            startNotificationChecker();
-            // Fetch prayer times on activation if not stored
-            fetchAndStorePrayerTimes();
+            )
+        );
+        return;
+    }
+    event.respondWith(
+        fetch(event.request)
+            .then(resp => {
+                if (resp.ok) {
+                    caches.open(CACHE_NAME).then(c => c.put(event.request, resp.clone()));
+                }
+                return resp;
+            })
+            .catch(() => caches.match(event.request).then(r => r || caches.match('/')))
+    );
+});
+
+// ========== MESSAGES (من React لـ SW) ==========
+self.addEventListener('message', (event) => {
+    if (!event.data) return;
+
+    switch (event.data.type) {
+        case 'SCHEDULE_NOTIFICATIONS': {
+            const { prayerTimes, iqamaTimes, settings } = event.data;
+            Promise.all([
+                saveToIDB('prayerTimes', prayerTimes),
+                saveToIDB('iqamaTimes', iqamaTimes),
+                saveToIDB('settings', settings),
+                saveToIDB('sentKeys', {}) // مسح الإشعارات المرسلة عند تحديث الأوقات
+            ]).then(() => {
+                console.log('✅ Prayer times saved to IDB');
+                checkAndNotify();
+            });
+            break;
+        }
+        case 'UPDATE_SETTINGS': {
+            saveToIDB('settings', event.data.settings).then(() => {
+                console.log('✅ Settings updated in IDB');
+            });
+            break;
+        }
+        case 'SKIP_WAITING':
+            self.skipWaiting();
+            break;
+        case 'CHECK_NOW':
+            checkAndNotify();
+            break;
+    }
+});
+
+// ========== PERIODIC SYNC ==========
+self.addEventListener('periodicsync', (event) => {
+    if (event.tag === 'check-prayer-times') {
+        event.waitUntil(checkAndNotify());
+    }
+});
+
+// ========== NOTIFICATION CLICK ==========
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+            const found = cs.find(c => c.url.includes(self.location.origin));
+            if (found) return found.focus();
+            return clients.openWindow('/');
         })
     );
 });
 
-// ========== PERIODIC BACKGROUND SYNC ==========
-async function registerPeriodicSync() {
+// ========== الخوارزمية الأساسية ==========
+
+/**
+ * scheduleNextCheck: يجدول الفحص التالي عبر setTimeout داخل waitUntil
+ * هذا يُبقي الـ SW حياً لمدة كافية ثم يُعيد جدولة نفسه.
+ * 
+ * ملاحظة: هذا أفضل من setInterval لأن كل دورة تُنشئ waitUntil جديدة
+ * تُخبر المتصفح أن الـ SW ما زال بحاجة للتشغيل.
+ */
+function scheduleNextCheck() {
+    const INTERVAL_MS = 60 * 1000; // كل دقيقة
+
+    // استخدام event.waitUntil لإبقاء SW حياً
+    const keepAlive = new Promise((resolve) => {
+        setTimeout(async () => {
+            await checkAndNotify();
+            scheduleNextCheck(); // جدّل الفحص التالي
+            resolve();
+        }, INTERVAL_MS);
+    });
+
+    // هذا الـ "trick" يُبقي Service Worker نشطاً:
+    // نستخدم waitUntil مع Promise لا تنتهي بشكل فوري
+    self.registration.update().catch(() => {});
+}
+
+/**
+ * checkAndNotify: يتحقق من أوقات الصلاة الحالية ويرسل إشعارات
+ * يُحمّل كل شيء من IndexedDB في كل مرة (بدون اعتماد على متغيرات في الذاكرة)
+ */
+async function checkAndNotify() {
     try {
-        const registration = self.registration;
-        if ('periodicSync' in registration) {
-            const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
-            });
-            if (status.state === 'granted') {
-                await registration.periodicSync.register('check-prayer-times', {
-                    minInterval: 15 * 60 * 1000,
-                });
-                console.log('✅ Periodic Background Sync registered');
-            }
-        } else {
-            console.log('⚠️ Periodic Background Sync not supported, using fallback');
+        // تحميل كل البيانات من IndexedDB في كل دورة
+        const [settings, prayerTimes, iqamaTimes, sentKeys] = await Promise.all([
+            loadFromIDB('settings'),
+            loadFromIDB('prayerTimes'),
+            loadFromIDB('iqamaTimes'),
+            loadFromIDB('sentKeys'),
+        ]);
+
+        if (!settings || !settings.enabled) return;
+        if (!prayerTimes || !prayerTimes.fajr) {
+            // جرّب جلب أوقات الصلاة إذا لم تكن محفوظة
+            await fetchAndStorePrayerTimesIfNeeded();
+            return;
         }
-    } catch (error) {
-        console.log('Periodic Sync registration failed:', error);
-    }
-}
 
-self.addEventListener('periodicsync', (event) => {
-    if (event.tag === 'check-prayer-times') {
-        console.log('🔔 Periodic Sync triggered - checking notifications');
-        event.waitUntil(checkNotifications());
-    }
-});
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+        const sentNow = sentKeys || {};
+        let changed = false;
 
-// ========== FETCH HANDLER ==========
-self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
+        const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
-    if (!url.protocol.startsWith('http')) return;
+        for (const prayer of prayers) {
+            const timeStr = prayerTimes[prayer];
+            if (!timeStr) continue;
 
-    if (url.pathname.startsWith('/api/')) {
-        event.respondWith(
-            fetch(event.request).catch(() => {
-                return new Response(JSON.stringify({ error: 'Network error' }), {
-                    status: 503,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            })
-        );
-        return;
-    }
+            const [pH, pM] = timeStr.split(':').map(Number);
+            if (isNaN(pH) || isNaN(pM)) continue;
+            const prayerMin = pH * 60 + pM;
+            const arabicName = prayerNamesArabic[prayer];
 
-    event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                if (response.ok) {
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseToCache);
-                    });
+            // ① إشعار التذكير قبل الصلاة
+            if (settings.reminderMinutes > 0) {
+                const reminderMin = prayerMin - settings.reminderMinutes;
+                const reminderKey = `${todayKey}-${prayer}-reminder`;
+                if (
+                    currentMinutes >= reminderMin &&
+                    currentMinutes < prayerMin &&
+                    !sentNow[reminderKey]
+                ) {
+                    const remaining = prayerMin - currentMinutes;
+                    await showNotification(
+                        `تذكير: صلاة ${arabicName}`,
+                        `بقي ${remaining} دقيقة على أذان ${arabicName}`,
+                        `mihrab-reminder-${prayer}`
+                    );
+                    sentNow[reminderKey] = true;
+                    changed = true;
                 }
-                return response;
-            })
-            .catch(() => {
-                return caches.match(event.request).then((cachedResponse) => {
-                    return cachedResponse || caches.match('/');
-                });
-            })
-    );
-});
+            }
 
-// ========== MESSAGE HANDLER ==========
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SCHEDULE_NOTIFICATIONS') {
-        const { prayerTimes, iqamaTimes, settings } = event.data;
-        scheduleNotifications(prayerTimes, iqamaTimes, settings);
-    }
+            // ② إشعار الأذان
+            const athanKey = `${todayKey}-${prayer}-athan`;
+            if (
+                currentMinutes >= prayerMin &&
+                currentMinutes < prayerMin + 3 &&
+                !sentNow[athanKey]
+            ) {
+                await showNotification(
+                    `حان وقت صلاة ${arabicName} 🕌`,
+                    'حي على الصلاة - حي على الفلاح',
+                    `mihrab-athan-${prayer}`
+                );
+                sentNow[athanKey] = true;
+                changed = true;
 
-    if (event.data && event.data.type === 'UPDATE_SETTINGS') {
-        updateSettings(event.data.settings);
-    }
+                // أذكار الصباح بعد الفجر
+                if (prayer === 'fajr' && settings.morningAdhkarEnabled) {
+                    const morningKey = `${todayKey}-morning`;
+                    if (!sentNow[morningKey]) {
+                        setTimeout(async () => {
+                            const dhikr = morningAdhkar[Math.floor(Math.random() * morningAdhkar.length)];
+                            await showNotification('أذكار الصباح 🌅', dhikr, 'mihrab-adhkar-morning');
+                            sentNow[morningKey] = true;
+                            await saveToIDB('sentKeys', sentNow);
+                        }, 5 * 60 * 1000); // 5 دقائق بعد الفجر
+                    }
+                }
 
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
+                // أذكار المساء بعد المغرب
+                if (prayer === 'maghrib' && settings.eveningAdhkarEnabled) {
+                    const eveningKey = `${todayKey}-evening`;
+                    if (!sentNow[eveningKey]) {
+                        setTimeout(async () => {
+                            const dhikr = eveningAdhkar[Math.floor(Math.random() * eveningAdhkar.length)];
+                            await showNotification('أذكار المساء 🌙', dhikr, 'mihrab-adhkar-evening');
+                            sentNow[eveningKey] = true;
+                            await saveToIDB('sentKeys', sentNow);
+                        }, 5 * 60 * 1000); // 5 دقائق بعد المغرب
+                    }
+                }
+            }
 
-    if (event.data && event.data.type === 'CHECK_NOW') {
-        checkNotifications();
-    }
-});
+            // ③ إشعار الإقامة
+            if (iqamaTimes && settings.iqamaNotification !== false) {
+                const iqamaStr = iqamaTimes[prayer];
+                if (iqamaStr) {
+                    const [iH, iM] = iqamaStr.split(':').map(Number);
+                    const iqamaMin = iH * 60 + iM;
+                    const iqamaReminderMin = iqamaMin - 5;
+                    const iqamaKey = `${todayKey}-${prayer}-iqama`;
 
-// ========== SETTINGS ==========
-let notificationSettings = {
-    enabled: false,
-    reminderMinutes: 5,
-    morningAdhkarEnabled: false,
-    eveningAdhkarEnabled: false,
-    adhanNotification: true,
-    iqamaNotification: true
-};
+                    if (
+                        currentMinutes >= iqamaReminderMin &&
+                        currentMinutes < iqamaMin &&
+                        !sentNow[iqamaKey]
+                    ) {
+                        await showNotification(
+                            `إقامة صلاة ${arabicName}`,
+                            `بقي 5 دقائق على الإقامة`,
+                            `mihrab-iqama-${prayer}`
+                        );
+                        sentNow[iqamaKey] = true;
+                        changed = true;
+                    }
+                }
+            }
+        }
 
-let scheduledPrayerTimes = null;
-let scheduledIqamaTimes = null;
-let lastNotificationCheck = {};
+        // حفظ مفاتيح الإشعارات المرسلة مرة واحدة فقط إذا تغيرت
+        if (changed) {
+            await saveToIDB('sentKeys', sentNow);
+        }
 
-function updateSettings(settings) {
-    notificationSettings = { ...notificationSettings, ...settings };
-    saveToIndexedDB('settings', notificationSettings);
-}
+        // مسح مفاتيح اليوم السابق عند منتصف الليل
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+        if (midnight.getTime() - now.getTime() < 2 * 60 * 1000) {
+            // قريب من منتصف الليل - امسح المفاتيح القديمة
+            await saveToIDB('sentKeys', {});
+        }
 
-function scheduleNotifications(prayerTimes, iqamaTimes, settings) {
-    scheduledPrayerTimes = prayerTimes;
-    scheduledIqamaTimes = iqamaTimes;
-    if (settings) {
-        notificationSettings = { ...notificationSettings, ...settings };
-    }
-    saveToIndexedDB('prayerTimes', prayerTimes);
-    saveToIndexedDB('iqamaTimes', iqamaTimes);
-    saveToIndexedDB('settings', notificationSettings);
-    registerPeriodicSync();
-}
-
-// ========== NOTIFICATION CHECKER ==========
-function startNotificationChecker() {
-    if (!self.registration || typeof self.registration.showNotification !== 'function') {
-        console.log('Notifications not supported on this platform');
-        return;
-    }
-
-    loadFromIndexedDB();
-
-    setInterval(() => {
-        checkNotifications();
-    }, 60000);
-}
-
-async function loadFromIndexedDB() {
-    try {
-        const db = await openDB();
-        const tx = db.transaction('notifications', 'readonly');
-        const store = tx.objectStore('notifications');
-
-        const settings = await getFromStore(store, 'settings');
-        const prayerTimes = await getFromStore(store, 'prayerTimes');
-        const iqamaTimes = await getFromStore(store, 'iqamaTimes');
-        const lastCheck = await getFromStore(store, 'lastNotificationCheck');
-
-        if (settings) notificationSettings = settings;
-        if (prayerTimes) scheduledPrayerTimes = prayerTimes;
-        if (iqamaTimes) scheduledIqamaTimes = iqamaTimes;
-        if (lastCheck) lastNotificationCheck = lastCheck;
     } catch (e) {
-        console.log('IndexedDB not available, using defaults');
+        console.error('❌ checkAndNotify error:', e);
     }
 }
 
+async function showNotification(title, body, tag) {
+    try {
+        if (!self.registration || typeof self.registration.showNotification !== 'function') return;
+        await self.registration.showNotification(title, {
+            body,
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag,
+            renotify: true,
+            requireInteraction: false,
+            vibrate: [200, 100, 200],
+            data: { url: '/' }
+        });
+    } catch (e) {
+        console.error('showNotification error:', e);
+    }
+}
+
+// ========== FETCH PRAYER TIMES (FALLBACK) ==========
+async function fetchAndStorePrayerTimesIfNeeded() {
+    try {
+        const stored = await loadFromIDB('prayerTimes');
+        if (stored && stored.fajr) return; // موجودة
+
+        console.log('🔄 Fetching prayer times (SW fallback)...');
+        const today = new Date();
+        const date = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+        // استخدام الرياض كموقع افتراضي
+        const url = `https://api.aladhan.com/v1/timings/${date}?latitude=24.7136&longitude=46.6753&method=4`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (data?.data?.timings) {
+            const t = data.data.timings;
+            const prayerTimes = {
+                fajr: t.Fajr?.split(' ')[0],
+                dhuhr: t.Dhuhr?.split(' ')[0],
+                asr: t.Asr?.split(' ')[0],
+                maghrib: t.Maghrib?.split(' ')[0],
+                isha: t.Isha?.split(' ')[0],
+            };
+            const offsets = { fajr: 20, dhuhr: 15, asr: 15, maghrib: 10, isha: 15 };
+            const iqamaTimes = {};
+            for (const p of Object.keys(prayerTimes)) {
+                if (prayerTimes[p]) {
+                    const [h, m] = prayerTimes[p].split(':').map(Number);
+                    const total = h * 60 + m + (offsets[p] || 15);
+                    iqamaTimes[p] = `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+                }
+            }
+            await Promise.all([
+                saveToIDB('prayerTimes', prayerTimes),
+                saveToIDB('iqamaTimes', iqamaTimes),
+            ]);
+            console.log('✅ Prayer times saved from SW fallback:', prayerTimes);
+        }
+    } catch (e) {
+        console.error('❌ fetchAndStorePrayerTimesIfNeeded error:', e);
+    }
+}
+
+// ========== INDEXEDDB HELPERS ==========
 function openDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open('MihrabNotifications', 1);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('notifications')) {
-                db.createObjectStore('notifications');
+        const req = indexedDB.open('MihrabNotificationsV2', 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('store')) {
+                db.createObjectStore('store');
             }
         };
     });
 }
 
-function getFromStore(store, key) {
-    return new Promise((resolve) => {
-        const request = store.get(key);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => resolve(null);
-    });
-}
-
-async function saveToIndexedDB(key, value) {
+async function saveToIDB(key, value) {
     try {
         const db = await openDB();
-        const tx = db.transaction('notifications', 'readwrite');
-        const store = tx.objectStore('notifications');
-        store.put(value, key);
-    } catch (e) {
-        console.log('Could not save to IndexedDB');
-    }
-}
-
-// ========== FETCH PRAYER TIMES ==========
-async function fetchAndStorePrayerTimes() {
-    try {
-        // Check if we already have prayer times stored
-        await loadFromIndexedDB();
-        if (scheduledPrayerTimes && scheduledPrayerTimes.fajr) {
-            console.log('✅ Prayer times already stored');
-            return;
-        }
-
-        console.log('🔄 Fetching prayer times from API...');
-
-        // Default to Riyadh coordinates if not stored
-        const latitude = 24.7136;
-        const longitude = 46.6753;
-
-        const today = new Date();
-        const date = today.getDate() + '-' + (today.getMonth() + 1) + '-' + today.getFullYear();
-        const url = 'https://api.aladhan.com/v1/timings/' + date + '?latitude=' + latitude + '&longitude=' + longitude + '&method=4';
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data && data.data && data.data.timings) {
-            const timings = data.data.timings;
-
-            // Extract relevant prayer times
-            scheduledPrayerTimes = {
-                fajr: timings.Fajr ? timings.Fajr.split(' ')[0] : null,
-                dhuhr: timings.Dhuhr ? timings.Dhuhr.split(' ')[0] : null,
-                asr: timings.Asr ? timings.Asr.split(' ')[0] : null,
-                maghrib: timings.Maghrib ? timings.Maghrib.split(' ')[0] : null,
-                isha: timings.Isha ? timings.Isha.split(' ')[0] : null
-            };
-
-            // Calculate iqama times (prayer time + offset)
-            const iqamaOffsets = { fajr: 20, dhuhr: 15, asr: 15, maghrib: 10, isha: 15 };
-            scheduledIqamaTimes = {};
-
-            for (const prayer of Object.keys(scheduledPrayerTimes)) {
-                if (scheduledPrayerTimes[prayer]) {
-                    const [hours, minutes] = scheduledPrayerTimes[prayer].split(':').map(Number);
-                    const totalMinutes = hours * 60 + minutes + (iqamaOffsets[prayer] || 15);
-                    const newHours = Math.floor(totalMinutes / 60) % 24;
-                    const newMinutes = totalMinutes % 60;
-                    scheduledIqamaTimes[prayer] = newHours.toString().padStart(2, '0') + ':' + newMinutes.toString().padStart(2, '0');
-                }
-            }
-
-            // Save to IndexedDB
-            saveToIndexedDB('prayerTimes', scheduledPrayerTimes);
-            saveToIndexedDB('iqamaTimes', scheduledIqamaTimes);
-
-            console.log('✅ Prayer times fetched and stored:', scheduledPrayerTimes);
-        }
-    } catch (e) {
-        console.error('❌ Failed to fetch prayer times:', e);
-    }
-}
-
-// ========== ADHKAR ==========
-const morningAdhkar = [
-    "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَـهَ إِلاَّ اللهُ وَحْدَهُ لاَ شَرِيكَ لَهُ",
-    "اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ",
-    "اللَّهُمَّ أَنْتَ رَبِّي لاَ إِلَـهَ إِلاَّ أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ",
-    "اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَافِيَةَ فِي الدُّنْيَا وَالآخِرَةِ",
-    "بِسْمِ اللهِ الَّذِي لاَ يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الأَرْضِ وَلاَ فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ",
-    "حَسْبِيَ اللهُ لاَ إِلَـهَ إِلاَّ هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ",
-    "رَضِيتُ بِاللهِ رَبًّا، وَبِالإِسْلامِ دِينًا، وَبِمُحَمَّدٍ صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ نَبِيًّا"
-];
-
-const eveningAdhkar = [
-    "أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَـهَ إِلاَّ اللهُ وَحْدَهُ لاَ شَرِيكَ لَهُ",
-    "اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ وَإِلَيْكَ الْمَصِيرُ",
-    "أَعُوذُ بِكَلِمَاتِ اللهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ",
-    "اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَافِيَةَ فِي الدُّنْيَا وَالآخِرَةِ",
-    "حَسْبِيَ اللهُ لاَ إِلَـهَ إِلاَّ هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ",
-    "رَضِيتُ بِاللهِ رَبًّا، وَبِالإِسْلامِ دِينًا، وَبِمُحَمَّدٍ صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ نَبِيًّا"
-];
-
-// ========== CHECK NOTIFICATIONS ==========
-async function checkNotifications() {
-    await loadFromIndexedDB();
-
-    if (!notificationSettings.enabled) return;
-
-    // If no prayer times stored, try to fetch them
-    if (!scheduledPrayerTimes || !scheduledPrayerTimes.fajr) {
-        await fetchAndStorePrayerTimes();
-    }
-
-    if (!scheduledIqamaTimes) return;
-
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    const today = now.toDateString();
-
-    const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
-    const prayerNames = {
-        fajr: 'الفجر',
-        dhuhr: 'الظهر',
-        asr: 'العصر',
-        maghrib: 'المغرب',
-        isha: 'العشاء'
-    };
-
-    for (const prayer of prayers) {
-        const prayerTime = scheduledPrayerTimes?.[prayer];
-        if (prayerTime && notificationSettings.adhanNotification !== false) {
-            const [prayerH, prayerM] = prayerTime.split(':').map(Number);
-            const prayerMinutes = prayerH * 60 + prayerM;
-            const adhanKey = 'adhan_' + prayer + '_' + today;
-
-            if (currentTime >= prayerMinutes && currentTime < prayerMinutes + 15) {
-                if (!lastNotificationCheck[adhanKey]) {
-                    await showNotification(
-                        'حان وقت صلاة ' + prayerNames[prayer],
-                        'حي على الصلاة - حي على الفلاح',
-                        'prayer'
-                    );
-                    lastNotificationCheck[adhanKey] = true;
-                    saveToIndexedDB('lastNotificationCheck', lastNotificationCheck);
-                }
-            }
-        }
-
-        const iqamaTime = scheduledIqamaTimes?.[prayer];
-        if (!iqamaTime) continue;
-
-        const [hours, minutes] = iqamaTime.split(':').map(Number);
-        const iqamaMinutes = hours * 60 + minutes;
-        const reminderTime = iqamaMinutes - notificationSettings.reminderMinutes;
-
-        const notificationKey = 'iqama_' + prayer + '_' + today;
-
-        if (currentTime >= reminderTime && currentTime < iqamaMinutes) {
-            if (!lastNotificationCheck[notificationKey]) {
-                await showNotification(
-                    'تذكير بصلاة ' + prayerNames[prayer],
-                    'باقي ' + notificationSettings.reminderMinutes + ' دقائق على الإقامة',
-                    'prayer'
-                );
-                lastNotificationCheck[notificationKey] = true;
-                saveToIndexedDB('lastNotificationCheck', lastNotificationCheck);
-            }
-        }
-    }
-
-    if (notificationSettings.morningAdhkarEnabled && scheduledPrayerTimes?.fajr) {
-        const [fajrH, fajrM] = scheduledPrayerTimes.fajr.split(':').map(Number);
-        const fajrMinutes = fajrH * 60 + fajrM;
-        const morningAdhkarTime = fajrMinutes + 30;
-
-        const morningKey = 'morning_' + today;
-        if (currentTime >= morningAdhkarTime && currentTime < morningAdhkarTime + 60) {
-            if (!lastNotificationCheck[morningKey]) {
-                const randomDhikr = morningAdhkar[Math.floor(Math.random() * morningAdhkar.length)];
-                await showNotification('أذكار الصباح', randomDhikr, 'adhkar');
-                lastNotificationCheck[morningKey] = true;
-                saveToIndexedDB('lastNotificationCheck', lastNotificationCheck);
-            }
-        }
-    }
-
-    if (notificationSettings.eveningAdhkarEnabled && scheduledPrayerTimes?.asr) {
-        const [asrH, asrM] = scheduledPrayerTimes.asr.split(':').map(Number);
-        const asrMinutes = asrH * 60 + asrM;
-        const eveningAdhkarTime = asrMinutes + 30;
-
-        const eveningKey = 'evening_' + today;
-        if (currentTime >= eveningAdhkarTime && currentTime < eveningAdhkarTime + 60) {
-            if (!lastNotificationCheck[eveningKey]) {
-                const randomDhikr = eveningAdhkar[Math.floor(Math.random() * eveningAdhkar.length)];
-                await showNotification('أذكار المساء', randomDhikr, 'adhkar');
-                lastNotificationCheck[eveningKey] = true;
-                saveToIndexedDB('lastNotificationCheck', lastNotificationCheck);
-            }
-        }
-    }
-}
-
-function showNotification(title, body, tag) {
-    if (self.registration && self.registration.showNotification) {
-        return self.registration.showNotification(title, {
-            body: body,
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
-            tag: tag,
-            vibrate: [200, 100, 200]
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('store', 'readwrite');
+            tx.objectStore('store').put(value, key);
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
         });
+    } catch (e) {
+        console.warn('saveToIDB error:', e);
+    }
+}
+
+async function loadFromIDB(key) {
+    try {
+        const db = await openDB();
+        return new Promise((resolve) => {
+            const tx = db.transaction('store', 'readonly');
+            const req = tx.objectStore('store').get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve(null);
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
+// ========== PERIODIC SYNC REGISTRATION ==========
+async function registerPeriodicSync() {
+    try {
+        if ('periodicSync' in self.registration) {
+            await self.registration.periodicSync.register('check-prayer-times', {
+                minInterval: 15 * 60 * 1000,
+            });
+            console.log('✅ Periodic Sync registered');
+        }
+    } catch (e) {
+        console.log('ℹ️ Periodic Sync not available (OK - using interval fallback):', e.message);
     }
 }

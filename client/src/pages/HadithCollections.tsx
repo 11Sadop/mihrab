@@ -7,6 +7,7 @@ import { BookOpen, ChevronLeft, Search, ChevronDown, ChevronUp, Loader2, Book } 
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useSeo } from "@/hooks/use-seo";
 
 interface Hadith {
   id: number;
@@ -29,6 +30,12 @@ interface HadithQueryResult {
 }
 
 export default function HadithCollections() {
+  useSeo({
+    title: "كتب الحديث الصحيحة - صحيح البخاري ومسلم",
+    description: "تصفح أحاديث صحيح البخاري وصحيح مسلم كاملاً مع إمكانية البحث. أصح كتابين في السنة النبوية الشريفة بترقيم الأحاديث والأبواب.",
+    keywords: "صحيح البخاري، صحيح مسلم، كتب الحديث، أحاديث البخاري، أحاديث مسلم، السنة النبوية، الحديث النبوي الشريف",
+    canonicalPath: "/hadith-collections",
+  });
   const [selectedCollection, setSelectedCollection] = useState<"bukhari" | "muslim" | null>(null);
   const [expandedBook, setExpandedBook] = useState<number | null>(null);
   const [expandedHadith, setExpandedHadith] = useState<number | null>(null);

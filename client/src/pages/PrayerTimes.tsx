@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { usePrayerNotifications, schedulePrayerNotificationsInSW } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
+import { useSeo } from "@/hooks/use-seo";
 
 function normalizeTime(time: string): string {
   return time.replace(/\s*\([^)]*\)$/, '').split(':').slice(0, 2).join(':');
@@ -120,6 +121,12 @@ function PrayerGridCard({ id, name, time, isNext, iqamaOffset, currentTime }: Pr
 }
 
 export default function PrayerTimes() {
+  useSeo({
+    title: "مواقيت الصلاة الآن - حسب موقعك",
+    description: "اعرف مواقيت الصلاة الدقيقة (الفجر، الشروق، الظهر، العصر، المغرب، العشاء) حسب موقعك الحالي أو مدينتك. مع وقت الإقامة والصلاة القادمة.",
+    keywords: "مواقيت الصلاة، أوقات الصلاة، وقت الفجر، وقت الظهر، وقت العصر، وقت المغرب، وقت العشاء، prayer times, salah times",
+    canonicalPath: "/prayer-times",
+  });
   const { toast } = useToast();
   const [savedLocation, setSavedLocation] = useLocalStorage<{latitude: number, longitude: number, city?: string} | null>("user_location", null);
   const [showCityPicker, setShowCityPicker] = useState(false);

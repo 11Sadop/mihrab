@@ -14,13 +14,22 @@ import {
   Search,
   Library,
   ChevronLeft,
-  RotateCcw
+  RotateCcw,
+  Share2,
+  ImagePlay
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useSeo } from "@/hooks/use-seo";
 
 export default function Home() {
+  useSeo({
+    title: "محراب - مواقيت الصلاة، تفسير القرآن، صحة الأحاديث",
+    description: "موقع محراب الإسلامي - مواقيت صلاة دقيقة، تفسير القرآن الكريم، التحقق من صحة الأحاديث، حاسبة الزكاة، أذكار الصباح والمساء، بوصلة القبلة. رفيقك الإسلامي اليومي.",
+    keywords: "محراب، موقع إسلامي، مواقيت الصلاة، تفسير القرآن، صحة الأحاديث، حاسبة الزكاة، أذكار، بوصلة القبلة، mihrab islamic",
+    canonicalPath: "/",
+  });
   const { data: prayerData, isLoading: isPrayerLoading, isRequestingLocation } = usePrayerTimes();
   const nextPrayer = prayerData ? getNextPrayer(prayerData.timings) : null;
   const { data: dailyHadith, isLoading: isHadithLoading } = useDailyHadith();
@@ -31,6 +40,28 @@ export default function Home() {
     setIsRefreshing(true);
     await manualRefresh();
     setIsRefreshing(false);
+  };
+
+  const handleShareHadith = async () => {
+    if (!dailyHadith) return;
+
+    const textToShare = `${dailyHadith.arabicText || dailyHadith.text}\n\nيومك أجمل مع أحاديث ومواقيت محراب 🕋\nhttps://mihrab.app`;
+
+    // Check if the native Share API is available (usually works well on mobile devices)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'حديث اليوم من محراب',
+          text: textToShare,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback for desktop/unsupported browsers: Copy to clipboard or open WhatsApp
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(textToShare)}`;
+      window.open(waUrl, '_blank');
+    }
   };
 
 
@@ -66,6 +97,30 @@ export default function Home() {
             </div>
           )}
         </div>
+      </section>
+
+      {/* NEW VIRAL FEATURE PROMO BANNER */}
+      <section>
+        <Link href="/card-generator">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 p-1 flex items-center shadow-lg shadow-orange-900/20 cursor-pointer hover:scale-[1.01] transition-transform group">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] opacity-10"></div>
+            <div className="flex-1 bg-[#0f172a]/90 backdrop-blur-sm rounded-xl p-4 flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl text-white shadow-inner">
+                <ImagePlay className="w-7 h-7" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">جديد</span>
+                  <h3 className="font-bold text-white text-base sm:text-lg">صانع البطاقات الدعوية</h3>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-300">
+                  أضف اسمك كصدقة جارية على دعاء اليوم وشاركه مع عائلتك!
+                </p>
+              </div>
+              <ChevronLeft className="w-5 h-5 text-amber-500 group-hover:text-amber-400 group-hover:-translate-x-1 transition-all" />
+            </div>
+          </div>
+        </Link>
       </section>
 
       {/* 2. Top Stacked Cards (Books & Verification) */}
@@ -144,16 +199,31 @@ export default function Home() {
               <Quote className="w-4 h-4" />
               حديث اليوم
             </h3>
-            {/* Refresh Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <RotateCcw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-            </Button>
+            <div className="flex gap-1">
+              {/* Share Button */}
+              {dailyHadith && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+                  onClick={handleShareHadith}
+                  title="مشاركة الحديث"
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              )}
+              {/* Refresh Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                title="تحديث الحديث"
+              >
+                <RotateCcw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+              </Button>
+            </div>
           </div>
 
           {isHadithLoading ? (

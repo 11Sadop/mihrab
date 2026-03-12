@@ -1,57 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- الصفحة الرئيسية -->
   <url>
-    <loc>https://mihrabapp.com/</loc>
-    <lastmod>2026-01-08</lastmod>
+    <loc>https://mihrab.app/</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  
+  <!-- مواقيت الصلاة -->
   <url>
-    <loc>https://mihrabapp.com/prayer-times</loc>
-    <lastmod>2026-01-08</lastmod>
+    <loc>https://mihrab.app/prayer-times</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
+  
+  <!-- الأذكار -->
   <url>
-    <loc>https://mihrabapp.com/qibla</loc>
-    <lastmod>2026-01-08</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://mihrab.app/adhkar</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
+  
+  <!-- الأدعية -->
   <url>
-    <loc>https://mihrabapp.com/zakat</loc>
-    <lastmod>2026-01-08</lastmod>
+    <loc>https://mihrab.app/duas</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- اتجاه القبلة -->
+  <url>
+    <loc>https://mihrab.app/qibla</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  
+  <!-- حاسبة الزكاة -->
   <url>
-    <loc>https://mihrabapp.com/azkar</loc>
-    <lastmod>2026-01-08</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://mihrab.app/zakat</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  
+  <!-- التسبيح -->
   <url>
-    <loc>https://mihrabapp.com/tasbih</loc>
-    <lastmod>2026-01-08</lastmod>
+    <loc>https://mihrab.app/tasbeeh</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  
+  <!-- الورد اليومي -->
   <url>
-    <loc>https://mihrabapp.com/hadith</loc>
-    <lastmod>2026-01-08</lastmod>
+    <loc>https://mihrab.app/ward</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+  
+  <!-- أذكار الوقاية -->
   <url>
-    <loc>https://mihrabapp.com/quran</loc>
-    <lastmod>2026-01-08</lastmod>
+    <loc>https://mihrab.app/protection</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+  
+  <!-- المساعد الذكي -->
   <url>
-    <loc>https://mihrabapp.com/settings</loc>
-    <lastmod>2026-01-08</lastmod>
+    <loc>https://mihrab.app/assistant</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- كتب الحديث الصحيحة -->
+  <url>
+    <loc>https://mihrab.app/hadith-collections</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- التحقق من صحة الحديث -->
+  <url>
+    <loc>https://mihrab.app/hadith-verify</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- التفسير -->
+  <url>
+    <loc>https://mihrab.app/tafseer</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- صانع البطاقات الدعوية -->
+  <url>
+    <loc>https://mihrab.app/card-generator</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- الإعدادات -->
+  <url>
+    <loc>https://mihrab.app/settings</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.4</priority>
+  </url>
+  
+  <!-- الدعم -->
+  <url>
+    <loc>https://mihrab.app/support</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
 </urlset>

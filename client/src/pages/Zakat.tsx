@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { Calculator, Coins, DollarSign, TrendingUp, RefreshCw, Info } from "lucide-react";
+import { Calculator, Coins, DollarSign, TrendingUp, RefreshCw, Info, Share2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSeo } from "@/hooks/use-seo";
 
 type AssetType = "gold" | "silver" | "money" | "stocks";
 
@@ -23,11 +24,17 @@ interface SilverGrade {
 }
 
 export default function Zakat() {
+  useSeo({
+    title: "حاسبة الزكاة - احسب زكاتك الآن",
+    description: "احسب زكاة مالك وذهبك وفضتك وأسهمك بسهولة ودقة. حاسبة زكاة مجانية مع أسعار الذهب المحدثة وحساب النصاب تلقائياً.",
+    keywords: "حاسبة الزكاة، حساب الزكاة، زكاة الذهب، زكاة المال، نصاب الزكاة، زكاة الفضة، زكاة الأسهم، zakat calculator",
+    canonicalPath: "/zakat",
+  });
   const [activeTab, setActiveTab] = useState<AssetType>("money");
   const [moneyAmount, setMoneyAmount] = useState("");
   const [stockShares, setStockShares] = useState("");
   const [stockPrice, setStockPrice] = useState("");
-  const [zakatResult, setZakatResult] = useState<{amount: number; nisabMet: boolean} | null>(null);
+  const [zakatResult, setZakatResult] = useState<{ amount: number; nisabMet: boolean } | null>(null);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -59,7 +66,7 @@ export default function Zakat() {
         const pricePerGramUSD = pricePerOunce / 31.1035;
         const sarRate = 3.75;
         const price24k = pricePerGramUSD * sarRate;
-        
+
         setGoldKarats(prev => prev.map(k => ({
           ...k,
           pricePerGram: Math.round(price24k * k.purity * 100) / 100
@@ -71,7 +78,7 @@ export default function Zakat() {
           const silverPricePerOunce = silverData.price || 30;
           const silverPricePerGramUSD = silverPricePerOunce / 31.1035;
           const silverPrice999 = silverPricePerGramUSD * sarRate;
-          
+
           setSilverGrades(prev => prev.map(g => ({
             ...g,
             pricePerGram: Math.round(silverPrice999 * g.purity * 100) / 100
@@ -92,13 +99,13 @@ export default function Zakat() {
   }, []);
 
   const updateGoldGrams = (index: number, value: string) => {
-    setGoldKarats(prev => prev.map((k, i) => 
+    setGoldKarats(prev => prev.map((k, i) =>
       i === index ? { ...k, grams: value } : k
     ));
   };
 
   const updateSilverGrams = (index: number, value: string) => {
-    setSilverGrades(prev => prev.map((g, i) => 
+    setSilverGrades(prev => prev.map((g, i) =>
       i === index ? { ...g, grams: value } : g
     ));
   };
@@ -182,6 +189,13 @@ export default function Zakat() {
         calculateStocksZakat();
         break;
     }
+  };
+
+  const handleShare = () => {
+    if (!zakatResult) return;
+    const text = `حسبت زكاة مالي عبر حاسبة موقع "محراب" الدقيقة ⚖️\nالمبلغ المستحق كزكاة هو: ${zakatResult.amount.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ريال\n\nاحسب زكاة مالك ومعادن الطيبة الآن:\nhttps://mihrab.app/zakat`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
   };
 
   const nisabMoneyValue = NISAB_GOLD_GRAMS * goldKarats[0].pricePerGram;
@@ -314,9 +328,9 @@ export default function Zakat() {
               </div>
 
               <div className="flex items-center justify-between mb-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={fetchGoldPrices}
                   disabled={isLoadingPrices}
                   data-testid="button-refresh-gold-prices"
@@ -377,9 +391,9 @@ export default function Zakat() {
               </div>
 
               <div className="flex items-center justify-between mb-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={fetchGoldPrices}
                   disabled={isLoadingPrices}
                   data-testid="button-refresh-silver-prices"
@@ -508,11 +522,25 @@ export default function Zakat() {
                   maximumFractionDigits: 2,
                 })}
               </p>
-              <p className="text-sm text-muted-foreground">ريال</p>
+              <p className="text-sm text-muted-foreground mb-4">ريال</p>
+
               {!zakatResult.nisabMet && (
                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
                   المبلغ أقل من النصاب - لا تجب الزكاة
                 </p>
+              )}
+
+              {zakatResult.nisabMet && (
+                <div className="pt-4 flex justify-center border-t border-primary/20">
+                  <Button
+                    variant="outline"
+                    className="gap-2 bg-transparent hover:bg-primary/10 border-primary/20 text-primary"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="w-4 h-4" />
+                    مشاركة النتيجة
+                  </Button>
+                </div>
               )}
             </div>
           )}

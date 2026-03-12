@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useSeo } from "@/hooks/use-seo";
 
 interface HadithResult {
     text: string;
@@ -15,6 +16,12 @@ interface HadithResult {
 }
 
 export default function HadithVerifyPage() {
+    useSeo({
+        title: "التحقق من صحة الأحاديث - ابحث وتحقق",
+        description: "تحقق من صحة الأحاديث النبوية الشريفة بسهولة - ابحث عن أي حديث واعرف هل هو صحيح أم ضعيف مع المصدر والدرجة من الدرر السنية. تخريج الأحاديث وتحقيقها.",
+        keywords: "صحة الحديث، تخريج حديث، هل الحديث صحيح، تحقق من الحديث، أحاديث صحيحة، أحاديث ضعيفة، موضوعة، البخاري، مسلم، الدرر السنية، hadith verification",
+        canonicalPath: "/hadith-verify",
+    });
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<HadithResult[]>([]);
     const [loading, setLoading] = useState(false);

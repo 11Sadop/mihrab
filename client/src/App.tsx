@@ -107,6 +107,7 @@ import SupportPage from "@/pages/Support";
 import StatsPage from "@/pages/Stats";
 import NotFound from "@/pages/not-found";
 import AssistantPage from "@/pages/AssistantPage";
+import CardGenerator from "@/pages/CardGenerator";
 
 function Router() {
   useVisitorTracking();
@@ -134,6 +135,7 @@ function Router() {
         <Route path="/support" component={SupportPage} />
         <Route path="/settings" component={SettingsPage} />
         <Route path="/assistant" component={AssistantPage} />
+        <Route path="/card-generator" component={CardGenerator} />
         <Route path="/admin/stats" component={StatsPage} />
         <Route component={NotFound} />
       </Switch>

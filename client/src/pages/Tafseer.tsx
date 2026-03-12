@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, ChevronLeft, BookOpen, Loader2, Search, X } from "lucide-react";
+import { useSeo } from "@/hooks/use-seo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -162,6 +163,12 @@ interface SearchResult {
 }
 
 export default function TafseerPage() {
+  useSeo({
+    title: "تفسير القرآن الكريم - التفسير الميسر والجلالين",
+    description: "تفسير القرآن الكريم آية بآية - اختر السورة والآية وشاهد تفسيرها من التفسير الميسر وتفسير الجلالين. ابحث في كلمات القرآن ومعاني الآيات بسهولة.",
+    keywords: "تفسير القرآن، تفسير الآيات، معنى الآية، تفسير الجلالين، التفسير الميسر، تفسير سورة، شرح آية، معاني القرآن، quran tafseer",
+    canonicalPath: "/tafseer",
+  });
   const [selectedSurah, setSelectedSurah] = useState<number>(1);
   const [selectedAyah, setSelectedAyah] = useState<number>(1);
   const [selectedMufassir, setSelectedMufassir] = useState<number>(1);

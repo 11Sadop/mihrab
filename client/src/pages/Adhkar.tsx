@@ -4,6 +4,7 @@ import { ContentCard } from "@/components/ContentCard";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useSeo } from "@/hooks/use-seo";
 
 const categories = [
   { id: "morning", label: "الصباح" },
@@ -13,6 +14,12 @@ const categories = [
 ];
 
 export default function AdhkarPage() {
+  useSeo({
+    title: "أذكار الصباح والمساء - أذكار المسلم اليومية",
+    description: "أذكار الصباح والمساء وأذكار ما بعد الصلاة وعند الاستيقاظ من السنة النبوية الشريفة. ردد أذكارك اليومية بسهولة مع عداد التكرار.",
+    keywords: "أذكار الصباح، أذكار المساء، أذكار بعد الصلاة، أذكار الاستيقاظ، أذكار المسلم، adhkar morning evening",
+    canonicalPath: "/adhkar",
+  });
   const [selectedCategory, setSelectedCategory] = useState("morning");
   const { data: adhkarList, isLoading } = useAdhkar(selectedCategory);
 

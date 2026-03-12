@@ -1,18 +1,27 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://mihrabapp.com/sitemap.xml
+Sitemap: https://mihrab.app/sitemap.xml
 
+# منع الوصول للـ API والإدارة
 Disallow: /api/
 Disallow: /admin/
 
+# السماح بالصفحات العامة
 Allow: /prayer-times
 Allow: /qibla
 Allow: /zakat
-Allow: /azkar
-Allow: /tasbih
-Allow: /hadith
-Allow: /quran
+Allow: /adhkar
+Allow: /duas
+Allow: /tasbeeh
+Allow: /ward
+Allow: /protection
+Allow: /assistant
+Allow: /hadith-collections
+Allow: /hadith-verify
+Allow: /tafseer
+Allow: /card-generator
 Allow: /settings
+Allow: /support
 
 Crawl-delay: 1
