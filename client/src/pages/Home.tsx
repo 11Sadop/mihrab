@@ -15,8 +15,7 @@ import {
   Library,
   ChevronLeft,
   RotateCcw,
-  Share2,
-  ImagePlay
+  Share2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -99,29 +98,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* NEW VIRAL FEATURE PROMO BANNER */}
-      <section>
-        <Link href="/card-generator">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 p-1 flex items-center shadow-lg shadow-orange-900/20 cursor-pointer hover:scale-[1.01] transition-transform group">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] opacity-10"></div>
-            <div className="flex-1 bg-[#0f172a]/90 backdrop-blur-sm rounded-xl p-4 flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl text-white shadow-inner">
-                <ImagePlay className="w-7 h-7" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">جديد</span>
-                  <h3 className="font-bold text-white text-base sm:text-lg">صانع البطاقات الدعوية</h3>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-300">
-                  أضف اسمك كصدقة جارية على دعاء اليوم وشاركه مع عائلتك!
-                </p>
-              </div>
-              <ChevronLeft className="w-5 h-5 text-amber-500 group-hover:text-amber-400 group-hover:-translate-x-1 transition-all" />
-            </div>
-          </div>
-        </Link>
-      </section>
+
 
       {/* 2. Top Stacked Cards (Books & Verification) */}
       <section className="grid gap-3">

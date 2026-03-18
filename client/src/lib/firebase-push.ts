@@ -90,9 +90,45 @@ export async function requestNotificationPermission(): Promise<string | null> {
             serviceWorkerRegistration: await navigator.serviceWorker.getRegistration('/sw.js')
         });
         console.log('FCM Token obtained:', token.substring(0, 20) + '...');
-        // Send token to server
-        await apiRequest("POST", "/api/push/register", { token });
-        console.log('Token registered with server');
+
+        // Get user location for prayer time notifications
+        let locationData: { city?: string; country?: string; latitude?: number; longitude?: number } = {};
+        try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    timeout: 10000,
+                    maximumAge: 3600000, // cache for 1 hour
+                    enableHighAccuracy: false,
+                });
+            });
+            const { latitude, longitude } = position.coords;
+            locationData.latitude = latitude;
+            locationData.longitude = longitude;
+
+            // Reverse geocode to get city/country
+            try {
+                const geoResp = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
+                    { headers: { 'User-Agent': 'Mihrab App' } }
+                );
+                const geoData = await geoResp.json();
+                locationData.city = geoData.address?.city || geoData.address?.town || geoData.address?.state || 'unknown';
+                locationData.country = geoData.address?.country_code?.toUpperCase() || 'unknown';
+                console.log('Location resolved:', locationData.city, locationData.country);
+            } catch (geoErr) {
+                // Default to Riyadh if reverse geocoding fails
+                locationData.city = 'Riyadh';
+                locationData.country = 'SA';
+            }
+        } catch (locErr) {
+            // Default to Riyadh if geolocation fails
+            locationData = { city: 'Riyadh', country: 'SA', latitude: 24.7136, longitude: 46.6753 };
+            console.log('Geolocation failed, using default: Riyadh, SA');
+        }
+
+        // Send token WITH location to server
+        await apiRequest("POST", "/api/push/register", { token, ...locationData });
+        console.log('Token registered with server (with location)');
         return token;
     } catch (error) {
         console.error('Error requesting notification permission:', error);

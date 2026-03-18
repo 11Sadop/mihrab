@@ -3,11 +3,70 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
-import { BookOpen, ChevronLeft, Search, ChevronDown, ChevronUp, Loader2, Book } from "lucide-react";
+import { BookOpen, ChevronLeft, Search, ChevronDown, ChevronUp, Loader2, Book, Share2, Image as ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useSeo } from "@/hooks/use-seo";
+import { useToast } from "@/hooks/use-toast";
+
+function wrapTextLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    for (const word of words) {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+        } else { currentLine = testLine; }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+}
+
+async function generateHadithImage(text: string, source: string, hadithNumber: number): Promise<Blob | null> {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const W = 1080, H = 1080;
+    canvas.width = W; canvas.height = H;
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0f172a'); bg.addColorStop(1, '#1e293b');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(16,185,129,0.3)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(40, 40, W - 80, H - 80, 30); ctx.stroke();
+    // Top decoration
+    const topG = ctx.createLinearGradient(100, 0, W - 100, 0);
+    topG.addColorStop(0, 'transparent'); topG.addColorStop(0.5, '#10b981'); topG.addColorStop(1, 'transparent');
+    ctx.strokeStyle = topG; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(100, 90); ctx.lineTo(W - 100, 90); ctx.stroke();
+    // Hadith number badge
+    ctx.fillStyle = '#10b981'; ctx.font = 'bold 28px Tajawal, Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText(`حديث رقم ${hadithNumber}`, W / 2, 140);
+    // Text
+    let fontSize = 44;
+    ctx.font = `bold ${fontSize}px Tajawal, Arial, sans-serif`;
+    let lines = wrapTextLines(ctx, text, W - 200);
+    if (lines.length > 10) { fontSize = 32; }
+    else if (lines.length > 7) { fontSize = 36; }
+    ctx.font = `bold ${fontSize}px Tajawal, Arial, sans-serif`;
+    lines = wrapTextLines(ctx, text, W - 200);
+    const lineH = fontSize * 1.9;
+    let y = Math.max(200, (H - lines.length * lineH) / 2 + fontSize);
+    ctx.fillStyle = '#f1f5f9'; ctx.direction = 'rtl';
+    for (const line of lines) { ctx.fillText(line, W / 2, y); y += lineH; }
+    // Source
+    const btmG = ctx.createLinearGradient(100, 0, W - 100, 0);
+    btmG.addColorStop(0, 'transparent'); btmG.addColorStop(0.5, '#10b981'); btmG.addColorStop(1, 'transparent');
+    ctx.strokeStyle = btmG; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(100, H - 180); ctx.lineTo(W - 100, H - 180); ctx.stroke();
+    ctx.font = '24px Tajawal, Arial, sans-serif'; ctx.fillStyle = '#10b981';
+    ctx.fillText(source, W / 2, H - 130);
+    ctx.font = 'bold 28px Tajawal, Arial, sans-serif'; ctx.fillStyle = 'rgba(16,185,129,0.5)';
+    ctx.fillText('محراب  ❘  mihrab.app', W / 2, H - 70);
+    return new Promise(r => canvas.toBlob(b => r(b), 'image/png', 1.0));
+}
 
 interface Hadith {
   id: number;
@@ -36,12 +95,43 @@ export default function HadithCollections() {
     keywords: "صحيح البخاري، صحيح مسلم، كتب الحديث، أحاديث البخاري، أحاديث مسلم، السنة النبوية، الحديث النبوي الشريف",
     canonicalPath: "/hadith-collections",
   });
+  const { toast } = useToast();
   const [selectedCollection, setSelectedCollection] = useState<"bukhari" | "muslim" | null>(null);
   const [expandedBook, setExpandedBook] = useState<number | null>(null);
   const [expandedHadith, setExpandedHadith] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [bookPage, setBookPage] = useState<Record<number, number>>({});
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+
+  const shareHadithLink = async (hadith: Hadith) => {
+    const collectionName = selectedCollection === 'bukhari' ? 'صحيح البخاري' : 'صحيح مسلم';
+    const text = `${hadith.text}\n\n📚 ${collectionName} - حديث رقم ${hadith.hadithNumber}\n\nمن تطبيق محراب 🕌\nhttps://mihrab.app/hadith-collections`;
+    if (navigator.share) {
+      try { await navigator.share({ title: `حديث من ${collectionName}`, text }); } catch {}
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+  };
+
+  const shareHadithImage = async (hadith: Hadith) => {
+    const collectionName = selectedCollection === 'bukhari' ? 'صحيح البخاري' : 'صحيح مسلم';
+    setGeneratingId(hadith.id);
+    try {
+      const blob = await generateHadithImage(hadith.text, collectionName, hadith.hadithNumber);
+      if (!blob) return;
+      const file = new File([blob], `hadith-${hadith.hadithNumber}.png`, { type: 'image/png' });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: `حديث من ${collectionName}`, files: [file] });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `hadith-${hadith.hadithNumber}.png`; a.click();
+        URL.revokeObjectURL(url);
+        toast({ title: 'تم تحميل الصورة ✅' });
+      }
+    } catch { toast({ title: 'خطأ في إنشاء الصورة' }); }
+    finally { setGeneratingId(null); }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -270,6 +360,16 @@ export default function HadithCollections() {
                             >
                               {hadith.text}
                             </p>
+                            {expandedHadith === hadith.id && (
+                              <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30">
+                                <button onClick={(e) => { e.stopPropagation(); shareHadithImage(hadith); }} disabled={generatingId === hadith.id} className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-all" title="حفظ كصورة">
+                                  {generatingId === hadith.id ? <div className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); shareHadithLink(hadith); }} className="p-1.5 rounded-md text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="مشاركة">
+                                  <Share2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </Card>
@@ -345,6 +445,16 @@ export default function HadithCollections() {
                                   <button className="text-xs text-primary mt-1">
                                     {expandedHadith === hadith.id ? "عرض أقل" : "عرض المزيد"}
                                   </button>
+                                )}
+                                {expandedHadith === hadith.id && (
+                                  <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30">
+                                    <button onClick={(e) => { e.stopPropagation(); shareHadithImage(hadith); }} disabled={generatingId === hadith.id} className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-all" title="حفظ كصورة">
+                                      {generatingId === hadith.id ? <div className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); shareHadithLink(hadith); }} className="p-1.5 rounded-md text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="مشاركة">
+                                      <Share2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             </div>

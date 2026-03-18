@@ -1,11 +1,65 @@
 import { Header } from "@/components/Header";
 import { useState } from "react";
-import { Search, Loader2, Check, X, AlertTriangle } from "lucide-react";
+import { Search, Loader2, Check, X, AlertTriangle, Share2, Image as ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/hooks/use-seo";
+import { useToast } from "@/hooks/use-toast";
+
+async function generateVerifyImage(text: string, grade: string, source: string): Promise<Blob | null> {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const W = 1080, H = 1080;
+    canvas.width = W; canvas.height = H;
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0f172a'); bg.addColorStop(1, '#1e293b');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(16,185,129,0.3)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(40, 40, W-80, H-80, 30); ctx.stroke();
+    const topG = ctx.createLinearGradient(100,0,W-100,0);
+    topG.addColorStop(0,'transparent'); topG.addColorStop(0.5,'#10b981'); topG.addColorStop(1,'transparent');
+    ctx.strokeStyle = topG; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(100,90); ctx.lineTo(W-100,90); ctx.stroke();
+    // Grade badge
+    const isGood = grade.includes('صحيح') || grade.includes('حسن');
+    ctx.fillStyle = isGood ? '#10b981' : '#ef4444';
+    ctx.font = 'bold 26px Tajawal, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`درجة الحديث: ${grade}`, W/2, 140);
+    // Text
+    let fontSize = 42;
+    ctx.font = `bold ${fontSize}px Tajawal, Arial, sans-serif`;
+    const words = text.split(' ');
+    const lines: string[] = []; let cur = '';
+    for (const w of words) {
+        const t = cur ? cur+' '+w : w;
+        if (ctx.measureText(t).width > W-200 && cur) { lines.push(cur); cur=w; } else cur=t;
+    }
+    if (cur) lines.push(cur);
+    if (lines.length > 9) fontSize = 32; else if (lines.length > 6) fontSize = 36;
+    ctx.font = `bold ${fontSize}px Tajawal, Arial, sans-serif`;
+    const lines2: string[] = []; cur = '';
+    for (const w of words) {
+        const t = cur ? cur+' '+w : w;
+        if (ctx.measureText(t).width > W-200 && cur) { lines2.push(cur); cur=w; } else cur=t;
+    }
+    if (cur) lines2.push(cur);
+    const lh = fontSize*1.9;
+    let y = Math.max(200,(H-lines2.length*lh)/2+fontSize);
+    ctx.fillStyle = '#f1f5f9'; ctx.direction = 'rtl';
+    for (const line of lines2) { ctx.fillText(line, W/2, y); y+=lh; }
+    const btmG = ctx.createLinearGradient(100,0,W-100,0);
+    btmG.addColorStop(0,'transparent'); btmG.addColorStop(0.5,'#10b981'); btmG.addColorStop(1,'transparent');
+    ctx.strokeStyle = btmG; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(100,H-180); ctx.lineTo(W-100,H-180); ctx.stroke();
+    ctx.font = '22px Tajawal, Arial, sans-serif'; ctx.fillStyle = '#10b981';
+    if (source) ctx.fillText(source, W/2, H-130);
+    ctx.font = 'bold 26px Tajawal, Arial, sans-serif'; ctx.fillStyle = 'rgba(16,185,129,0.5)';
+    ctx.fillText('محراب  ❘  mihrab.app', W/2, H-70);
+    return new Promise(r => canvas.toBlob(b => r(b), 'image/png', 1.0));
+}
 
 interface HadithResult {
     text: string;
@@ -22,12 +76,41 @@ export default function HadithVerifyPage() {
         keywords: "صحة الحديث، تخريج حديث، هل الحديث صحيح، تحقق من الحديث، أحاديث صحيحة، أحاديث ضعيفة، موضوعة، البخاري، مسلم، الدرر السنية، hadith verification",
         canonicalPath: "/hadith-verify",
     });
+    const { toast } = useToast();
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<HadithResult[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [filterSahih, setFilterSahih] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [generatingIdx, setGeneratingIdx] = useState<number|null>(null);
+
+    const shareHadithText = async (hadith: HadithResult) => {
+        const text = `${hadith.text}\n\n📚 ${hadith.source || ''}\n⚖️ الدرجة: ${hadith.grade}\n\nمن تطبيق محراب 🕌\nhttps://mihrab.app/hadith-verify`;
+        if (navigator.share) {
+            try { await navigator.share({ title: 'حديث من محراب', text }); } catch {}
+        } else {
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
+    };
+
+    const shareHadithImage = async (hadith: HadithResult, idx: number) => {
+        setGeneratingIdx(idx);
+        try {
+            const blob = await generateVerifyImage(hadith.text, hadith.grade, hadith.source);
+            if (!blob) return;
+            const file = new File([blob], 'hadith-verify.png', { type: 'image/png' });
+            if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ title: 'حديث من محراب', files: [file] });
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'hadith-verify.png'; a.click();
+                URL.revokeObjectURL(url);
+                toast({ title: 'تم تحميل الصورة ✅' });
+            }
+        } catch { toast({ title: 'خطأ في إنشاء الصورة' }); }
+        finally { setGeneratingIdx(null); }
+    };
 
     const searchHadith = async () => {
         if (!query.trim()) return;
@@ -271,6 +354,26 @@ export default function HadithVerifyPage() {
                                                 {hadith.source}
                                             </p>
                                         )}
+                                    </div>
+                                    {/* Share buttons */}
+                                    <div className="flex items-center gap-2 pt-2 justify-end">
+                                        <button
+                                            onClick={() => shareHadithImage(hadith, index)}
+                                            disabled={generatingIdx === index}
+                                            className="flex items-center gap-1 text-xs px-2 py-1 rounded-md text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                                        >
+                                            {generatingIdx === index
+                                                ? <div className="w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                                                : <ImageIcon className="w-3.5 h-3.5" />}
+                                            <span>حفظ صورة</span>
+                                        </button>
+                                        <button
+                                            onClick={() => shareHadithText(hadith)}
+                                            className="flex items-center gap-1 text-xs px-2 py-1 rounded-md text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                                        >
+                                            <Share2 className="w-3.5 h-3.5" />
+                                            <span>مشاركة</span>
+                                        </button>
                                     </div>
                                 </Card>
                             );

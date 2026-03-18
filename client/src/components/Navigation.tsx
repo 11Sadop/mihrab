@@ -8,7 +8,7 @@ export function Navigation() {
   const navItems = [
     { href: "/", icon: Home, label: "الرئيسية" },
     { href: "/prayer-times", icon: Clock, label: "الصلوات" },
-    { href: "/tafseer", icon: BookOpen, label: "التفسير" },
+    { href: "/tafseer", icon: BookOpen, label: "القرآن" },
     { href: "/tasbeeh", icon: Fingerprint, label: "التسبيح" },
     { href: "/assistant", icon: Bot, label: "المساعد" },
     { href: "/settings", icon: Settings, label: "الإعدادات" },

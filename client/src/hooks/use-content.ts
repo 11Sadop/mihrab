@@ -33,25 +33,40 @@ export function useDuas(category?: string) {
   });
 }
 
-// Daily Hadith Hook - Refreshes on each page load
+// Daily Hadith Hook - Auto-refreshes at midnight
 export function useDailyHadith() {
+  // Calculate milliseconds until midnight so it auto-refreshes each new day
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  const msUntilMidnight = midnight.getTime() - now.getTime();
+
   return useQuery({
     queryKey: [api.hadith.daily.path],
     queryFn: async () => {
-      // Use daily endpoint for consistent result throughout the day
       const res = await fetch(api.hadith.daily.path);
       if (!res.ok) throw new Error("Failed to fetch daily hadith");
       return api.hadith.daily.responses[200].parse(await res.json());
     },
-    staleTime: 1000 * 60 * 60, // 1 hour cache
-    gcTime: 1000 * 60 * 60 * 24, // 24 hours cache
+    staleTime: msUntilMidnight, // يتحدث تلقائي عند منتصف الليل
+    gcTime: 1000 * 60 * 60 * 24,
   });
 }
 
-// Manual Refresh Hook
+// Manual Refresh Hook - يستدعي POST /api/hadith/refresh ويعطي حديث عشوائي مختلف
 export function useManualHadithRefresh() {
   const queryClient = useQueryClient();
   return async () => {
-    await queryClient.invalidateQueries({ queryKey: [api.hadith.daily.path] });
+    try {
+      const res = await fetch(api.hadith.refresh.path, { method: "POST" });
+      if (res.ok) {
+        const newHadith = await res.json();
+        // حدّث الكاش مباشرة بالحديث الجديد
+        queryClient.setQueryData([api.hadith.daily.path], newHadith);
+      }
+    } catch (e) {
+      // fallback: أعد جلب الحديث اليومي
+      await queryClient.invalidateQueries({ queryKey: [api.hadith.daily.path] });
+    }
   };
 }

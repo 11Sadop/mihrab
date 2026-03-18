@@ -1,8 +1,41 @@
 // ========== MIHRAB SERVICE WORKER ==========
-// الإصلاح: استخدام نمط "self-wake" لضمان استمرارية الإشعارات
-// حتى عندما يطفئ المتصفح الـ SW، يُعيد تشغيله تلقائياً عند كل دقيقة
+// يدعم: Firebase Cloud Messaging (FCM) + Local Timer Fallback
 
-const CACHE_NAME = 'mihrab-app-v74';
+// ========== FIREBASE CLOUD MESSAGING ==========
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+    apiKey: "AIzaSyAxSyfXuj4pLzNbOBrMlX3HKGTxi0O2VuQ",
+    authDomain: "mihrabapp-32e80.firebaseapp.com",
+    projectId: "mihrabapp-32e80",
+    storageBucket: "mihrabapp-32e80.firebasestorage.app",
+    messagingSenderId: "1057466774502",
+    appId: "1:1057466774502:web:0c8f703b608ac84d8c9c27"
+});
+
+const fcmMessaging = firebase.messaging();
+
+// عند استقبال رسالة FCM في الخلفية
+fcmMessaging.onBackgroundMessage((payload) => {
+    console.log('🔔 FCM Background message:', payload);
+    const title = payload.notification?.title || 'محراب';
+    const options = {
+        body: payload.notification?.body || '',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        dir: 'rtl',
+        lang: 'ar',
+        vibrate: [200, 100, 200],
+        requireInteraction: true,
+        renotify: true,
+        tag: `mihrab-fcm-${Date.now()}`,
+        data: payload.data || {}
+    };
+    return self.registration.showNotification(title, options);
+});
+
+const CACHE_NAME = 'mihrab-app-v75';
 const urlsToCache = ['/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 // ========== الإسماء العربية لأوقات الصلاة ==========
