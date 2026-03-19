@@ -138,6 +138,8 @@ export default function QuranPage(){
 
   // ═══ AUDIO ═══
   const getReciter=()=>RECITERS.find(r=>r.id===recIdRef.current)||RECITERS[0];
+  const onEndedRef=useRef<()=>void>(()=>{});
+  const onErrRef=useRef<()=>void>(()=>{});
 
   const preloadNext=(sn:number,nis:number)=>{
     const rec=getReciter();if(!rec.ev)return;
@@ -147,7 +149,7 @@ export default function QuranPage(){
     const a=new Audio(url);a.preload='auto';nextAudioRef.current=a;
   };
 
-  const playVerse=useCallback((sn:number,nis:number)=>{
+  const playVerse=(sn:number,nis:number)=>{
     const rec=getReciter();
     if(!rec.ev){
       if(audioRef.current){audioRef.current.src=`${rec.server}/${pad3(sn)}.mp3`;audioRef.current.play().catch(()=>{});}
@@ -157,14 +159,16 @@ export default function QuranPage(){
     if(nextAudioRef.current&&nextAudioRef.current.src.endsWith(`${pad3(sn)}${pad3(nis)}.mp3`)){
       if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}
       const a=nextAudioRef.current;nextAudioRef.current=null;audioRef.current=a;
-      a.onended=onEnded;a.onerror=onErr;a.play().catch(()=>{});
+      a.onended=()=>onEndedRef.current();a.onerror=()=>onErrRef.current();a.play().catch(()=>{});
     }else{
       if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}
-      const a=new Audio(url);a.preload='auto';a.onended=onEnded;a.onerror=onErr;audioRef.current=a;a.play().catch(()=>{});
+      const a=new Audio(url);a.preload='auto';
+      a.onended=()=>onEndedRef.current();a.onerror=()=>onErrRef.current();
+      audioRef.current=a;a.play().catch(()=>{});
     }
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     preloadNext(sn,nis);
-  },[]);
+  };
 
   const playSurahFrom=(sn:number,startNis:number)=>{
     const maxNis=SURAHS.find(s=>s.id===sn)?.c||1;
@@ -187,34 +191,26 @@ export default function QuranPage(){
   const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}};
   const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;playVerse(q.sn,q.nis);}};
 
-  // Check if verse is on current page, if not navigate
+  // Auto page turn when verse not on current page
   const ensureVerseVisible=(sn:number,nis:number)=>{
-    // Find which page this verse is on - check if it's on current page data
     const data=qc.getQueryData<any[]>(["qp",pgRef.current]);
     if(data){
       const found=data.some((a:any)=>a.sn===sn&&a.nis===nis);
       if(!found){
-        // Check next page
         const nextData=qc.getQueryData<any[]>(["qp",pgRef.current-1]);
-        if(nextData&&nextData.some((a:any)=>a.sn===sn&&a.nis===nis)){
-          setPg(pgRef.current-1);
-        }else{
-          // Just go to next page (RTL: page-1 = forward in Quran)
-          if(pgRef.current>1)setPg(pgRef.current-1);
-        }
+        if(nextData&&nextData.some((a:any)=>a.sn===sn&&a.nis===nis))setPg(pgRef.current-1);
+        else if(pgRef.current>1)setPg(pgRef.current-1);
       }
     }
   };
 
-  const onEnded=()=>{
+  // Assign callbacks via refs to break circular dependency
+  onEndedRef.current=()=>{
     const q=playQueueRef.current;
-    if(q&&q.nis<q.maxNis&&getReciter().ev){
-      q.nis++;
-      ensureVerseVisible(q.sn,q.nis);
-      playVerse(q.sn,q.nis);
-    }else stopAudio();
+    if(q&&q.nis<q.maxNis&&getReciter().ev){q.nis++;ensureVerseVisible(q.sn,q.nis);playVerse(q.sn,q.nis);}
+    else stopAudio();
   };
-  const onErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis)skipNext();else stopAudio();};
+  onErrRef.current=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis)skipNext();else stopAudio();};
 
   // When reciter changes during playback, restart with new reciter
   const handleReciterChange=(newId:string)=>{
