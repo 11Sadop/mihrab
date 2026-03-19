@@ -1,5 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Amiri+Quran&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
 
+/* KFGQPC HAFS Uthmanic Script - King Fahd Complex Mushaf Font */
+@font-face {
+  font-family: 'KFGQPC Uthmanic Script HAFS';
+  src: url('https://cdn.jsdelivr.net/gh/nicefont/quran-fonts@master/fonts/hafs/UthmanicHafs1Ver18.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/gh/nicefont/quran-fonts@master/fonts/hafs/UthmanicHafs1Ver18.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -82,13 +92,13 @@
   }
   
   .font-quran {
-    font-family: 'Amiri Quran', 'Scheherazade New', 'Amiri', serif;
+    font-family: 'KFGQPC Uthmanic Script HAFS', 'Amiri Quran', 'Scheherazade New', 'Amiri', serif;
     letter-spacing: 0;
-    line-height: 2.2;
+    line-height: 2.4;
     font-feature-settings: "liga" 1, "calt" 1, "rlig" 1, "kern" 1;
     text-rendering: geometricPrecision;
     -webkit-font-smoothing: antialiased;
-    word-spacing: 0.05em;
+    word-spacing: 0.08em;
   }
 }
 
