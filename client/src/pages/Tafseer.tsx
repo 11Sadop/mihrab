@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2, Image, Type, FileText } from "lucide-react";
+import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2 } from "lucide-react";
 import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
@@ -43,10 +43,17 @@ function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Numb
 const fetchPage=async(p:number)=>{
   const r=await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
   if(!r.ok)throw new Error("Fail");const d=await r.json();
-  // Filter out bismillah entries (nis=0 or duplicate bismillah in verse text for nis=1)
-  return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>({
-    num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:norm(a.text)
-  }));
+  return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
+    let t = norm(a.text);
+    // Remove bismillah from text of verse 1 (except Fatiha and Tawbah)
+    if(a.numberInSurah === 1 && a.surah.number !== 1 && a.surah.number !== 9) {
+      t = t.replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '');
+      t = t.replace(/^بسم الله الرحمن الرحيم\s*/, '');
+    }
+    return {
+      num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t
+    };
+  });
 };
 
 export default function QuranPage(){
@@ -62,12 +69,16 @@ export default function QuranPage(){
   const [showOptions,setShowOptions]=useState(false);
   const [showSharePage,setShowSharePage]=useState(false);
   const [shareMode,setShareMode]=useState<"text"|"noharakat"|"image">("text");
-  const [shareFrom,setShareFrom]=useState(1);
-  const [shareTo,setShareTo]=useState(1);
+  const [shareEndNis,setShareEndNis]=useState(1);
+  const [isSharing,setIsSharing]=useState(false);
 
-  // Audio - per-verse playback
+  // Search by ayahs
+  const [isSearchingAyahs,setIsSearchingAyahs]=useState(false);
+  const [ayahSearchResults,setAyahSearchResults]=useState<any[]>([]);
+
+  // Audio - per-verse playback using single <audio> tag for better mobile stability
   const [isPlaying,setIsPlaying]=useState(false);
-  const [playingKey,setPlayingKey]=useState(""); // "sn-nis" of current playing verse
+  const [playingKey,setPlayingKey]=useState(""); 
   const [playingSn,setPlayingSn]=useState(0);
   const audioRef=useRef<HTMLAudioElement|null>(null);
   const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
@@ -81,7 +92,6 @@ export default function QuranPage(){
   const recRef=useRef<any>(null);
   const txRef=useRef(0);
   const searchRef=useRef<HTMLInputElement>(null);
-  const canvasRef=useRef<HTMLCanvasElement>(null);
 
   const reciter=RECITERS.find(r=>r.id===recId)||RECITERS[0];
   const surah=surahForPage(pg);
@@ -103,36 +113,37 @@ export default function QuranPage(){
 
   const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");};
 
-  // ═══ PER-VERSE AUDIO ═══
+  // ═══ SEARCH LOGIC ═══
+  const handleSearch=async(val:string)=>{
+    setSearch(val);
+    if(val.trim().length>2 && !SURAHS.some(s=>s.n.includes(val.trim()))) {
+      setIsSearchingAyahs(true);
+      try{
+        const r=await fetch(`https://api.alquran.cloud/v1/search/${val.trim()}/all/ar`);
+        const d=await r.json();
+        if(d.code===200) setAyahSearchResults(d.data.matches.slice(0,25));
+        else setAyahSearchResults([]);
+      }catch(e){setAyahSearchResults([]);}
+      setIsSearchingAyahs(false);
+    } else {
+      setAyahSearchResults([]);
+    }
+  };
+
+  const goSurah=(id:number)=>{setPg(PS[id]||1);setShowSearch(false);setSearch("");setSelVerse(null);setShowOptions(false);setHifz(false);stopHifz();resetHifz();setAyahSearchResults([]);};
+
+  // ═══ AUDIO LOGIC ═══
   const playVerse=(sn:number,nis:number)=>{
-    if(audioRef.current){audioRef.current.pause();}
     const folder=reciter.ev;
     let url:string;
-    if(folder){
-      url=`https://everyayah.com/data/${folder}/${pad3(sn)}${pad3(nis)}.mp3`;
-    }else{
-      url=`${reciter.server}/${pad3(sn)}.mp3`;
+    if(folder) url=`https://everyayah.com/data/${folder}/${pad3(sn)}${pad3(nis)}.mp3`;
+    else url=`${reciter.server}/${pad3(sn)}.mp3`;
+    
+    if(audioRef.current){
+      audioRef.current.src=url;
+      audioRef.current.play().catch(()=>{});
+      setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     }
-    const a=new Audio(url);
-    audioRef.current=a;
-    a.onended=()=>{
-      // Auto-advance to next verse
-      const q=playQueueRef.current;
-      if(q&&q.nis<q.maxNis&&folder){
-        const next=q.nis+1;
-        playQueueRef.current={...q,nis:next};
-        setPlayingKey(`${q.sn}-${next}`);
-        const nextUrl=`https://everyayah.com/data/${folder}/${pad3(q.sn)}${pad3(next)}.mp3`;
-        const na=new Audio(nextUrl);
-        audioRef.current=na;
-        na.onended=audioRef.current!.onended;
-        na.play().catch(()=>{});
-      }else{
-        setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
-      }
-    };
-    a.play().catch(()=>{});
-    setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
   };
 
   const playSurahFrom=(sn:number,startNis:number)=>{
@@ -142,13 +153,13 @@ export default function QuranPage(){
   };
 
   const stopAudio=()=>{
-    if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}
+    if(audioRef.current){audioRef.current.pause();audioRef.current.removeAttribute('src');}
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
   };
 
   const togglePlay=()=>{
     if(isPlaying){if(audioRef.current)audioRef.current.pause();setIsPlaying(false);}
-    else if(audioRef.current){audioRef.current.play().catch(()=>{});setIsPlaying(true);}
+    else if(audioRef.current&&audioRef.current.src){audioRef.current.play().catch(()=>{});setIsPlaying(true);}
     else playSurahFrom(surah.id,1);
   };
 
@@ -156,18 +167,35 @@ export default function QuranPage(){
     const q=playQueueRef.current;
     if(q&&q.nis<q.maxNis&&reciter.ev){
       const next=q.nis+1;playQueueRef.current={...q,nis:next};
-      setPlayingKey(`${q.sn}-${next}`);playVerse(q.sn,next);
+      playVerse(q.sn,next);
     }
   };
+  
   const skipPrev=()=>{
     const q=playQueueRef.current;
     if(q&&q.nis>1&&reciter.ev){
       const prev=q.nis-1;playQueueRef.current={...q,nis:prev};
-      setPlayingKey(`${q.sn}-${prev}`);playVerse(q.sn,prev);
+      playVerse(q.sn,prev);
     }
   };
 
-  // Hifz
+  const onAudioEnded=()=>{
+    const q=playQueueRef.current;
+    if(q&&q.nis<q.maxNis&&reciter.ev){
+      const next=q.nis+1;playQueueRef.current={...q,nis:next};
+      playVerse(q.sn,next);
+    }else{
+      stopAudio();
+    }
+  };
+
+  const onAudioError=()=>{
+    // Try skipping to next if error
+    if(isPlaying) skipNext();
+    else stopAudio();
+  };
+
+  // Hifz logic
   const startHifz=useCallback(()=>{
     const SR=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
     if(!SR){alert("جرب Chrome");return;}
@@ -195,24 +223,39 @@ export default function QuranPage(){
 
   useEffect(()=>{return()=>{stopHifz();stopAudio();};},[]);
   useEffect(()=>{if(showSearch&&searchRef.current)setTimeout(()=>searchRef.current?.focus(),100);},[showSearch]);
+  useEffect(()=>{if(selVerse)setShareEndNis(selVerse.nis)},[selVerse]);
 
-  const goSurah=(id:number)=>{setPg(PS[id]||1);setShowSearch(false);setSearch("");setSelVerse(null);setShowOptions(false);setHifz(false);stopHifz();resetHifz();};
-  const filtered=search.trim()?SURAHS.filter(s=>s.n.includes(search)||s.id.toString()===search.trim()):SURAHS;
+  // ═══ SHARE LOGIC ═══
+  const getShareRange=async()=>{
+    if(!selVerse)return {text:"",refs:""};
+    if(shareEndNis===selVerse.nis)return {text:selVerse.text, refs:`${selVerse.nis}`};
+    setIsSharing(true);
+    try{
+      const r=await fetch(`https://api.alquran.cloud/v1/surah/${selVerse.sn}/quran-uthmani`);
+      const d=await r.json();
+      const ayahs=d.data.ayahs.slice(selVerse.nis-1, shareEndNis);
+      const combined=ayahs.map((a:any)=>`${norm(a.text)} ﴿${a.numberInSurah}﴾`).join(' ');
+      setIsSharing(false);
+      return {text:combined, refs:`${selVerse.nis}-${shareEndNis}`};
+    }catch(e){
+      setIsSharing(false);
+      return {text:selVerse.text, refs:`${selVerse.nis}`};
+    }
+  };
 
-  // Share as image
-  const shareAsImage=()=>{
+  const shareAsImage=async(text:string, refs:string)=>{
     if(!selVerse)return;
-    const cv=document.createElement('canvas');cv.width=800;cv.height=500;
+    const cv=document.createElement('canvas');cv.width=800;cv.height=800;
     const ctx=cv.getContext('2d');if(!ctx)return;
     // Background
-    ctx.fillStyle='#1a3a2a';ctx.fillRect(0,0,800,500);
+    ctx.fillStyle='#1a3a2a';ctx.fillRect(0,0,800,800);
     // Border
-    ctx.strokeStyle='#C8A96E';ctx.lineWidth=3;ctx.strokeRect(20,20,760,460);
+    ctx.strokeStyle='#C8A96E';ctx.lineWidth=3;ctx.strokeRect(20,20,760,760);
     // Text
     ctx.font='32px "KFGQPC Uthmanic Script HAFS", "Amiri Quran", serif';
     ctx.fillStyle='#E8DCC8';ctx.textAlign='center';ctx.direction='rtl';
     // Word wrap
-    const words=selVerse.text.split(' ');let line='';let y=120;
+    const words=text.split(' ');let line='';let y=120;
     for(const w of words){
       const test=line+w+' ';
       if(ctx.measureText(test).width>700&&line){ctx.fillText(line.trim(),400,y);y+=55;line=w+' ';}
@@ -221,98 +264,92 @@ export default function QuranPage(){
     if(line)ctx.fillText(line.trim(),400,y);
     // Surah info
     ctx.font='20px sans-serif';ctx.fillStyle='#C8A96E';
-    ctx.fillText(`${SURAHS.find(s=>s.id===selVerse.sn)?.n} : ${selVerse.nis}`,400,y+70);
+    ctx.fillText(`${SURAHS.find(s=>s.id===selVerse.sn)?.n} : ${refs}`,400,y+80);
     // Mihrab watermark
-    ctx.font='14px sans-serif';ctx.fillStyle='#C8A96E50';ctx.fillText('mihrabapp.com',400,470);
+    ctx.font='14px sans-serif';ctx.fillStyle='#C8A96E50';ctx.fillText('mihrabapp.com',400,y+120);
     cv.toBlob((blob)=>{
       if(!blob)return;
       const file=new File([blob],'ayah.png',{type:'image/png'});
       if(navigator.share&&navigator.canShare?.({files:[file]})){
-        navigator.share({files:[file],text:`${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${selVerse.nis}`}).catch(()=>{});
+        navigator.share({files:[file],text:`${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}`}).catch(()=>{});
       }else{
         const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='ayah.png';a.click();URL.revokeObjectURL(url);
       }
     },'image/png');
   };
 
-  // Do share
-  const doShare=()=>{
+  const doShare=async()=>{
     if(!selVerse)return;
-    if(shareMode==='image'){shareAsImage();return;}
-    let txt=selVerse.text;
+    const {text, refs}=await getShareRange();
+    if(shareMode==='image'){shareAsImage(text,refs);return;}
+    let txt=text;
     if(shareMode==='noharakat')txt=txt.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'');
-    const full=`${txt}\n\n— ${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${selVerse.nis}\nmihrabapp.com`;
+    const full=`${txt}\n\n— سُورَةُ ${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}\nmihrabapp.com`;
     if(navigator.share)navigator.share({text:full}).catch(()=>{});
     else{navigator.clipboard.writeText(full);alert("تم النسخ!");}
+    setShowSharePage(false);
   };
 
-  // Group by surah
+  // Data processing
   const groups:{sn:number;sname:string;ayahs:{nis:number;text:string;gi:number}[]}[]=[];
   if(pq.data){let cur:typeof groups[0]|null=null;pq.data.forEach((a:any,i:number)=>{if(!cur||cur.sn!==a.sn){cur={sn:a.sn,sname:a.sname,ayahs:[]};groups.push(cur);}cur.ayahs.push({nis:a.nis,text:a.text,gi:i});});}
-
+  const filteredS=search.trim()?SURAHS.filter(s=>s.n.includes(search)||s.id.toString()===search.trim()):SURAHS;
   const playingName=playingSn?SURAHS.find(s=>s.id===playingSn)?.n:"";
-  const pKey=playingKey; // current playing verse key
 
-  // ═══ SHARE PAGE (full screen like Ayah app) ═══
+  // ═══ SHARE PAGE ═══
   if(showSharePage&&selVerse){
     const sname=SURAHS.find(s=>s.id===selVerse.sn)?.n||"";
+    const maxNis=SURAHS.find(s=>s.id===selVerse.sn)?.c||1;
+    const len=shareEndNis-selVerse.nis+1;
+    const shareBtnText=`مشاركة ${len===1?"آية واحدة":len+" آيات"}`;
+    
     return(
       <div className="min-h-screen bg-background flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <button onClick={()=>setShowSharePage(false)}><X className="w-5 h-5 text-muted-foreground"/></button>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border" style={{paddingTop:'calc(env(safe-area-inset-top, 16px) + 12px)'}}>
+          <button onClick={()=>setShowSharePage(false)} className="p-2"><X className="w-5 h-5 text-muted-foreground"/></button>
           <span className="text-sm font-bold">مشاركة</span>
-          <span className="text-sm text-primary font-bold">{sname}: {selVerse.nis}</span>
+          <span className="text-sm text-primary font-bold pr-2">{sname}: {selVerse.nis}</span>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-6" dir="rtl">
-          {/* Share format */}
           <div>
             <h3 className="text-sm font-bold mb-3 text-foreground">مشاركة ك:</h3>
             <div className="space-y-2">
               {([["image","صورة"],["text","نص"],["noharakat","نص بدون تشكيل"]] as const).map(([val,label])=>(
                 <button key={val} onClick={()=>setShareMode(val)}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border ${shareMode===val?"border-primary bg-primary/5":"border-border"}`}>
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border ${shareMode===val?"border-primary bg-primary/5 text-primary font-bold":"border-border text-foreground"}`}>
                   <span className="text-sm">{label}</span>
-                  {shareMode===val&&<span className="text-primary text-lg">✓</span>}
+                  {shareMode===val&&<span className="text-lg">✓</span>}
                 </button>
               ))}
             </div>
           </div>
-          {/* Range */}
           <div>
             <h3 className="text-sm font-bold mb-3 text-foreground">النطاق</h3>
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground w-8">من</span>
-                <div className="flex-1 p-2.5 rounded-xl border border-border text-sm">{sname}: {selVerse.nis}</div>
+                <div className="flex-1 p-3 rounded-xl border border-border text-sm flex justify-between bg-card text-foreground">
+                  <span>سورة {sname}</span><span>آية {selVerse.nis}</span>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground w-8">إلى</span>
-                <div className="flex-1 p-2.5 rounded-xl border border-border text-sm">{sname}: {selVerse.nis}</div>
+                <div className="flex-1 relative">
+                  <select value={shareEndNis} onChange={e=>setShareEndNis(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl border border-border text-sm appearance-auto outline-none bg-card text-foreground pr-3 pl-8">
+                    {Array.from({length:Math.min(20, maxNis-selVerse.nis+1)}).map((_,i)=>{
+                      const n=selVerse.nis+i;return <option key={n} value={n}>آية {n}</option>
+                    })}
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
-          {/* App badge */}
-          <div>
-            <h3 className="text-sm font-bold mb-3 text-foreground">شارة التطبيق</h3>
-            <div className="flex items-center justify-between p-3 rounded-xl border border-border">
-              <span className="text-sm">إضافة شارة التطبيق</span>
-              <div className="w-10 h-6 bg-primary rounded-full flex items-center justify-end px-0.5">
-                <div className="w-5 h-5 bg-white rounded-full shadow"/>
-              </div>
-            </div>
-          </div>
-          {/* Preview */}
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <p className="font-quran text-center text-foreground leading-[2.5]" style={{fontSize:'clamp(18px,4vw,22px)'}}>
-              {shareMode==='noharakat'?selVerse.text.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,''):selVerse.text}
-            </p>
-            <p className="text-center text-xs text-muted-foreground mt-2">— {sname}: {selVerse.nis}</p>
+            {len===20&&<p className="text-xs text-amber-500 mt-2 text-center border border-amber-500/20 bg-amber-500/10 rounded-lg p-2">أقصى حد للمشاركة 20 آية</p>}
           </div>
         </div>
-        {/* Bottom button */}
-        <div className="p-4 border-t border-border">
-          <button onClick={()=>{doShare();}} className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm">
-            مشاركة آية واحدة
+        <div className="p-4 border-t border-border" style={{paddingBottom:'calc(env(safe-area-inset-bottom, 16px) + 16px)'}}>
+          <button onClick={doShare} disabled={isSharing} className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm flex justify-center items-center gap-2">
+            {isSharing?<Loader2 className="w-5 h-5 animate-spin"/>:shareBtnText}
           </button>
         </div>
       </div>
@@ -321,8 +358,12 @@ export default function QuranPage(){
 
   return(
     <div className="min-h-screen bg-background select-none">
-      {/* TOP BAR - fixed with safe area */}
-      {showUI&&<div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground shadow-md" style={{paddingTop:'env(safe-area-inset-top,0px)'}}>
+      {/* Hidden audio element for stable mobile playback */}
+      <audio ref={audioRef} onEnded={onAudioEnded} onError={onAudioError} preload="auto" />
+
+      {/* TOP NAV */}
+      {showUI&&<div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground shadow-md transition-transform" 
+        style={{paddingTop:'env(safe-area-inset-top, 0px)'}}>
         <div className="flex items-center justify-between px-3" style={{height:48}}>
           <button onClick={()=>setShowSearch(true)} className="p-2 rounded-lg hover:bg-white/10"><Search className="w-5 h-5"/></button>
           <div className="text-center flex-1">
@@ -336,67 +377,85 @@ export default function QuranPage(){
         </div>
       </div>}
 
-      {/* SEARCH */}
+      {/* SEARCH OVERLAY */}
       {showSearch&&<div className="fixed inset-0 z-[60] bg-black/50" onClick={()=>setShowSearch(false)}>
-        <div className="bg-card h-full w-full max-w-sm ml-auto overflow-y-auto" onClick={e=>e.stopPropagation()}>
-          <div className="sticky top-0 bg-primary p-3 z-10"><div className="relative">
-            <Input ref={searchRef} placeholder="ابحث عن سورة..." value={search} onChange={e=>setSearch(e.target.value)}
-              className="text-right pl-10 h-10 rounded-xl bg-white/10 border-white/20 text-primary-foreground placeholder:text-white/40" dir="rtl"/>
-            <button onClick={()=>setShowSearch(false)} className="absolute left-3 top-2.5"><X className="w-5 h-5 text-white/60"/></button>
-          </div></div>
-          <div className="p-2">{filtered.map(s=><button key={s.id} onClick={()=>goSurah(s.id)}
-            className="w-full text-right p-3 rounded-lg hover:bg-muted flex items-center gap-3">
-            <span className="w-7 h-7 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{s.id}</span>
-            <span className="font-bold text-sm flex-1">{s.n}</span>
-            <span className="text-[11px] text-muted-foreground">{s.c} آية</span>
-          </button>)}</div>
+        <div className="bg-card h-full w-full max-w-sm ml-auto flex flex-col" onClick={e=>e.stopPropagation()}
+          style={{paddingTop:'env(safe-area-inset-top, 0px)'}}>
+          <div className="bg-primary p-3 shadow-sm z-10 shrink-0">
+            <div className="relative">
+              <Input ref={searchRef} placeholder="ابحث باسم السورة أو جزء من آية..." value={search} onChange={e=>handleSearch(e.target.value)}
+                className="text-right pl-10 h-10 rounded-xl bg-white/10 border-white/20 text-primary-foreground placeholder:text-white/40 font-quran" dir="rtl"/>
+              <button onClick={()=>setShowSearch(false)} className="absolute left-3 top-2.5"><X className="w-5 h-5 text-white/60"/></button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2">
+            {search.trim().length===0 ? filteredS.map(s=><button key={s.id} onClick={()=>goSurah(s.id)}
+              className="w-full text-right p-3 rounded-lg hover:bg-muted flex items-center gap-3">
+              <span className="w-7 h-7 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{s.id}</span>
+              <span className="font-bold text-sm flex-1">{s.n}</span><span className="text-[11px] text-muted-foreground">{s.c} آية</span>
+            </button>) : 
+            isSearchingAyahs ? <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary"/></div> :
+            ayahSearchResults.length > 0 ? ayahSearchResults.map((m,i)=><button key={i} onClick={()=>goSurah(m.surah.number)}
+              className="w-full text-right p-3 rounded-lg hover:bg-muted border-b border-border/50 text-foreground" dir="rtl">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-bold text-primary">{m.surah.name}</span>
+                <span className="text-[10px] text-muted-foreground">آية {m.numberInSurah}</span>
+              </div>
+              <p className="text-sm font-quran leading-loose" dangerouslySetInnerHTML={{__html:m.text.replace(new RegExp(search.trim(),'g'),`<span class="text-primary bg-primary/10 rounded px-1">${search.trim()}</span>`)}}></p>
+            </button>) :
+            filteredS.length > 0 ? filteredS.map(s=><button key={s.id} onClick={()=>goSurah(s.id)}
+              className="w-full text-right p-3 rounded-lg hover:bg-muted flex items-center gap-3">
+              <span className="w-7 h-7 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{s.id}</span>
+              <span className="font-bold text-sm flex-1">{s.n}</span><span className="text-[11px] text-muted-foreground">{s.c} آية</span>
+            </button>) :
+            <div className="p-8 text-center text-sm text-muted-foreground">لا توجد نتائج</div>}
+          </div>
         </div>
       </div>}
 
       {/* VERSE OPTIONS */}
       {showOptions&&selVerse&&<div className="fixed inset-0 z-[55] flex items-end" onClick={()=>setShowOptions(false)}>
-        <div className="w-full bg-card rounded-t-2xl shadow-2xl border-t border-border max-h-[65vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-          <div className="sticky top-0 bg-card pt-3 px-4 pb-2 border-b border-border flex items-center justify-between z-10">
-            <button onClick={()=>setShowOptions(false)} className="text-muted-foreground">✕</button>
+        <div className="w-full bg-card rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.2)] border-t border-border max-h-[70vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+          <div className="sticky top-0 bg-card pt-4 px-4 pb-3 border-b border-border flex items-center justify-between z-10 mx-[-1px]">
+            <button onClick={()=>setShowOptions(false)} className="bg-muted p-1.5 rounded-full"><X className="w-4 h-4 text-foreground"/></button>
             <span className="text-sm font-bold">{SURAHS.find(s=>s.id===selVerse.sn)?.n}: {selVerse.nis}</span>
-            <span/>
+            <span className="w-7"/>
           </div>
-          <div className="p-4 space-y-4" dir="rtl">
+          <div className="p-4 space-y-6" dir="rtl">
             <div>
-              <h3 className="text-sm font-bold mb-2">التلاوة</h3>
+              <h3 className="text-sm font-bold mb-3 text-foreground">التلاوة</h3>
               <select value={recId} onChange={e=>setRecId(e.target.value)}
-                className="w-full h-10 rounded-xl border border-border bg-card text-foreground text-sm px-3 mb-2">
+                className="w-full h-12 rounded-xl border border-border bg-muted/50 text-foreground text-sm px-4 mb-3 appearance-auto outline-none">
                 {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
               <div className="flex gap-2">
                 <button onClick={()=>{playSurahFrom(selVerse.sn,selVerse.nis);setShowOptions(false);}}
-                  className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1">
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2">
                   <Play className="w-4 h-4"/>تشغيل
                 </button>
-                <button onClick={()=>{playSurahFrom(selVerse.sn,selVerse.nis);setShowOptions(false);}}
-                  className="flex-1 py-2.5 rounded-xl bg-muted text-foreground text-sm font-bold flex items-center justify-center gap-1">
-                  <Play className="w-4 h-4"/>تشغيل إلى
+                <button onClick={()=>{playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}}
+                  className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold flex items-center justify-center gap-2">
+                  <Play className="w-4 h-4"/>تشغيل الآية
                 </button>
               </div>
             </div>
             <div>
-              <h3 className="text-sm font-bold mb-2">التفسير</h3>
+              <h3 className="text-sm font-bold mb-3 text-foreground">التفسير</h3>
               <div className="flex gap-2">
                 <button onClick={async()=>{try{const r=await fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/ar.muyassar`);const d=await r.json();alert(d.data.text);}catch(e){alert("فشل");}}}
-                  className="flex-1 py-2.5 rounded-xl bg-muted text-sm flex items-center justify-center gap-1">
+                  className="flex-1 py-3 rounded-xl bg-muted text-sm flex items-center justify-center gap-2 text-foreground">
                   <BookOpen className="w-4 h-4 text-primary"/>الميسر
                 </button>
                 <button onClick={async()=>{try{const r=await fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/ar.jalalayn`);const d=await r.json();alert(d.data.text);}catch(e){alert("فشل");}}}
-                  className="flex-1 py-2.5 rounded-xl bg-muted text-sm flex items-center justify-center gap-1">
+                  className="flex-1 py-3 rounded-xl bg-muted text-sm flex items-center justify-center gap-2 text-foreground">
                   <BookOpen className="w-4 h-4 text-primary"/>الجلالين
                 </button>
               </div>
             </div>
             <div>
-              <h3 className="text-sm font-bold mb-2">المشاركة</h3>
               <button onClick={()=>{setShowOptions(false);setShowSharePage(true);}}
-                className="w-full py-2.5 rounded-xl bg-muted text-sm flex items-center justify-center gap-1">
-                <Share2 className="w-4 h-4 text-primary"/>مشاركة
+                className="w-full py-3.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-2 text-foreground mb-4">
+                <Share2 className="w-4 h-4 text-primary"/>مشاركة الآية
               </button>
             </div>
           </div>
@@ -425,30 +484,30 @@ export default function QuranPage(){
 
       {/* ═══ MUSHAF ═══ */}
       <div style={{paddingTop:showUI?(hifz?110:56):0,paddingBottom:playingSn?130:70}}
-        className="min-h-screen flex flex-col"
+        className="min-h-screen flex flex-col pt-safe pb-safe"
         onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]')){setShowUI(!showUI);if(showOptions)setShowOptions(false);}}}
         onTouchStart={onTS} onTouchEnd={onTE}>
 
         {pq.isLoading?<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div>
         :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p className="text-muted-foreground text-sm">فشل التحميل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex-1 flex flex-col justify-center px-5 py-6" style={{maxWidth:580,margin:'0 auto',width:'100%'}}>
+        :<div className="flex-1 flex flex-col justify-center px-4 md:px-5 py-6" style={{maxWidth:600,margin:'0 auto',width:'100%'}}>
           {groups.map((g,gi)=><div key={`${g.sn}-${gi}`}>
             {/* Surah header */}
-            {g.ayahs[0].nis===1&&<div className="text-center mb-3 mt-2">
-              <div className="inline-block px-10 py-2 rounded-xl border-2 border-primary/20 bg-primary/5">
-                <span className="text-primary font-bold font-quran" style={{fontSize:'clamp(20px,5vw,26px)'}}>{g.sname}</span>
+            {g.ayahs[0].nis===1&&<div className="text-center mb-3 mt-4">
+              <div className="inline-block px-10 py-2.5 rounded-2xl border border-primary/20 bg-primary/5">
+                <span className="text-primary font-bold font-quran" style={{fontSize:'clamp(22px,5vw,28px)'}}>{g.sname}</span>
               </div>
             </div>}
-            {/* Bismillah - separate, only for surahs 2-114 except 9, and only if first verse text doesn't start with bismillah */}
-            {g.ayahs[0].nis===1&&g.sn!==1&&g.sn!==9&&!g.ayahs[0].text.includes('بسم')&&
-              <div className="text-center mb-4">
-                <p className="font-quran text-foreground" style={{fontSize:'clamp(20px,5vw,24px)'}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+            {/* Bismillah */}
+            {g.ayahs[0].nis===1&&g.sn!==1&&g.sn!==9&&
+              <div className="text-center mb-5 mt-2">
+                <p className="font-quran text-foreground" style={{fontSize:'clamp(20px,5vw,26px)'}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
               </div>
             }
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(22px,5.5vw,30px)',lineHeight:'2.8'}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(22px,6vw,32px)',lineHeight:'2.4'}}>
               {g.ayahs.map(a=>{
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
-                const isPlaying_=pKey===k;
+                const isPlaying_=playingKey===k;
                 return<span key={k} className="inline" data-v>
                   <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.text});setShowOptions(true);}}}
                     className={`transition-all duration-300 px-0.5 rounded ${
@@ -460,39 +519,39 @@ export default function QuranPage(){
                     } ${cur?"bg-amber-500/15":""} ${!hifz&&!isPlaying_?"active:bg-primary/10 cursor-pointer":""}`}>
                     {hidden?a.text.replace(/[^\s]/g,"·"):a.text}
                   </span>
-                  <span className={`inline-flex items-center justify-center w-7 h-7 mx-0.5 rounded-full border text-[11px] font-sans align-middle font-bold ${
+                  <span className={`inline-flex items-center justify-center w-[1.8em] h-[1.8em] mx-1 rounded-full border text-[0.4em] font-sans align-middle font-bold ${
                     isPlaying_?"border-primary bg-primary/10 text-primary":"border-primary/20 text-primary/60"
                   }`}>{hidden?"؟":a.nis}</span>
                 </span>;
               })}
             </div>
           </div>)}
-          <div className="flex items-center justify-center gap-3 mt-6"><div className="w-14 h-px bg-border"/><span className="text-[12px] text-muted-foreground font-sans">{pg}</span><div className="w-14 h-px bg-border"/></div>
+          <div className="flex items-center justify-center gap-3 mt-8 mb-4"><div className="w-14 h-px bg-border"/><span className="text-[12px] text-muted-foreground font-sans">{pg}</span><div className="w-14 h-px bg-border"/></div>
         </div>}
       </div>
 
       {/* ═══ BOTTOM PLAYER ═══ */}
-      {playingSn>0&&<div className="fixed left-0 right-0 z-50 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.15)]"
-        style={{bottom:0,paddingBottom:'max(env(safe-area-inset-bottom,0px),8px)'}}>
-        <div className="flex items-center justify-between px-4 pt-2 pb-0.5">
+      {playingSn>0&&<div className="fixed left-0 right-0 z-50 bg-card border-t border-border shadow-[0_-10px_30px_rgba(0,0,0,0.1)] transition-transform duration-300 transform translate-y-0"
+        style={{bottom:0, paddingBottom:'calc(env(safe-area-inset-bottom, 16px) + 8px)'}}>
+        <div className="flex items-center justify-between px-5 pt-3 pb-2">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground">🎙</span>
-            <select value={recId} onChange={e=>{setRecId(e.target.value);}}
-              className="bg-transparent text-foreground text-[12px] border-0 outline-none">
+            <span className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-[11px] text-primary-foreground">🎙</span>
+            <select value={recId} onChange={e=>setRecId(e.target.value)}
+              className="bg-transparent text-foreground text-xs border-0 outline-none appearance-auto">
               {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground">{playingName}</span>
-            <button onClick={stopAudio} className="p-1 text-red-400 text-xs">✕</button>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-muted-foreground font-bold">{playingName}</span>
+            <button onClick={stopAudio} className="w-7 h-7 flex items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"><X className="w-4 h-4"/></button>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-6 pb-1">
-          <button onClick={skipPrev} className="p-2 text-muted-foreground hover:text-foreground"><SkipForward className="w-5 h-5"/></button>
-          <button onClick={togglePlay} className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform">
-            {isPlaying?<Pause className="w-6 h-6"/>:<Play className="w-6 h-6 ml-0.5"/>}
+        <div className="flex items-center justify-center gap-8 pb-3 pt-1">
+          <button onClick={skipPrev} className="p-2 text-muted-foreground hover:text-foreground active:scale-90 transition-all"><SkipForward className="w-6 h-6"/></button>
+          <button onClick={togglePlay} className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-all outline-none">
+            {isPlaying?<Pause className="w-6 h-6"/>:<Play className="w-6 h-6 ml-1"/>}
           </button>
-          <button onClick={skipNext} className="p-2 text-muted-foreground hover:text-foreground"><SkipBack className="w-5 h-5"/></button>
+          <button onClick={skipNext} className="p-2 text-muted-foreground hover:text-foreground active:scale-90 transition-all"><SkipBack className="w-6 h-6"/></button>
         </div>
       </div>}
 
