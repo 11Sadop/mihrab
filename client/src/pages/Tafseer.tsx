@@ -206,7 +206,7 @@ export default function QuranPage(){
       {/* ═══ VERSE OPTIONS PANEL (like Ayah app) ═══ */}
       {showOptions&&selVerse&&<div className="fixed inset-0 z-[55] flex items-end" onClick={()=>{setShowOptions(false);}}>
         <div className="w-full bg-card rounded-t-2xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-200 max-h-[70vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-          <div className="sticky top-0 bg-card pt-3 px-4 pb-2 border-b border-border flex items-center justify-between">
+          <div className="sticky top-0 bg-card pt-3 px-4 pb-2 border-b border-border flex items-center justify-between z-10">
             <button onClick={()=>setShowOptions(false)} className="text-sm text-muted-foreground">✕</button>
             <span className="text-sm font-bold">{SURAHS.find(s=>s.id===selVerse.sn)?.n}: {selVerse.nis}</span>
             <span className="text-sm text-primary font-bold">تعديل</span>
@@ -215,10 +215,10 @@ export default function QuranPage(){
             {/* التلاوة */}
             <div>
               <h3 className="text-sm font-bold mb-2 text-foreground">التلاوة</h3>
-              <Select value={recId} onValueChange={setRecId}>
-                <SelectTrigger className="h-9 text-sm mb-2"><SelectValue/></SelectTrigger>
-                <SelectContent className="max-h-[200px]">{RECITERS.map(r=><SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <select value={recId} onChange={e=>setRecId(e.target.value)}
+                className="w-full h-10 rounded-xl border border-border bg-card text-foreground text-sm px-3 mb-2 appearance-auto">
+                {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
               <div className="flex gap-2">
                 <button onClick={()=>{playSurah(selVerse.sn);setShowOptions(false);}}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold">
@@ -257,13 +257,23 @@ export default function QuranPage(){
             {/* المشاركة */}
             <div>
               <h3 className="text-sm font-bold mb-2 text-foreground">المشاركة</h3>
-              <button onClick={()=>{
-                const txt=`${selVerse.text}\n\n— ${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${selVerse.nis}`;
-                if(navigator.share)navigator.share({text:txt}).catch(()=>{});
-                else{navigator.clipboard.writeText(txt);alert("تم النسخ!");}
-              }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-muted text-foreground text-sm w-full">
-                <Share2 className="w-4 h-4 text-primary"/>مشاركة
-              </button>
+              <div className="space-y-2">
+                <button onClick={()=>{
+                  const txt=`${selVerse.text}\n\n— ${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${selVerse.nis}`;
+                  if(navigator.share)navigator.share({text:txt}).catch(()=>{});
+                  else{navigator.clipboard.writeText(txt);alert("تم النسخ!");}
+                }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-muted text-foreground text-sm w-full">
+                  <Share2 className="w-4 h-4 text-primary"/>نص
+                </button>
+                <button onClick={()=>{
+                  const clean=selVerse.text.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'');
+                  const txt=`${clean}\n\n— ${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${selVerse.nis}`;
+                  if(navigator.share)navigator.share({text:txt}).catch(()=>{});
+                  else{navigator.clipboard.writeText(txt);alert("تم النسخ!");}
+                }} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-muted text-foreground text-sm w-full">
+                  <Share2 className="w-4 h-4 text-primary"/>نص بدون تشكيل
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -299,18 +309,23 @@ export default function QuranPage(){
         :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p className="text-muted-foreground text-sm">فشل التحميل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
         :<div className="flex-1 flex flex-col justify-center px-5 py-6" style={{maxWidth:580,margin:'0 auto',width:'100%'}}>
           {groups.map((g,gi)=><div key={`${g.sn}-${gi}`}>
+            {/* Surah header - use API name directly (already includes سورة) */}
             {g.ayahs[0].nis===1&&<div className="text-center mb-4 mt-2">
               <div className="inline-block px-10 py-2 rounded-xl border-2 border-primary/20 bg-primary/5">
-                <span className="text-primary font-bold font-quran" style={{fontSize:'clamp(20px,5vw,26px)'}}>سُورَةُ {g.sname}</span>
+                <span className="text-primary font-bold font-quran" style={{fontSize:'clamp(20px,5vw,26px)'}}>{g.sname}</span>
               </div>
-              {g.sn!==1&&g.sn!==9&&<p className="font-quran text-foreground mt-3" style={{fontSize:'clamp(20px,5vw,24px)'}}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>}
+            </div>}
+            {/* Bismillah - always separate, only once per surah */}
+            {g.ayahs[0].nis===1&&g.sn!==1&&g.sn!==9&&<div className="text-center mb-4">
+              <p className="font-quran text-foreground" style={{fontSize:'clamp(20px,5vw,24px)'}}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
             </div>}
             <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(22px,5.5vw,30px)',lineHeight:'2.8'}}>
               {g.ayahs.map(a=>{
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
+                const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
                 return<span key={k} className="inline" data-v>
                   <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.text});setShowOptions(true);}}}
-                    className={`transition-colors duration-200 px-0.5 rounded-sm ${hidden?"text-transparent":"text-foreground"} ${hr==="ok"?"!text-green-600 dark:!text-green-400":""} ${hr==="err"?"!text-red-500 dark:!text-red-400":""} ${cur?"bg-amber-500/15 rounded":""} ${!hifz?"active:bg-primary/10 cursor-pointer":""}`}>
+                    className={`transition-colors duration-200 px-0.5 rounded-sm ${hidden?"text-transparent":"text-foreground"} ${hr==="ok"?"!text-green-600 dark:!text-green-400":""} ${hr==="err"?"!text-red-500 dark:!text-red-400":""} ${cur?"bg-amber-500/15 rounded":""} ${isSel?"bg-primary/15 rounded":""} ${!hifz?"active:bg-primary/10 cursor-pointer":""}`}>
                     {hidden?a.text.replace(/[^\s]/g,"·"):a.text}
                   </span>
                   <span className="inline-flex items-center justify-center w-7 h-7 mx-0.5 rounded-full border border-primary/20 text-[11px] text-primary/60 font-sans align-middle font-bold">{hidden?"؟":a.nis}</span>
@@ -326,13 +341,13 @@ export default function QuranPage(){
       {playingSurah>0&&showUI&&<div className="fixed left-0 right-0 z-40 bg-card border-t border-border shadow-[0_-2px_10px_rgba(0,0,0,0.1)]" style={{bottom:64}}>
         {/* Reciter info */}
         <div className="flex items-center justify-between px-4 pt-2 pb-1">
-          <Select value={recId} onValueChange={setRecId}>
-            <SelectTrigger className="h-7 text-[11px] w-auto border-0 bg-transparent p-0 gap-1">
-              <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center"><span className="text-[8px] text-primary-foreground">🎙</span></span>
-              <SelectValue/>
-            </SelectTrigger>
-            <SelectContent className="max-h-[200px]">{RECITERS.map(r=><SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center"><span className="text-[10px] text-primary-foreground">🎙</span></span>
+            <select value={recId} onChange={e=>{setRecId(e.target.value);if(playingSurah)setTimeout(()=>playSurah(playingSurah),100);}}
+              className="bg-transparent text-foreground text-[12px] border-0 outline-none cursor-pointer">
+              {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
           <span className="text-[11px] text-muted-foreground">{playingName}</span>
         </div>
         {/* Controls */}
