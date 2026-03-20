@@ -1,11 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Amiri+Quran&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
 
-/* me_quran - Mushaf font with correct tashkeel (same as Ayah app) */
+/* me_quran - Mushaf font with correct tashkeel */
 @font-face {
   font-family: 'me_quran';
-  src: url('https://cdn.jsdelivr.net/gh/AzizZayed/Quran-Complex-Fonts@main/me_quran.woff2') format('woff2'),
-       url('https://cdn.jsdelivr.net/gh/AzizZayed/Quran-Complex-Fonts@main/me_quran.woff') format('woff'),
-       url('https://fonts.qurancomplex.gov.sa/wp-content/fonts/me_quran/me_quran-regular.woff2') format('woff2');
+  src: url('https://db.onlinewebfonts.com/t/a79b204e9c3055c77f0d81921bd881c2.woff2') format('woff2'),
+       url('https://db.onlinewebfonts.com/t/a79b204e9c3055c77f0d81921bd881c2.woff') format('woff');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
