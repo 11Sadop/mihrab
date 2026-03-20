@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2, Square, Settings } from "lucide-react";
+import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2, Square, Settings, ArrowRight } from "lucide-react";
 import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
@@ -34,10 +34,21 @@ const PS:Record<number,number>={1:1,2:2,3:50,4:77,5:106,6:128,7:151,8:177,9:187,
 const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9,182:10,201:11,222:12,242:13,262:14,282:15,302:16,322:17,342:18,362:19,382:20,402:21,422:22,442:23,462:24,482:25,502:26,522:27,542:28,562:29,582:30};
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
+// Strip Quranic pause marks AND normalize text
 const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'').replace(/[\u06D6-\u06ED]/g,'');
 const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g,'').replace(/[ٱإأآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
+
+// Multiple bismillah patterns to strip
+const BISM_PATTERNS=[
+  /^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/,
+  /^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/,
+  /^بسم الله الرحمن الرحيم\s*/,
+  /^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/,
+  /^بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ\s*/,
+  /^بسم ٱلله ٱلرحمن ٱلرحيم\s*/,
+];
 
 const fetchPage=async(p:number)=>{
   const r=await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
@@ -45,18 +56,17 @@ const fetchPage=async(p:number)=>{
   return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
     let t=norm(a.text);
     if(a.numberInSurah===1&&a.surah.number!==1&&a.surah.number!==9){
-      t=t.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/,'');
-      t=t.replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/,'');
+      for(const p of BISM_PATTERNS)t=t.replace(p,'');
     }
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t,juz:a.juz};
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t.trim(),juz:a.juz};
   });
 };
 
-const QBG:Record<string,{bg:string;text:string;border:string}>={
-  dark:{bg:'#1a2332',text:'#d4c5a0',border:'#3d5a3d'},
-  cream:{bg:'#F5ECD7',text:'#2c1810',border:'#c8a96e'},
-  white:{bg:'#ffffff',text:'#1a1a1a',border:'#ddd'},
-  green:{bg:'#1a3a2a',text:'#d4c5a0',border:'#3d5a3d'},
+const QBG:Record<string,{bg:string;text:string;border:string;hi:string}>={
+  dark:{bg:'#1a2332',text:'#d4c5a0',border:'#3d5a3d',hi:'rgba(34,197,94,0.25)'},
+  cream:{bg:'#F5ECD7',text:'#2c1810',border:'#c8a96e',hi:'rgba(34,150,94,0.2)'},
+  white:{bg:'#ffffff',text:'#1a1a1a',border:'#ddd',hi:'rgba(34,197,94,0.15)'},
+  green:{bg:'#1a3a2a',text:'#d4c5a0',border:'#3d5a3d',hi:'rgba(34,197,94,0.25)'},
 };
 
 export default function QuranPage(){
@@ -70,7 +80,7 @@ export default function QuranPage(){
   const [selVerse,setSelVerse]=useState<{sn:number;nis:number;text:string}|null>(null);
   const [showOptions,setShowOptions]=useState(false);
   const [showSharePage,setShowSharePage]=useState(false);
-  const [shareMode,setShareMode]=useState<"text"|"noharakat"|"image">("text");
+  const [shareMode,setShareMode]=useState<"text"|"noharakat"|"image">("image");
   const [shareEndNis,setShareEndNis]=useState(1);
   const [isSharing,setIsSharing]=useState(false);
   const [isSearchingAyahs,setIsSearchingAyahs]=useState(false);
@@ -84,7 +94,9 @@ export default function QuranPage(){
   const audioRef=useRef<HTMLAudioElement|null>(null);
   const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
   const nextAudioRef=useRef<HTMLAudioElement|null>(null);
-  const recIdRef=useRef(recId); // track current reciter for callbacks
+  const recIdRef=useRef(recId);
+  const onEndedRef=useRef<()=>void>(()=>{});
+  const onErrRef=useRef<()=>void>(()=>{});
 
   const [hifz,setHifz]=useState(false);
   const [recording,setRecording]=useState(false);
@@ -119,7 +131,6 @@ export default function QuranPage(){
   },[pg]);
   const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");};
 
-  // Search with debounce
   const searchTimeout=useRef<any>(null);
   const handleSearch=(val:string)=>{
     setSearch(val);
@@ -138,8 +149,6 @@ export default function QuranPage(){
 
   // ═══ AUDIO ═══
   const getReciter=()=>RECITERS.find(r=>r.id===recIdRef.current)||RECITERS[0];
-  const onEndedRef=useRef<()=>void>(()=>{});
-  const onErrRef=useRef<()=>void>(()=>{});
 
   const preloadNext=(sn:number,nis:number)=>{
     const rec=getReciter();if(!rec.ev)return;
@@ -152,7 +161,8 @@ export default function QuranPage(){
   const playVerse=(sn:number,nis:number)=>{
     const rec=getReciter();
     if(!rec.ev){
-      if(audioRef.current){audioRef.current.src=`${rec.server}/${pad3(sn)}.mp3`;audioRef.current.play().catch(()=>{});}
+      if(!audioRef.current)audioRef.current=new Audio();
+      audioRef.current.src=`${rec.server}/${pad3(sn)}.mp3`;audioRef.current.play().catch(()=>{});
       setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);return;
     }
     const url=`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3`;
@@ -191,20 +201,13 @@ export default function QuranPage(){
   const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}};
   const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;playVerse(q.sn,q.nis);}};
 
-  // Auto page turn when verse not on current page
   const ensureVerseVisible=(sn:number,nis:number)=>{
     const data=qc.getQueryData<any[]>(["qp",pgRef.current]);
-    if(data){
-      const found=data.some((a:any)=>a.sn===sn&&a.nis===nis);
-      if(!found){
-        const nextData=qc.getQueryData<any[]>(["qp",pgRef.current-1]);
-        if(nextData&&nextData.some((a:any)=>a.sn===sn&&a.nis===nis))setPg(pgRef.current-1);
-        else if(pgRef.current>1)setPg(pgRef.current-1);
-      }
+    if(data&&!data.some((a:any)=>a.sn===sn&&a.nis===nis)){
+      if(pgRef.current>1)setPg(pgRef.current-1);
     }
   };
 
-  // Assign callbacks via refs to break circular dependency
   onEndedRef.current=()=>{
     const q=playQueueRef.current;
     if(q&&q.nis<q.maxNis&&getReciter().ev){q.nis++;ensureVerseVisible(q.sn,q.nis);playVerse(q.sn,q.nis);}
@@ -212,13 +215,10 @@ export default function QuranPage(){
   };
   onErrRef.current=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis)skipNext();else stopAudio();};
 
-  // When reciter changes during playback, restart with new reciter
   const handleReciterChange=(newId:string)=>{
-    setRecId(newId);
-    recIdRef.current=newId;
+    setRecId(newId);recIdRef.current=newId;
     const q=playQueueRef.current;
     if(q&&isPlaying){
-      // Stop current, restart with new reciter at same verse
       if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}
       nextAudioRef.current=null;
       setTimeout(()=>playVerse(q.sn,q.nis),100);
@@ -273,12 +273,12 @@ export default function QuranPage(){
     const ctx=cv.getContext('2d');if(!ctx)return;
     ctx.fillStyle='#1a3a2a';ctx.fillRect(0,0,800,800);
     ctx.strokeStyle='#C8A96E';ctx.lineWidth=3;ctx.strokeRect(20,20,760,760);
-    ctx.font='32px "KFGQPC Uthmanic Script HAFS","Amiri Quran",serif';
+    ctx.font='32px "me_quran","KFGQPC Uthmanic Script HAFS","Amiri Quran",serif';
     ctx.fillStyle='#E8DCC8';ctx.textAlign='center';ctx.direction='rtl';
     const words=text.split(' ');let line='';let y=120;
     for(const w of words){const test=line+w+' ';if(ctx.measureText(test).width>700&&line){ctx.fillText(line.trim(),400,y);y+=55;line=w+' ';}else line=test;}
     if(line)ctx.fillText(line.trim(),400,y);
-    ctx.font='20px sans-serif';ctx.fillStyle='#C8A96E';ctx.fillText(`سُورَةُ ${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}`,400,y+80);
+    ctx.font='20px sans-serif';ctx.fillStyle='#C8A96E';ctx.fillText(`${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}`,400,y+80);
     ctx.font='14px sans-serif';ctx.fillStyle='#C8A96E50';ctx.fillText('mihrabapp.com',400,y+120);
     cv.toBlob(blob=>{
       if(!blob)return;
@@ -293,7 +293,7 @@ export default function QuranPage(){
     if(!selVerse)return;const{text,refs}=await getShareRange();
     if(shareMode==='image'){shareAsImage(text,refs);return;}
     let t=text;if(shareMode==='noharakat')t=t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'');
-    const full=`${t}\n\n— سُورَةُ ${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}\nmihrabapp.com`;
+    const full=`${t}\n\n${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}\nmihrabapp.com`;
     if(navigator.share)navigator.share({text:full}).catch(()=>{});
     else{navigator.clipboard.writeText(full);alert("تم النسخ!");}
     setShowSharePage(false);
@@ -304,9 +304,7 @@ export default function QuranPage(){
   if(pq.data){let cur:typeof groups[0]|null=null;pq.data.forEach((a:any,i:number)=>{if(!cur||cur.sn!==a.sn){cur={sn:a.sn,sname:a.sname,ayahs:[]};groups.push(cur);}cur.ayahs.push({nis:a.nis,text:a.text,gi:i});});}
   const filteredS=search.trim()?SURAHS.filter(s=>s.n.includes(search)||s.id.toString()===search.trim()):SURAHS;
   const playingName=playingSn?SURAHS.find(s=>s.id===playingSn)?.n:"";
-  const playerH=playingSn?80:0;
-  const topH=showUI?44:0;
-  const hifzH=hifz&&showUI?56:0;
+  const isMobile=typeof window!=='undefined'&&window.innerWidth<768;
 
   // ═══ SHARE PAGE ═══
   if(showSharePage&&selVerse){
@@ -317,16 +315,16 @@ export default function QuranPage(){
       <div className="min-h-screen bg-background flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border" style={{paddingTop:'calc(env(safe-area-inset-top,12px) + 8px)'}}>
           <button onClick={()=>setShowSharePage(false)} className="p-2"><X className="w-5 h-5"/></button>
-          <span className="text-sm font-bold">مشاركة</span>
+          <span className="text-sm font-bold">مشاركة الآيات</span>
           <span className="text-sm text-primary font-bold">{sname}: {selVerse.nis}</span>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-5" dir="rtl">
-          <div><h3 className="text-sm font-bold mb-2">مشاركة ك:</h3>
-            <div className="space-y-2">{([["image","صورة (حفظ/إرسال)"],["text","نص"],["noharakat","نص بدون تشكيل"]] as const).map(([v,l])=>(
+          <div><h3 className="text-sm font-bold mb-2">نوع المشاركة:</h3>
+            <div className="space-y-2">{([["image","📷 صورة (حفظ/إرسال)"],["text","📝 نص"],["noharakat","📝 نص بدون تشكيل"]] as const).map(([v,l])=>(
               <button key={v} onClick={()=>setShareMode(v)} className={`w-full flex items-center justify-between p-3 rounded-xl border ${shareMode===v?"border-primary bg-primary/5 font-bold":"border-border"}`}>
-                <span className="text-sm">{l}</span>{shareMode===v&&<span className="text-primary">✓</span>}
+                <span className="text-sm">{l}</span>{shareMode===v&&<span className="text-primary text-lg">✓</span>}
               </button>))}</div></div>
-          <div><h3 className="text-sm font-bold mb-2">النطاق</h3>
+          <div><h3 className="text-sm font-bold mb-2">النطاق (أقصى 20 آية)</h3>
             <div className="space-y-2">
               <div className="flex items-center gap-3"><span className="text-sm text-muted-foreground w-8">من</span>
                 <div className="flex-1 p-3 rounded-xl border border-border text-sm bg-card">{sname}: آية {selVerse.nis}</div></div>
@@ -334,12 +332,15 @@ export default function QuranPage(){
                 <select value={shareEndNis} onChange={e=>setShareEndNis(Number(e.target.value))}
                   className="flex-1 p-3 rounded-xl border border-border text-sm bg-card outline-none">
                   {Array.from({length:Math.min(20,maxNis-selVerse.nis+1)}).map((_,i)=>{const n=selVerse.nis+i;return<option key={n} value={n}>آية {n}</option>})}
-                </select></div></div>
-            {len>=20&&<p className="text-xs text-amber-500 mt-1 text-center">أقصى حد 20 آية</p>}</div>
+                </select></div></div></div>
+          <div className="p-4 rounded-xl bg-card border border-border">
+            <p className="font-quran text-center leading-[2.5]" style={{fontSize:'clamp(16px,4vw,20px)'}}>
+              {shareMode==='noharakat'?selVerse.text.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,''):selVerse.text}
+            </p><p className="text-center text-xs text-muted-foreground mt-2">— {sname}: {selVerse.nis}</p></div>
         </div>
         <div className="p-4 border-t border-border" style={{paddingBottom:'calc(env(safe-area-inset-bottom,12px) + 8px)'}}>
-          <button onClick={doShare} disabled={isSharing} className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm">
-            {isSharing?<Loader2 className="w-5 h-5 animate-spin mx-auto"/>:`مشاركة ${len===1?"آية واحدة":len+" آيات"}`}
+          <button onClick={doShare} disabled={isSharing} className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-base">
+            {isSharing?<Loader2 className="w-5 h-5 animate-spin mx-auto"/>:shareMode==='image'?`💾 حفظ/مشاركة ${len} آية كصورة`:`📤 مشاركة ${len} آية`}
           </button></div>
       </div>);
   }
@@ -348,28 +349,29 @@ export default function QuranPage(){
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
       {/* TOP BAR */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground shadow-md" style={{paddingTop:'env(safe-area-inset-top,0px)'}}>
-        <div className="flex items-center justify-between px-2" style={{height:44}}>
-          <div className="flex items-center gap-0.5">
-            <button onClick={()=>setShowSearch(true)} className="p-1.5 rounded-lg hover:bg-white/10"><Search className="w-4 h-4"/></button>
-            <button onClick={()=>setShowSettings(!showSettings)} className="p-1.5 rounded-lg hover:bg-white/10"><Settings className="w-4 h-4"/></button>
+        <div className="flex items-center justify-between px-2" style={{height:48}}>
+          <div className="flex items-center gap-1">
+            <a href="/" className="p-2 rounded-lg hover:bg-white/10"><ArrowRight className="w-4 h-4"/></a>
+            <button onClick={()=>setShowSearch(true)} className="p-2 rounded-lg hover:bg-white/10"><Search className="w-4 h-4"/></button>
+            <button onClick={()=>setShowSettings(!showSettings)} className="p-2 rounded-lg hover:bg-white/10"><Settings className="w-4 h-4"/></button>
           </div>
-          <span className="text-[13px] font-bold">{surah.n}</span>
-          <div className="flex items-center gap-0.5">
-            <span className="text-[10px] opacity-60">ج{juz} ص{pg}</span>
-            <button onClick={()=>{setHifz(!hifz);if(hifz)stopHifz();resetHifz();}} className={`p-1.5 rounded-lg ${hifz?"bg-amber-500":"hover:bg-white/10"}`}>
+          <span className="text-sm font-bold">{surah.n}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] opacity-70">ج{juz} ص{pg}</span>
+            <button onClick={()=>{setHifz(!hifz);if(hifz)stopHifz();resetHifz();}} className={`p-2 rounded-lg ${hifz?"bg-amber-500":"hover:bg-white/10"}`}>
               <Mic className="w-4 h-4"/></button>
           </div>
         </div>
       </div>}
 
-      {/* SETTINGS POPUP */}
+      {/* SETTINGS */}
       {showSettings&&<div className="fixed inset-0 z-[58] flex items-end" onClick={()=>setShowSettings(false)}>
-        <div className="w-full bg-card rounded-t-2xl p-4 border-t border-border" onClick={e=>e.stopPropagation()}>
+        <div className="w-full bg-card rounded-t-2xl p-4 border-t border-border shadow-2xl" onClick={e=>e.stopPropagation()}>
           <h3 className="text-sm font-bold mb-3 text-center text-foreground">لون صفحة القرآن</h3>
           <div className="flex justify-center gap-3">
             {Object.entries(QBG).map(([k,v])=>(
               <button key={k} onClick={()=>{setQTheme(k);setShowSettings(false);}}
-                className={`w-12 h-12 rounded-xl border-2 ${qTheme===k?'border-primary':'border-transparent'}`}
+                className={`w-14 h-14 rounded-xl border-2 ${qTheme===k?'border-primary shadow-lg':'border-transparent'}`}
                 style={{background:v.bg}}/>
             ))}
           </div>
@@ -401,31 +403,31 @@ export default function QuranPage(){
 
       {/* VERSE OPTIONS */}
       {showOptions&&selVerse&&<div className="fixed inset-0 z-[55] flex items-end" onClick={()=>setShowOptions(false)}>
-        <div className="w-full bg-card rounded-t-2xl shadow-2xl border-t border-border max-h-[60vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+        <div className="w-full bg-card rounded-t-2xl shadow-2xl border-t border-border max-h-[55vh] overflow-y-auto" style={{paddingBottom:'env(safe-area-inset-bottom,8px)'}} onClick={e=>e.stopPropagation()}>
           <div className="sticky top-0 bg-card pt-3 px-4 pb-2 border-b border-border flex items-center justify-between z-10">
             <button onClick={()=>setShowOptions(false)} className="bg-muted p-1.5 rounded-full"><X className="w-4 h-4"/></button>
             <span className="text-sm font-bold">{SURAHS.find(s=>s.id===selVerse.sn)?.n}: {selVerse.nis}</span><span className="w-7"/>
           </div>
-          <div className="p-4 space-y-3" dir="rtl">
-            <div><h3 className="text-xs font-bold mb-2 opacity-60">التلاوة</h3>
+          <div className="p-3 space-y-3" dir="rtl">
+            <div><h3 className="text-xs font-bold mb-1.5 opacity-60">القارئ</h3>
               <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="w-full h-10 rounded-xl border border-border bg-muted/50 text-sm px-3 mb-2 outline-none">
                 {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
               <div className="flex gap-2">
-                <button onClick={()=>{playSurahFrom(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>تشغيل</button>
-                <button onClick={()=>{playQueueRef.current=null;playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>الآية فقط</button>
+                <button onClick={()=>{playSurahFrom(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>من هنا</button>
+                <button onClick={()=>{playQueueRef.current=null;playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>الآية</button>
               </div></div>
-            <div><h3 className="text-xs font-bold mb-2 opacity-60">التفسير</h3>
+            <div><h3 className="text-xs font-bold mb-1.5 opacity-60">التفسير</h3>
               <div className="flex gap-2">
                 <button onClick={async()=>{try{const r=await fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/ar.muyassar`);const d=await r.json();alert(d.data.text);}catch{alert("فشل");}}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>الميسر</button>
                 <button onClick={async()=>{try{const r=await fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/ar.jalalayn`);const d=await r.json();alert(d.data.text);}catch{alert("فشل");}}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>الجلالين</button>
               </div></div>
-            <button onClick={()=>{setShowOptions(false);setShowSharePage(true);}} className="w-full py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Share2 className="w-4 h-4 text-primary"/>مشاركة</button>
+            <button onClick={()=>{setShowOptions(false);setShowSharePage(true);}} className="w-full py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"><Share2 className="w-4 h-4"/>مشاركة / حفظ كصورة</button>
           </div>
         </div>
       </div>}
 
-      {/* HIFZ BAR */}
-      {hifz&&showUI&&<div className="fixed left-0 right-0 z-40 px-3 py-1.5" style={{top:`calc(44px + env(safe-area-inset-top,0px))`,background:colors.bg,borderBottom:`1px solid ${colors.border}`}}>
+      {/* HIFZ */}
+      {hifz&&showUI&&<div className="fixed left-0 right-0 z-40 px-3 py-1.5" style={{top:'calc(48px + env(safe-area-inset-top,0px))',background:colors.bg,borderBottom:`1px solid ${colors.border}`}}>
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold">🎤 الحفظ</span>
           <div className="flex gap-1">
@@ -435,81 +437,88 @@ export default function QuranPage(){
         <div className="flex gap-1.5 mt-1">
           <button onClick={()=>recording?stopHifz():startHifz()} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 ${recording?"bg-red-500 text-white animate-pulse":"bg-amber-500 text-white"}`}>
             {recording?<><MicOff className="w-3 h-3"/>إيقاف</>:<><Mic className="w-3 h-3"/>ابدأ</>}</button>
-          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40'}}>كشف</button>
-          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40'}}>تخطي</button>
+          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>كشف</button>
+          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>تخطي</button>
         </div>
       </div>}
 
       {/* ═══ MUSHAF ═══ */}
       <div className="overflow-y-auto"
-        style={{height:`calc(100dvh - ${topH+hifzH+playerH}px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))`,
-          marginTop:topH+hifzH,paddingTop:4}}
-        onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]')){setShowUI(!showUI);if(showOptions)setShowOptions(false);}}}
+        style={{height:`calc(100dvh - ${showUI?48:0}px - ${hifz&&showUI?46:0}px - ${playingSn?72:0}px)`,
+          marginTop:(showUI?48:0)+(hifz&&showUI?46:0),paddingTop:4}}
+        onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]'))setShowUI(!showUI);}}
         onTouchStart={onTS} onTouchEnd={onTE}>
         {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
-        :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p className="text-sm">فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col justify-center px-3 md:px-5" style={{maxWidth:620,margin:'0 auto',width:'100%',minHeight:'100%'}}>
+        :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
+        :<div className="flex flex-col justify-center px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%'}}>
           {groups.map((g,gi)=><div key={`${g.sn}-${gi}`}>
-            {g.ayahs[0].nis===1&&<div className="text-center my-2">
-              <div className="inline-block relative px-10 py-1.5">
-                <div className="absolute inset-0 border rounded-2xl" style={{borderColor:colors.border}}/>
-                <div className="absolute top-1/2 left-1 w-3 h-px" style={{background:colors.border}}/>
-                <div className="absolute top-1/2 right-1 w-3 h-px" style={{background:colors.border}}/>
-                <span className="font-quran font-bold relative z-10" style={{fontSize:'clamp(16px,4vw,22px)',color:colors.text}}>{g.sname}</span>
+            {/* Decorated Surah Header */}
+            {g.ayahs[0].nis===1&&<div className="text-center my-3">
+              <div className="inline-block relative px-12 py-2">
+                <div className="absolute inset-0 border-2 rounded-2xl" style={{borderColor:colors.border}}/>
+                <div className="absolute top-1/2 -left-4 w-6 h-px" style={{background:colors.border}}/>
+                <div className="absolute top-1/2 -right-4 w-6 h-px" style={{background:colors.border}}/>
+                <span className="font-quran font-bold relative z-10" style={{fontSize:'clamp(20px,5vw,28px)',color:colors.text}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
               </div>
             </div>}
+            {/* Bismillah - once, separate */}
             {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mb-2">
-              <p className="font-quran" style={{fontSize:'clamp(14px,3.5vw,18px)',color:colors.text}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+              <p className="font-quran" style={{fontSize:'clamp(16px,4vw,22px)',color:colors.text,letterSpacing:'0.02em'}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ</p>
             </div>}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(16px,4.2vw,24px)',lineHeight:'2.2',color:colors.text}}>
+            {/* Verses */}
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(20px,5vw,28px)',lineHeight:'2.4',color:colors.text}}>
               {g.ayahs.map(a=>{
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                 const isP=playingKey===k;
+                // For Fatiha, verse 1 is bismillah itself - skip it since we show it separately
                 if(g.sn===1&&a.nis===1)return null;
-                return<span key={k} className="inline" data-v>
+                return<span key={k} className="inline" data-v="1">
                   <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.text});setShowOptions(true);}}}
-                    className="transition-colors duration-200 px-0.5 rounded cursor-pointer"
+                    className="transition-colors duration-200 rounded cursor-pointer"
                     style={{
                       color:hidden?'transparent':isP?'#fff':hr==='ok'?'#4ade80':hr==='err'?'#f87171':colors.text,
-                      background:isP?'rgba(34,197,94,0.3)':cur?'rgba(245,158,11,0.15)':'transparent',
+                      background:isP?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
+                      padding:isP?'2px 4px':'0',borderRadius:isP?'6px':'0',
                     }}>
-                    {hidden?a.text.replace(/[^\s]/g,"·"):a.text}
+                    {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text}
                   </span>
-                  <span className="inline-flex items-center justify-center rounded-full border align-middle font-sans font-bold"
-                    style={{width:'1.4em',height:'1.4em',fontSize:'0.38em',margin:'0 1px',
-                      borderColor:isP?'#22c55e':colors.border+'50',color:isP?'#22c55e':colors.text+'70',
+                  {/* Verse number marker - bigger like Ayah app */}
+                  <span className="inline-flex items-center justify-center rounded-full border-2 align-middle font-sans font-bold mx-1"
+                    style={{width:'1.8em',height:'1.8em',fontSize:'0.42em',verticalAlign:'middle',
+                      borderColor:isP?'#22c55e':colors.border+'80',color:isP?'#22c55e':colors.text+'90',
                       background:isP?'rgba(34,197,94,0.1)':'transparent'
                     }}>{hidden?"؟":a.nis}</span>
                 </span>;
               })}
             </div>
           </div>)}
-          <div className="flex items-center justify-center gap-3 mt-3 mb-2"><div className="w-10 h-px" style={{background:colors.border}}/><span className="text-[10px] font-sans" style={{color:colors.text+'70'}}>{pg}</span><div className="w-10 h-px" style={{background:colors.border}}/></div>
-          {/* Desktop nav inside content area */}
-          {typeof window!=='undefined'&&window.innerWidth>=768&&showUI&&!playingSn&&<div className="flex justify-center gap-3 mt-1 mb-2">
-            <button onClick={()=>{if(pg>1)setPg(p=>p-1);}} disabled={pg<=1} className="px-4 py-1.5 rounded-lg bg-primary/80 text-primary-foreground text-xs disabled:opacity-30 flex items-center gap-1"><ChevronRight className="w-3 h-3"/>التالية</button>
-            <button onClick={()=>{if(pg<604)setPg(p=>p+1);}} disabled={pg>=604} className="px-4 py-1.5 rounded-lg bg-primary/80 text-primary-foreground text-xs disabled:opacity-30 flex items-center gap-1">السابقة<ChevronLeft className="w-3 h-3"/></button>
+          {/* Page number */}
+          <div className="flex items-center justify-center gap-3 mt-3 mb-2">
+            <div className="w-12 h-px" style={{background:colors.border}}/><span className="text-[11px] font-sans" style={{color:colors.text+'80'}}>{pg}</span><div className="w-12 h-px" style={{background:colors.border}}/>
+          </div>
+          {/* Desktop navigation */}
+          {!isMobile&&showUI&&<div className="flex justify-center gap-3 mt-1 mb-3">
+            <button onClick={()=>{if(pg>1)setPg(p=>p-1);}} disabled={pg<=1} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold disabled:opacity-30 flex items-center gap-1"><ChevronRight className="w-4 h-4"/>التالية</button>
+            <button onClick={()=>{if(pg<604)setPg(p=>p+1);}} disabled={pg>=604} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold disabled:opacity-30 flex items-center gap-1">السابقة<ChevronLeft className="w-4 h-4"/></button>
           </div>}
         </div>}
       </div>
 
       {/* ═══ BOTTOM PLAYER ═══ */}
-      {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card border-t border-border" style={{paddingBottom:'env(safe-area-inset-bottom,4px)'}}>
-        <div className="flex items-center justify-between px-3 pt-1.5 pb-0.5">
+      {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.2)]" style={{paddingBottom:'env(safe-area-inset-bottom,4px)'}}>
+        <div className="flex items-center justify-between px-3 pt-2 pb-1">
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="bg-transparent text-foreground text-[11px] border-0 outline-none min-w-0 truncate max-w-[140px]">
+            <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="bg-transparent text-foreground text-[12px] border-0 outline-none min-w-0 truncate max-w-[130px]">
               {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
+            <span className="text-[10px] text-muted-foreground">| {playingName}</span>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[10px] text-muted-foreground">{playingName}</span>
-            <button onClick={stopAudio} className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center"><Square className="w-3 h-3 text-red-400"/></button>
+          <div className="flex items-center gap-3">
+            <button onClick={skipPrev} className="p-1 text-muted-foreground"><SkipForward className="w-4 h-4"/></button>
+            <button onClick={togglePlay} className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
+              {isPlaying?<Pause className="w-4 h-4"/>:<Play className="w-4 h-4 ml-0.5"/>}</button>
+            <button onClick={skipNext} className="p-1 text-muted-foreground"><SkipBack className="w-4 h-4"/></button>
+            <button onClick={stopAudio} className="p-1"><Square className="w-4 h-4 text-red-400"/></button>
           </div>
-        </div>
-        <div className="flex items-center justify-center gap-5 pb-1.5">
-          <button onClick={skipPrev} className="p-1.5 text-muted-foreground active:scale-90"><SkipForward className="w-5 h-5"/></button>
-          <button onClick={togglePlay} className="w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95">
-            {isPlaying?<Pause className="w-5 h-5"/>:<Play className="w-5 h-5 ml-0.5"/>}</button>
-          <button onClick={skipNext} className="p-1.5 text-muted-foreground active:scale-90"><SkipBack className="w-5 h-5"/></button>
         </div>
       </div>}
     </div>
