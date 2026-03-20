@@ -273,7 +273,7 @@ export default function QuranPage(){
     const ctx=cv.getContext('2d');if(!ctx)return;
     ctx.fillStyle='#1a3a2a';ctx.fillRect(0,0,800,800);
     ctx.strokeStyle='#C8A96E';ctx.lineWidth=3;ctx.strokeRect(20,20,760,760);
-    ctx.font='32px "me_quran","KFGQPC Uthmanic Script HAFS","Amiri Quran",serif';
+    ctx.font='32px "Amiri Quran","KFGQPC Uthmanic Script HAFS",serif';
     ctx.fillStyle='#E8DCC8';ctx.textAlign='center';ctx.direction='rtl';
     const words=text.split(' ');let line='';let y=120;
     for(const w of words){const test=line+w+' ';if(ctx.measureText(test).width>700&&line){ctx.fillText(line.trim(),400,y);y+=55;line=w+' ';}else line=test;}
@@ -466,7 +466,7 @@ export default function QuranPage(){
               <p className="font-quran" style={{fontSize:'clamp(16px,4vw,22px)',color:colors.text,letterSpacing:'0.02em'}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ</p>
             </div>}
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(20px,5vw,28px)',lineHeight:'2.4',color:colors.text}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(16px,3.8vw,22px)',lineHeight:'2',color:colors.text}}>
               {g.ayahs.map(a=>{
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                 const isP=playingKey===k;
@@ -484,7 +484,7 @@ export default function QuranPage(){
                   </span>
                   {/* Verse number marker - bigger like Ayah app */}
                   <span className="inline-flex items-center justify-center rounded-full border-2 align-middle font-sans font-bold mx-1"
-                    style={{width:'1.8em',height:'1.8em',fontSize:'0.42em',verticalAlign:'middle',
+                    style={{width:'2.2em',height:'2.2em',fontSize:'0.48em',verticalAlign:'middle',
                       borderColor:isP?'#22c55e':colors.border+'80',color:isP?'#22c55e':colors.text+'90',
                       background:isP?'rgba(34,197,94,0.1)':'transparent'
                     }}>{hidden?"؟":a.nis}</span>
