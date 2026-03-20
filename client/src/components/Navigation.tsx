@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 export function Navigation() {
   const [location] = useLocation();
 
+  // Hide nav on Quran page for immersive reading
+  if (location === "/tafseer") return null;
+
   const navItems = [
     { href: "/", icon: Home, label: "الرئيسية" },
     { href: "/prayer-times", icon: Clock, label: "الصلوات" },
