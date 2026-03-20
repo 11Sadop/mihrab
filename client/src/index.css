@@ -1,116 +1,220 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Amiri+Quran&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
 
-/* Quran font - Amiri Quran from Google Fonts (reliable) */
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta http-equiv="Permissions-Policy" content="accelerometer=*, gyroscope=*, magnetometer=*" />
 
-/* KFGQPC as fallback */
-@font-face {
-  font-family: 'KFGQPC Uthmanic Script HAFS';
-  src: url('https://cdn.jsdelivr.net/gh/nicefont/quran-fonts@master/fonts/hafs/UthmanicHafs1Ver18.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+    <!-- Force Dark Mode Colors -->
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#0c4a3e" media="(prefers-color-scheme: light)">
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+    <title>محراب - مواقيت الصلاة، الأحاديث، أسعار الذهب، والأذكار</title>
+    <meta name="description"
+        content="تطبيق محراب الإسلامي الشامل - مواقيت الصلاة الدقيقة، التأكد من صحة الأحاديث، أسعار الذهب اليوم، بوصلة القبلة، حاسبة الزكاة، أذكار الصباح والمساء، وتفسير القرآن. رفيقك الإسلامي اليومي." />
+    <meta name="keywords"
+        content="محراب، موقع محراب، مواقيت الصلاة، أوقات الصلاة، تخريج الأحاديث، صحة الحديث، أسعار الذهب، سعر الذهب اليوم، بوصلة القبلة، اتجاه القبلة، حاسبة الزكاة، القرآن الكريم، اذكار الصباح والمساء، ادعية، احاديث صحيحة، تسبيح، qibla compass, prayer times, gold price, islamic app" />
+    <meta name="author" content="موقع محراب" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://mihrab.app/" />
 
-:root {
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
-  --font-arabic: 'Amiri', serif;
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mihrab.app/" />
+    <meta property="og:title" content="محراب - دليلك الشامل: مواقيت الصلاة، الأحاديث، وأسعار الذهب" />
+    <meta property="og:description"
+        content="مكانك الواحد لكل ما تحتاجه: مواقيت الصلاة، التحقق من الأحاديث، أسعار الذهب المحدثة، بوصلة القبلة، حاسبة الزكاة، وأذكار الصباح والمساء." />
+    <meta property="og:image" content="https://mihrab.app/icon-512.png" />
+    <meta property="og:locale" content="ar_SA" />
+    <meta property="og:site_name" content="محراب" />
 
-  /* Islamic Calm Theme - Emerald/Teal & Gold */
-  --background: 150 20% 98%;      /* Very soft green-tinted white */
-  --foreground: 160 40% 15%;      /* Deep emerald text */
-  
-  --primary: 165 65% 35%;         /* Rich Emerald */
-  --primary-foreground: 150 20% 98%;
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://mihrab.app/" />
+    <meta name="twitter:title" content="موقع محراب - مواقيت الصلاة وصحة الأحاديث" />
+    <meta name="twitter:description"
+        content="تعرف على مواقيت الصلاة الدقيقة وتأكد من صحة الأحاديث الشريفة وتابع أسعار الذهب يومياً عبر موقع محراب." />
+    <meta name="twitter:image" content="https://mihrab.app/icon-512.png" />
+    <link rel="icon" type="image/png" href="/icon-512.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#111827" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="محراب" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="محراب" />
+    <meta name="msapplication-TileColor" content="#111827" />
+    <meta name="msapplication-TileImage" content="/icon-512.png" />
 
-  --secondary: 40 60% 95%;        /* Soft Gold/Cream */
-  --secondary-foreground: 35 70% 30%; /* Dark Bronze */
+    <!-- Force dark background immediately -->
+    <style>
+        html,
+        body {
+            background-color: #111827 !important;
+        }
 
-  --muted: 150 10% 94%;
-  --muted-foreground: 160 20% 50%;
+        html.dark {
+            background-color: #111827 !important;
+        }
+    </style>
 
-  --accent: 35 80% 55%;           /* Gold Accent */
-  --accent-foreground: 0 0% 100%;
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://mihrab.app/#website",
+          "name": "محراب - موقع إسلامي شامل",
+          "alternateName": "Mihrab Islamic App",
+          "url": "https://mihrab.app/",
+          "inLanguage": "ar",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://mihrab.app/tafseer?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://mihrab.app/#webapplication",
+          "name": "محراب - تطبيق إسلامي شامل",
+          "alternateName": "Mihrab Islamic App",
+          "applicationCategory": "LifestyleApplication",
+          "applicationSubCategory": "Religious",
+          "operatingSystem": ["Android", "iOS", "Web"],
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "SAR" },
+          "description": "موقع إسلامي شامل يوفر مواقيت الصلاة الدقيقة، تفسير القرآن الكريم آية بآية، التحقق من صحة الأحاديث، حاسبة الزكاة، أذكار الصباح والمساء، بوصلة اتجاه القبلة، وأحاديث من صحيح البخاري ومسلم.",
+          "url": "https://mihrab.app/",
+          "image": "https://mihrab.app/icon-512.png",
+          "inLanguage": "ar",
+          "featureList": [
+            "مواقيت الصلاة الدقيقة حسب موقعك",
+            "تفسير القرآن الكريم - التفسير الميسر والجلالين",
+            "التحقق من صحة الأحاديث النبوية",
+            "بوصلة اتجاه القبلة",
+            "حاسبة الزكاة للذهب والمال والأسهم",
+            "أذكار الصباح والمساء",
+            "أحاديث صحيح البخاري ومسلم كاملة",
+            "تسبيح إلكتروني",
+            "الورد اليومي",
+            "أدعية من القرآن والسنة"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://mihrab.app/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "كيف أتحقق من صحة الحديث؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "يمكنك التحقق من صحة أي حديث عبر موقع محراب - فقط أدخل نص الحديث أو جزء منه في خاصية 'التحقق من صحة الحديث' وستحصل على درجة الحديث (صحيح، حسن، ضعيف، أو موضوع) من مصدرها الدرر السنية."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "أين أجد تفسير القرآن الكريم؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "في موقع محراب يمكنك قراءة تفسير القرآن الكريم آية بآية من التفسير الميسر أو تفسير الجلالين. اختر السورة والآية وشاهد التفسير فوراً."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "كيف أحسب الزكاة؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "تتيح لك حاسبة الزكاة في موقع محراب حساب زكاة المال والذهب والفضة والأسهم بدقة مع تحديث أسعار الذهب تلقائياً وحساب النصاب."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "ما هي مواقيت الصلاة اليوم؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "يوفر موقع محراب مواقيت الصلاة الدقيقة (الفجر، الشروق، الظهر، العصر، المغرب، العشاء) حسب موقعك الجغرافي الحالي أو بالاختيار اليدوي للمدينة."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
 
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+        rel="stylesheet">
+</head>
 
-  --border: 160 20% 90%;
-  --input: 160 20% 90%;
-  --ring: 165 65% 35%;
-  --radius: 1rem;
+<body class="dark" style="background-color: #111827;">
+    <script>
+        // Force dark mode on all devices
+        (function () {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        })();
+    </script>
+    <div id="root">
+        <div id="loading-fallback"
+            style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111827;color:white;font-family:sans-serif;text-align:center;">
+            <div
+                style="width:80px;height:80px;border:4px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 1s linear infinite;">
+            </div>
+            <p style="margin-top:20px;font-size:18px;">جاري تحميل محراب...</p>
+            <style>
+                @keyframes spin {
+                    to {
+                        transform: rotate(360deg)
+                    }
+                }
+            </style>
+        </div>
+    </div>
+    <script>
+        // DEBUG: Show errors on screen
+        window.onerror = function (msg, url, line, col, error) {
+            var fallback = document.getElementById('loading-fallback');
+            if (fallback) {
+                fallback.innerHTML = '<div style="padding:20px;text-align:center;color:white;direction:rtl;background:#111827;">' +
+                    '<h2>حدث خطأ</h2>' +
+                    '<p style="font-size:14px;opacity:0.8;">يرجى تحديث الصفحة</p>' +
+                    '<button onclick="location.reload()" style="margin-top:20px;padding:10px 30px;background:white;color:#111827;border:none;border-radius:8px;font-size:16px;cursor:pointer;">تحديث الصفحة</button>' +
+                    '<p style="font-size:10px;margin-top:20px;opacity:0.5;user-select:all;">' + msg + '</p>' +
+                    '</div>';
+            }
+            return false;
+        };
+        // EMERGENCY CLEANUP
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+                for (let reg of regs) { reg.unregister(); }
+                console.log('Unregistered all SWs');
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(function (names) {
+                names.forEach(function (name) {
+                    if (name.indexOf('mihrab-app-v') !== -1 && name !== 'mihrab-app-v75') {
+                        console.log('Deleting cache: ' + name);
+                        caches.delete(name);
+                    }
+                });
+            });
+        }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+</body>
 
-  --card: 0 0% 100%;
-  --card-foreground: 160 40% 15%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 160 40% 15%;
-}
-
-.dark {
-  --background: 165 50% 5%;       /* Deepest Jungle Green/Black */
-  --foreground: 150 20% 94%;      
-  
-  --primary: 165 50% 45%;         /* Lighter Emerald for dark mode */
-  --primary-foreground: 0 0% 100%;
-
-  --secondary: 165 30% 15%;       /* Dark Green Secondary */
-  --secondary-foreground: 150 20% 90%;
-
-  --muted: 165 30% 15%;
-  --muted-foreground: 150 15% 65%;
-
-  --accent: 35 80% 55%;           /* Gold remains gold */
-  --accent-foreground: 0 0% 100%;
-
-  --destructive: 0 62% 30%;
-  --destructive-foreground: 0 85% 60%;
-
-  --border: 165 30% 15%;
-  --input: 165 30% 15%;
-  --ring: 165 50% 45%;
-
-  --card: 165 30% 10%;
-  --card-foreground: 150 20% 94%;
-  --popover: 165 30% 10%;
-  --popover-foreground: 150 20% 94%;
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
-    font-family: var(--font-sans);
-  }
-  
-  /* Apply Arabic font to specific elements */
-  .font-arabic {
-    font-family: var(--font-arabic);
-  }
-  
-  .font-quran {
-    font-family: 'Amiri Quran', 'KFGQPC Uthmanic Script HAFS', 'Scheherazade New', 'Amiri', serif;
-    letter-spacing: -0.01em;
-    line-height: 2.2;
-    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1, "kern" 1;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    word-spacing: 0;
-  }
-}
-
-@layer components {
-  .glass-card {
-    @apply bg-white/60 dark:bg-black/20 backdrop-blur-md border border-white/20 shadow-lg;
-  }
-  
-  .islamic-pattern {
-    background-image: radial-gradient(var(--primary) 1px, transparent 1px);
-    background-size: 20px 20px;
-    opacity: 0.05;
-  }
-}
+</html>
