@@ -259,14 +259,16 @@ export class DatabaseStorage implements IStorage {
         };
     }
 
-        async registerPushToken(token: string, city?: string, country?: string, latitude?: number, longitude?: number): Promise<void> {
+    async registerPushToken(token: string, city?: string, country?: string, latitude?: number, longitude?: number, method: number = 4, isActive: boolean = true): Promise<void> {
         await db.insert(pushSubscriptions)
             .values({ 
                 token,
                 city,
                 country,
                 latitude: latitude?.toString(),
-                longitude: longitude?.toString()
+                longitude: longitude?.toString(),
+                method,
+                isActive
             })
             .onConflictDoUpdate({
                 target: pushSubscriptions.token,
@@ -274,23 +276,26 @@ export class DatabaseStorage implements IStorage {
                     city,
                     country, 
                     latitude: latitude?.toString(),
-                    longitude: longitude?.toString()
+                    longitude: longitude?.toString(),
+                    method,
+                    isActive
                 }
             })
             .execute();
     }
 
-    async getDistinctLocations(): Promise<{ city: string; country: string; latitude: number; longitude: number }[]> {
+    async getDistinctLocations(): Promise<{ city: string; country: string; latitude: number; longitude: number; method: number }[]> {
         const result = await db.execute(sql`
-            SELECT city, country, AVG(CAST(latitude AS FLOAT)) as lat, AVG(CAST(longitude AS FLOAT)) as lng
+            SELECT city, country, method, AVG(CAST(latitude AS FLOAT)) as lat, AVG(CAST(longitude AS FLOAT)) as lng
             FROM push_subscriptions
-            WHERE city IS NOT NULL AND country IS NOT NULL
-            GROUP BY city, country
+            WHERE city IS NOT NULL AND country IS NOT NULL AND is_active = true
+            GROUP BY city, country, method
         `);
         
         return result.rows.map((row: any) => ({
             city: row.city,
             country: row.country,
+            method: Number(row.method) || 4,
             latitude: Number(row.lat),
             longitude: Number(row.lng)
         }));
