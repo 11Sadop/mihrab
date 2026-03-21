@@ -40,8 +40,14 @@ const PS:Record<number,number>={1:1,2:2,3:50,4:77,5:106,6:128,7:151,8:177,9:187,
 const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9,182:10,201:11,222:12,242:13,262:14,282:15,302:16,322:17,342:18,362:19,382:20,402:21,422:22,442:23,462:24,482:25,502:26,522:27,542:28,562:29,582:30};
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
-// Strip Quranic pause marks AND normalize text
-const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'').replace(/[\u06D6-\u06ED]/g,'');
+// Normalize text - keep waqf marks (dots, pause signs)
+const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'');
+// Add thin space between muqatta'at letters for better diacritic display
+const spaceMuqattaat=(t:string)=>t.replace(/^([المركهيعطسحقنص][ًَُِّٓ-ٟ]*){2,}$/gm,(m)=>{
+  // Only if text is short (muqattaat are 1-5 letters)
+  if(m.replace(/[\u064B-\u065F\u0653\u0670]/g,'').length<=5)return m.split('').join('\u200A');
+  return m;
+});
 const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
@@ -78,7 +84,7 @@ const fetchPage=async(p:number)=>{
     if(a.numberInSurah===1&&a.surah.number!==1&&a.surah.number!==9){
       t=removeBismillah(t);
     }
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t.trim(),juz:a.juz};
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:spaceMuqattaat(t.trim()),juz:a.juz};
   });
 };
 
@@ -289,17 +295,31 @@ export default function QuranPage(){
 
   const shareAsImage=async(text:string,refs:string)=>{
     if(!selVerse)return;
-    const cv=document.createElement('canvas');cv.width=800;cv.height=800;
+    const c=QBG[qTheme]||QBG.dark;
+    const cv=document.createElement('canvas');cv.width=800;cv.height=900;
     const ctx=cv.getContext('2d');if(!ctx)return;
-    ctx.fillStyle='#1a3a2a';ctx.fillRect(0,0,800,800);
-    ctx.strokeStyle='#C8A96E';ctx.lineWidth=3;ctx.strokeRect(20,20,760,760);
+    // Background matches theme
+    ctx.fillStyle=c.bg;ctx.fillRect(0,0,800,900);
+    // Ornamental border
+    ctx.strokeStyle='#C8A96E';ctx.lineWidth=3;ctx.strokeRect(20,20,760,860);
+    ctx.strokeStyle='#C8A96E40';ctx.lineWidth=1;ctx.strokeRect(30,30,740,840);
+    // Surah name header
+    const sname=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';
+    ctx.font='bold 22px sans-serif';ctx.fillStyle='#C8A96E';ctx.textAlign='center';
+    ctx.fillText(`سورة ${sname}`,400,65);
+    // Decorative line
+    ctx.strokeStyle='#C8A96E60';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(150,80);ctx.lineTo(650,80);ctx.stroke();
+    // Verse text
     ctx.font='32px "Amiri Quran","KFGQPC Uthmanic Script HAFS",serif';
-    ctx.fillStyle='#E8DCC8';ctx.textAlign='center';ctx.direction='rtl';
-    const words=text.split(' ');let line='';let y=120;
+    ctx.fillStyle=c.text;ctx.textAlign='center';ctx.direction='rtl';
+    const words=text.split(' ');let line='';let y=140;
     for(const w of words){const test=line+w+' ';if(ctx.measureText(test).width>700&&line){ctx.fillText(line.trim(),400,y);y+=55;line=w+' ';}else line=test;}
     if(line)ctx.fillText(line.trim(),400,y);
-    ctx.font='20px sans-serif';ctx.fillStyle='#C8A96E';ctx.fillText(`${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}`,400,y+80);
-    ctx.font='14px sans-serif';ctx.fillStyle='#C8A96E50';ctx.fillText('mihrabapp.com',400,y+120);
+    // Reference
+    ctx.font='18px sans-serif';ctx.fillStyle='#C8A96E';ctx.fillText(`${sname}: ${refs}`,400,y+70);
+    // Watermark
+    ctx.font='12px sans-serif';ctx.fillStyle='#C8A96E40';ctx.fillText('mihrabapp.com',400,y+100);
     cv.toBlob(blob=>{
       if(!blob)return;
       const dl=document.createElement('a');dl.href=URL.createObjectURL(blob);dl.download=`Quran_${selVerse.sn}_${refs}.png`;
@@ -489,7 +509,7 @@ export default function QuranPage(){
               <p className="font-quran" style={{fontSize:'clamp(16px,4vw,22px)',color:colors.text}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ</p>
             </div>}
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(18px,4.5vw,26px)',lineHeight:'2.2',color:colors.text}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(20px,5vw,28px)',lineHeight:'2.2',color:colors.text}}>
               {g.ayahs.map(a=>{
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                 const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
