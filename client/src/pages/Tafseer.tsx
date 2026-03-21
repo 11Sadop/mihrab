@@ -12,7 +12,7 @@ const RECITERS:Rec[]=[
   {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
   // ح-خ
   // م
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_128kbps"},
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
@@ -40,14 +40,16 @@ const PS:Record<number,number>={1:1,2:2,3:50,4:77,5:106,6:128,7:151,8:177,9:187,
 const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9,182:10,201:11,222:12,242:13,262:14,282:15,302:16,322:17,342:18,362:19,382:20,402:21,422:22,442:23,462:24,482:25,502:26,522:27,542:28,562:29,582:30};
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
-// Normalize text - keep waqf marks (dots, pause signs)
-const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'');
-// Add thin space between muqatta'at letters for better diacritic display
-const spaceMuqattaat=(t:string)=>t.replace(/^([المركهيعطسحقنص][ًَُِّٓ-ٟ]*){2,}$/gm,(m)=>{
-  // Only if text is short (muqattaat are 1-5 letters)
-  if(m.replace(/[\u064B-\u065F\u0653\u0670]/g,'').length<=5)return m.split('').join('\u200A');
-  return m;
-});
+// Normalize text - keep waqf marks (U+06D6..U+06DB) but strip tajweed marks (e.g. small meem U+06E2, U+06ED)
+const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'').replace(/[\u06DC-\u06ED]/g,'');
+// Add space between muqatta'at letters (e.g., الم) for better diacritic display
+const spaceMuqattaat=(t:string)=>{
+  const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A]/g,'');
+  if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنص]+$/.test(base)){
+    return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670]*)/g,'$1 ').trim();
+  }
+  return t;
+};
 const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
@@ -176,34 +178,39 @@ export default function QuranPage(){
   // ═══ AUDIO ═══
   const getReciter=()=>RECITERS.find(r=>r.id===recIdRef.current)||RECITERS[0];
 
-  const preloadNext=(sn:number,nis:number)=>{
-    const rec=getReciter();if(!rec.ev)return;
-    const maxNis=SURAHS.find(s=>s.id===sn)?.c||1;
-    if(nis>=maxNis)return;
-    const url=`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3`;
-    const a=new Audio(url);a.preload='auto';nextAudioRef.current=a;
-  };
-
   const playVerse=(sn:number,nis:number)=>{
     const rec=getReciter();
+    if(!audioRef.current){
+      const a=new Audio();
+      a.onended=()=>onEndedRef.current();
+      a.onerror=()=>onErrRef.current();
+      audioRef.current=a;
+    }
+    const a=audioRef.current;
+    
+    if('mediaSession' in navigator){
+      navigator.mediaSession.metadata=new MediaMetadata({
+        title:`سورة ${SURAHS.find(s=>s.id===sn)?.n||''}`,
+        artist:rec.name,
+        album:'محراب',
+        artwork:[{src:'/icon-512x512.png',sizes:'512x512',type:'image/png'}]
+      });
+      navigator.mediaSession.setActionHandler('play',()=>togglePlay());
+      navigator.mediaSession.setActionHandler('pause',()=>togglePlay());
+      navigator.mediaSession.setActionHandler('previoustrack',()=>skipPrev());
+      navigator.mediaSession.setActionHandler('nexttrack',()=>skipNext());
+    }
+
     if(!rec.ev){
-      if(!audioRef.current)audioRef.current=new Audio();
-      audioRef.current.src=`${rec.server}/${pad3(sn)}.mp3`;audioRef.current.play().catch(()=>{});
+      a.src=`${rec.server}/${pad3(sn)}.mp3`;
+      a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
       setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);return;
     }
-    const url=`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3`;
-    if(nextAudioRef.current&&nextAudioRef.current.src.endsWith(`${pad3(sn)}${pad3(nis)}.mp3`)){
-      if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}
-      const a=nextAudioRef.current;nextAudioRef.current=null;audioRef.current=a;
-      a.onended=()=>onEndedRef.current();a.onerror=()=>onErrRef.current();a.play().catch(()=>{});
-    }else{
-      if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}
-      const a=new Audio(url);a.preload='auto';
-      a.onended=()=>onEndedRef.current();a.onerror=()=>onErrRef.current();
-      audioRef.current=a;a.play().catch(()=>{});
-    }
+    
+    a.src=`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3`;
+    a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+    
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
-    preloadNext(sn,nis);
   };
 
   const playSurahFrom=(sn:number,startNis:number)=>{
@@ -213,14 +220,21 @@ export default function QuranPage(){
   };
 
   const stopAudio=()=>{
-    if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}
-    nextAudioRef.current=null;
+    if(audioRef.current)audioRef.current.pause();
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
+    if('mediaSession' in navigator)navigator.mediaSession.playbackState='none';
   };
 
   const togglePlay=()=>{
-    if(isPlaying){if(audioRef.current)audioRef.current.pause();setIsPlaying(false);}
-    else if(audioRef.current&&audioRef.current.src){audioRef.current.play().catch(()=>{});setIsPlaying(true);}
+    if(isPlaying){
+      if(audioRef.current)audioRef.current.pause();
+      setIsPlaying(false);
+      if('mediaSession' in navigator)navigator.mediaSession.playbackState='paused';
+    }
+    else if(audioRef.current&&audioRef.current.src){
+      audioRef.current.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+      setIsPlaying(true);
+    }
     else playSurahFrom(surah.id,1);
   };
 
