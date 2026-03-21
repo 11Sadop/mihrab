@@ -119,6 +119,8 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
     country: text("country"),
     latitude: text("latitude"),
     longitude: text("longitude"),
+    method: integer("method").default(4), // ISNA or Umm Al-Qura etc.
+    isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 // === SCHEMAS ===
