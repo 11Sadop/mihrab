@@ -13,7 +13,26 @@ export async function processPrayerNotifications() {
             if (!loc.latitude || !loc.longitude) continue;
 
             const coords = new Coordinates(loc.latitude, loc.longitude);
-            const params = CalculationMethod.UmmAlQura();
+            let params = CalculationMethod.UmmAlQura();
+            
+            // Map integer method to adhan library CalculationMethod
+            switch (loc.method) {
+                case 0: params = CalculationMethod.Tehran(); break; // Shia Ithna-Ashari uses Tehran params approximation
+                case 1: params = CalculationMethod.Karachi(); break;
+                case 2: params = CalculationMethod.NorthAmerica(); break;
+                case 3: params = CalculationMethod.MuslimWorldLeague(); break;
+                case 4: params = CalculationMethod.UmmAlQura(); break;
+                case 5: params = CalculationMethod.Egyptian(); break;
+                case 7: params = CalculationMethod.Tehran(); break;
+                case 8: params = CalculationMethod.Dubai(); break;
+                case 9: params = CalculationMethod.Kuwait(); break;
+                case 10: params = CalculationMethod.Qatar(); break;
+                case 11: params = CalculationMethod.Singapore(); break;
+                case 12: params = CalculationMethod.MuslimWorldLeague(); break; // France Uses MWL angles usually
+                case 13: params = CalculationMethod.Turkey(); break;
+                case 14: params = CalculationMethod.MuslimWorldLeague(); break; // Russia approximation
+            }
+            
             const prayerTimes = new PrayerTimes(coords, now, params);
 
             // Prayer notifications
