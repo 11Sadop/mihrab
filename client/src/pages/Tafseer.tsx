@@ -42,27 +42,41 @@ function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Numbe
 
 // Strip Quranic pause marks AND normalize text
 const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'').replace(/[\u06D6-\u06ED]/g,'');
-const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g,'').replace(/[ٱإأآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
+const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
 
-// Multiple bismillah patterns to strip
-const BISM_PATTERNS=[
-  /^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/,
-  /^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/,
-  /^بسم الله الرحمن الرحيم\s*/,
-  /^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/,
-  /^بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ\s*/,
-  /^بسم ٱلله ٱلرحمن ٱلرحيم\s*/,
-];
+// Robust bismillah removal: strip diacritics then compare
+const BISM_PLAIN='بسم الله الرحمن الرحيم';
+function removeBismillah(t:string):string{
+  const s=strip(t);
+  if(s.startsWith(BISM_PLAIN)){
+    // Find where bismillah ends in original text by matching char count
+    let plainIdx=0,origIdx=0;
+    const plainTarget=BISM_PLAIN.replace(/\s/g,'');
+    while(origIdx<t.length&&plainIdx<plainTarget.length){
+      const c=t[origIdx];
+      // Skip diacritics and special chars
+      if(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653\u0654\u0655]/.test(c)){origIdx++;continue;}
+      const nc=c.replace(/[ٱإأآا]/g,'ا');
+      if(nc===plainTarget[plainIdx]||c===' '){if(c!==' ')plainIdx++;origIdx++;}
+      else{origIdx++;plainIdx++;}
+    }
+    // Skip trailing whitespace
+    while(origIdx<t.length&&t[origIdx]===' ')origIdx++;
+    return t.slice(origIdx);
+  }
+  return t;
+}
 
 const fetchPage=async(p:number)=>{
   const r=await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
   if(!r.ok)throw new Error("Fail");const d=await r.json();
   return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
     let t=norm(a.text);
+    // Strip bismillah from verse 1 of all surahs except Fatiha and Tawbah
     if(a.numberInSurah===1&&a.surah.number!==1&&a.surah.number!==9){
-      for(const p of BISM_PATTERNS)t=t.replace(p,'');
+      t=removeBismillah(t);
     }
     return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t.trim(),juz:a.juz};
   });
@@ -470,16 +484,15 @@ export default function QuranPage(){
                 <span className="font-quran font-bold relative z-10" style={{fontSize:'clamp(18px,4.5vw,26px)',color:colors.text}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
               </div>
             </div>}
-            {/* Bismillah - once, separate */}
+            {/* Bismillah - once, separate (not for Fatiha where it's verse 1, not for Tawbah) */}
             {g.ayahs[0].nis===1&&g.sn!==9&&g.sn!==1&&<div className="text-center mb-1">
-              <p className="font-quran" style={{fontSize:'clamp(14px,3.5vw,18px)',color:colors.text}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ</p>
+              <p className="font-quran" style={{fontSize:'clamp(16px,4vw,22px)',color:colors.text}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ</p>
             </div>}
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(16px,3.8vw,22px)',lineHeight:'2.1',color:colors.text}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(18px,4.5vw,26px)',lineHeight:'2.2',color:colors.text}}>
               {g.ayahs.map(a=>{
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                 const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
-                if(g.sn===1&&a.nis===1)return null;
                 return<span key={k} className="inline" data-v="1">
                   <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.text});setShowOptions(true);}}}
                     className="transition-all duration-200 rounded cursor-pointer"
