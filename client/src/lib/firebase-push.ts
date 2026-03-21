@@ -126,9 +126,26 @@ export async function requestNotificationPermission(): Promise<string | null> {
             console.log('Geolocation failed, using default: Riyadh, SA');
         }
 
-        // Send token WITH location to server
-        await apiRequest("POST", "/api/push/register", { token, ...locationData });
-        console.log('Token registered with server (with location)');
+        // Get user settings
+        const methodUrl = localStorage.getItem('calculation_method');
+        const method = methodUrl ? parseInt(methodUrl, 10) : 4;
+        
+        let isActive = true;
+        try {
+            const savedSettings = localStorage.getItem('notification_settings');
+            if (savedSettings) {
+                isActive = JSON.parse(savedSettings).enabled ?? true;
+            }
+        } catch(e) {}
+
+        // Send token WITH location and settings to server
+        await apiRequest("POST", "/api/push/register", { 
+            token, 
+            ...locationData, 
+            method,
+            isActive
+        });
+        console.log('Token registered with server (with location and method)');
         return token;
     } catch (error) {
         console.error('Error requesting notification permission:', error);
