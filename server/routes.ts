@@ -137,17 +137,19 @@ export async function registerRoutes(
         country: z.string().optional(),
         latitude: z.number().optional(),
         longitude: z.number().optional(),
+        method: z.number().optional().default(4),
+        isActive: z.boolean().optional().default(true),
     });
 
     app.post("/api/push/register", async (req, res) => {
         try {
-            const { token, city, country, latitude, longitude } = pushRegisterSchema.parse(req.body);
+            const { token, city, country, latitude, longitude, method, isActive } = pushRegisterSchema.parse(req.body);
 
             if (!token) {
                 return res.status(400).json({ error: 'Token is required' });
             }
 
-            await storage.registerPushToken(token, city, country, latitude, longitude);
+            await storage.registerPushToken(token, city, country, latitude, longitude, method, isActive);
 
             if (city && country) {
                 const topic = `prayer_${country.replace(/[^a-zA-Z0-9]/g, '_')}_${city.replace(/[^a-zA-Z0-9]/g, '_')}`;
