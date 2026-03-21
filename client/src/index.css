@@ -93,7 +93,7 @@
   }
   
   .font-quran {
-    font-family: 'Amiri Quran', 'KFGQPC Uthmanic Script HAFS', 'Scheherazade New', 'Amiri', serif;
+    font-family: 'KFGQPC Uthmanic Script HAFS', 'Amiri Quran', 'Scheherazade New', 'Amiri', serif;
     letter-spacing: -0.01em;
     line-height: 2.2;
     font-feature-settings: "liga" 1, "calt" 1, "rlig" 1, "kern" 1;
