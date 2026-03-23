@@ -35,7 +35,7 @@ fcmMessaging.onBackgroundMessage((payload) => {
     return self.registration.showNotification(title, options);
 });
 
-const CACHE_NAME = 'mihrab-app-v75';
+const CACHE_NAME = 'mihrab-app-v76';
 const urlsToCache = ['/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 // ========== الإسماء العربية لأوقات الصلاة ==========
