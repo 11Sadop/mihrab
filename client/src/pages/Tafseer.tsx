@@ -43,7 +43,15 @@ function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Numbe
 
 // Normalize text - keep ALL marks for display except zero-width spaces
 const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'');
-// Remove spaceMuqattaat completely to let KFGQPC font ligatures work perfectly
+// Add space between muqatta'at letters (e.g., الم) for better diacritic display
+const spaceMuqattaat=(t:string)=>{
+  // Preserve spacing for display but don't strip the actual diacritics
+  const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'');
+  if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنص]+$/.test(base)){
+    return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670\u06D6-\u06ED]*)/g,'$1 ').trim();
+  }
+  return t;
+};
 const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
@@ -82,7 +90,7 @@ const fetchPage=async(p:number)=>{
     if(a.numberInSurah===1&&a.surah.number!==9){
       t=removeBismillah(t);
     }
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t.trim(),orig:norm(a.text),juz:a.juz};
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:spaceMuqattaat(t.trim()),orig:norm(a.text),juz:a.juz};
   });
 };
 
@@ -109,18 +117,19 @@ export default function QuranPage(){
   const [isSharing,setIsSharing]=useState(false);
   const [isSearchingAyahs,setIsSearchingAyahs]=useState(false);
   const [ayahSearchResults,setAyahSearchResults]=useState<any[]>([]);
-  const [qTheme,setQTheme]=useState<string>(()=>localStorage.getItem('q-theme')||'dark');
+  const [qTheme,setQTheme]=useState('cream');
   const [showSettings,setShowSettings]=useState(false);
 
   const [isPlaying,setIsPlaying]=useState(false);
   const [playingKey,setPlayingKey]=useState("");
   const [playingSn,setPlayingSn]=useState(0);
-  const audioRef=useRef<HTMLAudioElement|null>(null);
+
+  const audio1Ref=useRef<HTMLAudioElement>(null);
+  const audio2Ref=useRef<HTMLAudioElement>(null);
+  const activeAudioRef=useRef(1);
   const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
-  const nextAudioRef=useRef<HTMLAudioElement|null>(null);
   const recIdRef=useRef(recId);
-  const onEndedRef=useRef<()=>void>(()=>{});
-  const onErrRef=useRef<()=>void>(()=>{});
+  const pgRef=useRef(pg);
 
   const [hifz,setHifz]=useState(false);
   const [recording,setRecording]=useState(false);
@@ -130,8 +139,7 @@ export default function QuranPage(){
   const recRef=useRef<any>(null);
   const txRef=useRef(0);
   const searchRef=useRef<HTMLInputElement>(null);
-  const pgRef=useRef(pg);
-
+  
   useEffect(()=>{pgRef.current=pg;},[pg]);
   useEffect(()=>{recIdRef.current=recId;},[recId]);
 
@@ -185,8 +193,8 @@ export default function QuranPage(){
 
   const playVerse=(sn:number,nis:number)=>{
     const rec=getReciter();
-    const a=audioRef.current;
-    if(!a)return;
+    const curA = activeAudioRef.current === 1 ? audio1Ref.current : audio2Ref.current;
+    if(!curA)return;
     
     if('mediaSession' in navigator){
       navigator.mediaSession.metadata=new MediaMetadata({
@@ -197,23 +205,31 @@ export default function QuranPage(){
       });
       navigator.mediaSession.setActionHandler('play',()=>togglePlay());
       navigator.mediaSession.setActionHandler('pause',()=>togglePlay());
+      // Skip logic inside media session uses the refs
       navigator.mediaSession.setActionHandler('previoustrack',()=>skipPrev());
       navigator.mediaSession.setActionHandler('nexttrack',()=>skipNext());
     }
 
     const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
-    a.src=url;
-    a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+    
+    // Only set src if not already exactly matching (preloaded)
+    if (!curA.src.endsWith(pad3(sn)+pad3(nis)+'.mp3')) {
+      curA.src=url;
+    }
+    curA.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     ensureVerseVisible(sn,nis);
 
-    // Preload next audio
+    // Preload next audio into the OTHER element
     const maxNis=SURAHS.find(s=>s.id===sn)?.c||1;
     if (nis < maxNis) {
-      if(!nextAudioRef.current) nextAudioRef.current = new Audio();
-      nextAudioRef.current.src = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
-      nextAudioRef.current.preload = 'auto';
+      const nextA = activeAudioRef.current === 1 ? audio2Ref.current : audio1Ref.current;
+      if (nextA) {
+        const nextUrl = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
+        nextA.src = nextUrl;
+        nextA.preload = 'auto';
+      }
     }
   };
 
@@ -224,41 +240,43 @@ export default function QuranPage(){
   };
 
   const stopAudio=()=>{
-    if(audioRef.current){audioRef.current.pause();audioRef.current.removeAttribute('src');}
+    if(audio1Ref.current){audio1Ref.current.pause();audio1Ref.current.removeAttribute('src');}
+    if(audio2Ref.current){audio2Ref.current.pause();audio2Ref.current.removeAttribute('src');}
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
     if('mediaSession' in navigator)navigator.mediaSession.playbackState='none';
   };
 
   const togglePlay=()=>{
+    const curA = activeAudioRef.current === 1 ? audio1Ref.current : audio2Ref.current;
     if(isPlaying){
-      if(audioRef.current)audioRef.current.pause();
+      if(curA)curA.pause();
       setIsPlaying(false);
       if('mediaSession' in navigator)navigator.mediaSession.playbackState='paused';
     }
-    else if(audioRef.current&&audioRef.current.src){
-      audioRef.current.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+    else if(curA&&curA.src){
+      curA.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
       setIsPlaying(true);
     }
     else playSurahFrom(surah.id,1);
   };
 
-  const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}};
-  const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;playVerse(q.sn,q.nis);}};
+  const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;activeAudioRef.current=activeAudioRef.current===1?2:1;playVerse(q.sn,q.nis);}};
+  const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;activeAudioRef.current=activeAudioRef.current===1?2:1;playVerse(q.sn,q.nis);}};
 
-  onEndedRef.current=()=>{
+  const handleEnded=()=>{
     const q=playQueueRef.current;
-    if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}
+    if(q&&q.nis<q.maxNis){q.nis++;activeAudioRef.current=activeAudioRef.current===1?2:1;playVerse(q.sn,q.nis);}
     else stopAudio();
   };
-  onErrRef.current=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis)skipNext();else stopAudio();};
+  const handleErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis)skipNext();else stopAudio();};
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
     const q=playQueueRef.current;
     if(q&&isPlaying){
-      if(audioRef.current){audioRef.current.onended=null;audioRef.current.pause();}
-      nextAudioRef.current=null;
-      setTimeout(()=>playVerse(q.sn,q.nis),100);
+      if(audio1Ref.current)audio1Ref.current.pause();
+      if(audio2Ref.current)audio2Ref.current.pause();
+      setTimeout(()=>playVerse(q.sn,q.nis),50);
     }
   };
 
@@ -423,20 +441,9 @@ export default function QuranPage(){
 
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
-      {/* Audio Element rendered in DOM to bypass some mobile restrictions */}
-      <audio 
-        ref={audioRef} 
-        style={{display:'none'}}
-        onEnded={()=>{
-          const q=playQueueRef.current;
-          if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}
-          else stopAudio();
-        }}
-        onError={()=>{
-          const q=playQueueRef.current;
-          if(q&&q.nis<q.maxNis) skipNext(); else stopAudio();
-        }}
-      />
+      {/* Dual Buffer Audio Elements for true Gapless play */}
+      <audio ref={audio1Ref} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
+      <audio ref={audio2Ref} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
       
       {/* TOP BAR */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-50" style={{paddingTop:'env(safe-area-inset-top,0px)',background:colors.bg,borderBottom:`1px solid ${colors.border}40`}}>
@@ -556,12 +563,12 @@ export default function QuranPage(){
             </div>}
             
             {/* Bismillah - Grand and Centered */}
-            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-8">
+            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-6">
               {/* Highlight Fatiha Bismillah if playing */}
               <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
                 className="font-quran transition-all duration-200 rounded cursor-pointer" 
                 style={{
-                  fontSize:'clamp(26px, 6vw, 36px)',
+                  fontSize:'clamp(20px, 5.5vw, 30px)',
                   color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#fff' : colors.text,
                   background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
                   padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 8px' : '0'
@@ -572,7 +579,7 @@ export default function QuranPage(){
             </div>}
             
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(28px, 7vw, 48px)',lineHeight:'2.1',letterSpacing:'normal',color:colors.text, wordSpacing:'0.05em'}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(22px, 5.5vw, 36px)',lineHeight:'2.2',fontWeight:'normal',letterSpacing:'normal',color:colors.text, wordSpacing:'0.05em'}}>
               {g.ayahs.map(a=>{
                 if(a.nis===1 && g.sn===1) return null; // Rendered above as Bismillah block
                 
