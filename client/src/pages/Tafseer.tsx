@@ -43,25 +43,13 @@ function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Numbe
 
 // Normalize text - keep ALL marks for display except zero-width spaces
 const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'');
-// Add space between muqatta'at letters (e.g., الم) for better diacritic display
-const spaceMuqattaat=(t:string)=>{
-  // Preserve spacing for display but don't strip the actual diacritics
-  const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'');
-  if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنص]+$/.test(base)){
-    return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670\u06D6-\u06ED]*)/g,'$1 ').trim();
-  }
-  return t;
-};
+// Remove spaceMuqattaat completely to let KFGQPC font ligatures work perfectly
 const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
-function pageForVerse(sn:number,nis:number){
-  // Basic approximation for simplicity: if on current page, keep it. 
-  // Otherwise search PS map.
-  return 1; // Handled fully dynamically via query in component
-}
+function pageForVerse(sn:number,nis:number){ return 1; }
 
-// Robust bismillah removal: strip diacritics then compare
+// Robust bismillah removal
 const BISM_PLAIN='بسم الله الرحمن الرحيم';
 function removeBismillah(t:string):string{
   const s=strip(t);
@@ -89,11 +77,12 @@ const fetchPage=async(p:number)=>{
   if(!r.ok)throw new Error("Fail");const d=await r.json();
   return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
     let t=norm(a.text);
-    // Strip bismillah from verse 1 of all surahs except Fatiha and Tawbah
-    if(a.numberInSurah===1&&a.surah.number!==1&&a.surah.number!==9){
+    // Strip bismillah from verse 1 of ALL surahs (so we can manually inject it gracefully at the top)
+    // EXCEPT Tawbah which has no Bismillah.
+    if(a.numberInSurah===1&&a.surah.number!==9){
       t=removeBismillah(t);
     }
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:spaceMuqattaat(t.trim()),juz:a.juz};
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t.trim(),orig:norm(a.text),juz:a.juz};
   });
 };
 
@@ -196,13 +185,8 @@ export default function QuranPage(){
 
   const playVerse=(sn:number,nis:number)=>{
     const rec=getReciter();
-    if(!audioRef.current){
-      const a=new Audio();
-      a.onended=()=>onEndedRef.current();
-      a.onerror=()=>onErrRef.current();
-      audioRef.current=a;
-    }
     const a=audioRef.current;
+    if(!a)return;
     
     if('mediaSession' in navigator){
       navigator.mediaSession.metadata=new MediaMetadata({
@@ -218,14 +202,13 @@ export default function QuranPage(){
     }
 
     const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
-    // If we have a prefetched audio that matches, we could swap it. But setting src is fast enough if browser cached it.
     a.src=url;
     a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     ensureVerseVisible(sn,nis);
 
-    // Preload next audio for gapless playback
+    // Preload next audio
     const maxNis=SURAHS.find(s=>s.id===sn)?.c||1;
     if (nis < maxNis) {
       if(!nextAudioRef.current) nextAudioRef.current = new Audio();
@@ -338,10 +321,10 @@ export default function QuranPage(){
     ctx.strokeRect(340,boxY,400,90);
     ctx.fillStyle=c.text;ctx.textAlign='center';ctx.textBaseline='middle';
     
-    // Draw decorative stars ❁ around the box
-    ctx.font='30px sans-serif';
-    ctx.fillText('❁', 310, boxY+45);
-    ctx.fillText('❁', 770, boxY+45);
+    // Draw decorative stars ۞ around the box
+    ctx.font='36px serif';
+    ctx.fillText('۞', 290, boxY+45);
+    ctx.fillText('۞', 790, boxY+45);
 
     // Surah name inside box
     const sname=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';
@@ -393,8 +376,8 @@ export default function QuranPage(){
   };
 
   // Groups
-  const groups:{sn:number;sname:string;ayahs:{nis:number;text:string;gi:number}[]}[]=[];
-  if(pq.data){let cur:typeof groups[0]|null=null;pq.data.forEach((a:any,i:number)=>{if(!cur||cur.sn!==a.sn){cur={sn:a.sn,sname:a.sname,ayahs:[]};groups.push(cur);}cur.ayahs.push({nis:a.nis,text:a.text,gi:i});});}
+  const groups:{sn:number;sname:string;ayahs:{nis:number;text:string;gi:number;orig:string}[]}[]=[];
+  if(pq.data){let cur:typeof groups[0]|null=null;pq.data.forEach((a:any,i:number)=>{if(!cur||cur.sn!==a.sn){cur={sn:a.sn,sname:a.sname,ayahs:[]};groups.push(cur);}cur.ayahs.push({nis:a.nis,text:a.text,gi:i,orig:a.orig});});}
   const filteredS=search.trim()?SURAHS.filter(s=>s.n.includes(search)||s.id.toString()===search.trim()):SURAHS;
   const playingName=playingSn?SURAHS.find(s=>s.id===playingSn)?.n:"";
   const isMobile=typeof window!=='undefined'&&window.innerWidth<768;
@@ -440,6 +423,21 @@ export default function QuranPage(){
 
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
+      {/* Audio Element rendered in DOM to bypass some mobile restrictions */}
+      <audio 
+        ref={audioRef} 
+        style={{display:'none'}}
+        onEnded={()=>{
+          const q=playQueueRef.current;
+          if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}
+          else stopAudio();
+        }}
+        onError={()=>{
+          const q=playQueueRef.current;
+          if(q&&q.nis<q.maxNis) skipNext(); else stopAudio();
+        }}
+      />
+      
       {/* TOP BAR */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-50" style={{paddingTop:'env(safe-area-inset-top,0px)',background:colors.bg,borderBottom:`1px solid ${colors.border}40`}}>
         <div className="flex items-center justify-between px-3" style={{height:40}}>
@@ -549,25 +547,39 @@ export default function QuranPage(){
         :<div className="flex flex-col justify-center px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%'}}>
           {groups.map((g,gi)=><div key={`${g.sn}-${gi}`}>
             {/* Decorated Surah Header - ornamental like Ayah */}
-            {g.ayahs[0].nis===1&&<div className="text-center my-3">
-              <div className="inline-block relative px-10 py-2" style={{background:`linear-gradient(135deg,${colors.border}15,${colors.border}08)`}}>
-                <div className="absolute inset-0 border-2 rounded-xl" style={{borderColor:colors.border}}/>
-                <div className="absolute -left-6 top-1/2 -translate-y-1/2 text-lg" style={{color:colors.border}}>❁</div>
-                <div className="absolute -right-6 top-1/2 -translate-y-1/2 text-lg" style={{color:colors.border}}>❁</div>
-                <span className="font-quran font-bold relative z-10" style={{fontSize:'clamp(18px,4.5vw,26px)',color:colors.text}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
+            {g.ayahs[0].nis===1&&<div className="text-center my-6">
+              <div className="inline-block relative px-12 py-3" style={{border:`2px solid ${colors.border}40`,borderRadius:'4px',background:`linear-gradient(wrap, ${colors.border}10, transparent)`}}>
+                <div className="absolute -left-5 top-1/2 -translate-y-1/2 text-2xl font-serif" style={{color:colors.border}}>۞</div>
+                <div className="absolute -right-5 top-1/2 -translate-y-1/2 text-2xl font-serif" style={{color:colors.border}}>۞</div>
+                <span className="font-quran font-bold relative z-10" style={{fontSize:'clamp(28px, 6vw, 36px)',color:colors.text}}>سُورَةُ ٱل{g.sname.replace(/^سُورَةُ\s*/,'').replace('ال','')}</span>
               </div>
             </div>}
-            {/* Bismillah - once, separate (not for Fatiha where it's verse 1, not for Tawbah) */}
-            {g.ayahs[0].nis===1&&g.sn!==9&&g.sn!==1&&<div className="text-center mb-1">
-              <p className="font-quran" style={{fontSize:'clamp(16px,4vw,22px)',color:colors.text}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ</p>
+            
+            {/* Bismillah - Grand and Centered */}
+            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-8">
+              {/* Highlight Fatiha Bismillah if playing */}
+              <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
+                className="font-quran transition-all duration-200 rounded cursor-pointer" 
+                style={{
+                  fontSize:'clamp(26px, 6vw, 36px)',
+                  color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#fff' : colors.text,
+                  background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
+                  padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 8px' : '0'
+                }}>
+                بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
+                {g.sn===1 && <span className="inline-flex items-center justify-center rounded-full mx-1.5" style={{width:'2em',height:'2em',fontSize:'0.4em',verticalAlign:'middle',border:`1px solid ${colors.border}`,color:colors.border}}>١</span>}
+              </span>
             </div>}
+            
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(24px, 6.5vw, 42px)',lineHeight:'2.1',letterSpacing:'normal',color:colors.text}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(28px, 7vw, 48px)',lineHeight:'2.1',letterSpacing:'normal',color:colors.text, wordSpacing:'0.05em'}}>
               {g.ayahs.map(a=>{
+                if(a.nis===1 && g.sn===1) return null; // Rendered above as Bismillah block
+                
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                 const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
                 return<span key={k} className="inline" data-v="1">
-                  <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.text});setShowOptions(true);}}}
+                  <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
                     className="transition-all duration-200 rounded cursor-pointer"
                     style={{
                       color:hidden?'transparent':isP?'#fff':hr==='ok'?'#4ade80':hr==='err'?'#f87171':colors.text,
@@ -578,10 +590,10 @@ export default function QuranPage(){
                   </span>
                   {/* Golden verse marker */}
                   <span className="inline-flex items-center justify-center rounded-full align-middle font-sans font-bold mx-1.5"
-                    style={{width:'2.3em',height:'2.3em',fontSize:'0.45em',verticalAlign:'middle',
-                      border:`2px solid ${isP?'#22c55e':'#c8a96e'}`,
-                      color:isP?'#22c55e':'#8b7355',
-                      background:isP?'rgba(34,197,94,0.1)':'rgba(200,169,110,0.08)'
+                    style={{width:'2.2em',height:'2.2em',fontSize:'0.45em',verticalAlign:'middle',
+                      border:`1px solid ${isP?'#22c55e':colors.border}`,
+                      color:isP?'#22c55e':colors.border,
+                      background:isP?'rgba(34,197,94,0.1)':'transparent'
                     }}>{hidden?"؟":a.nis}</span>
                 </span>;
               })}
