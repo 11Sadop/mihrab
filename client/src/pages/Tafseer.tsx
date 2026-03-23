@@ -13,7 +13,7 @@ const RECITERS:Rec[]=[
   // ح-خ
   // ح-خ
   // م
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"},
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
@@ -124,9 +124,7 @@ export default function QuranPage(){
   const [playingKey,setPlayingKey]=useState("");
   const [playingSn,setPlayingSn]=useState(0);
 
-  const audio1Ref=useRef<HTMLAudioElement>(null);
-  const audio2Ref=useRef<HTMLAudioElement>(null);
-  const activeAudioRef=useRef(1);
+  const audioRef=useRef<HTMLAudioElement>(null);
   const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
   const recIdRef=useRef(recId);
   const pgRef=useRef(pg);
@@ -193,8 +191,8 @@ export default function QuranPage(){
 
   const playVerse=(sn:number,nis:number)=>{
     const rec=getReciter();
-    const curA = activeAudioRef.current === 1 ? audio1Ref.current : audio2Ref.current;
-    if(!curA)return;
+    const a=audioRef.current;
+    if(!a)return;
     
     if('mediaSession' in navigator){
       navigator.mediaSession.metadata=new MediaMetadata({
@@ -205,32 +203,16 @@ export default function QuranPage(){
       });
       navigator.mediaSession.setActionHandler('play',()=>togglePlay());
       navigator.mediaSession.setActionHandler('pause',()=>togglePlay());
-      // Skip logic inside media session uses the refs
       navigator.mediaSession.setActionHandler('previoustrack',()=>skipPrev());
       navigator.mediaSession.setActionHandler('nexttrack',()=>skipNext());
     }
 
     const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
-    
-    // Only set src if not already exactly matching (preloaded)
-    if (!curA.src.endsWith(pad3(sn)+pad3(nis)+'.mp3')) {
-      curA.src=url;
-    }
-    curA.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+    a.src=url;
+    a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     ensureVerseVisible(sn,nis);
-
-    // Preload next audio into the OTHER element
-    const maxNis=SURAHS.find(s=>s.id===sn)?.c||1;
-    if (nis < maxNis) {
-      const nextA = activeAudioRef.current === 1 ? audio2Ref.current : audio1Ref.current;
-      if (nextA) {
-        const nextUrl = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
-        nextA.src = nextUrl;
-        nextA.preload = 'auto';
-      }
-    }
   };
 
   const playSurahFrom=(sn:number,startNis:number)=>{
@@ -240,32 +222,31 @@ export default function QuranPage(){
   };
 
   const stopAudio=()=>{
-    if(audio1Ref.current){audio1Ref.current.pause();audio1Ref.current.removeAttribute('src');}
-    if(audio2Ref.current){audio2Ref.current.pause();audio2Ref.current.removeAttribute('src');}
+    if(audioRef.current){audioRef.current.pause();audioRef.current.removeAttribute('src');}
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
     if('mediaSession' in navigator)navigator.mediaSession.playbackState='none';
   };
 
   const togglePlay=()=>{
-    const curA = activeAudioRef.current === 1 ? audio1Ref.current : audio2Ref.current;
+    const a=audioRef.current;
     if(isPlaying){
-      if(curA)curA.pause();
+      if(a)a.pause();
       setIsPlaying(false);
       if('mediaSession' in navigator)navigator.mediaSession.playbackState='paused';
     }
-    else if(curA&&curA.src){
-      curA.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+    else if(a&&a.src){
+      a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
       setIsPlaying(true);
     }
     else playSurahFrom(surah.id,1);
   };
 
-  const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;activeAudioRef.current=activeAudioRef.current===1?2:1;playVerse(q.sn,q.nis);}};
-  const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;activeAudioRef.current=activeAudioRef.current===1?2:1;playVerse(q.sn,q.nis);}};
+  const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}};
+  const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;playVerse(q.sn,q.nis);}};
 
   const handleEnded=()=>{
     const q=playQueueRef.current;
-    if(q&&q.nis<q.maxNis){q.nis++;activeAudioRef.current=activeAudioRef.current===1?2:1;playVerse(q.sn,q.nis);}
+    if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}
     else stopAudio();
   };
   const handleErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis)skipNext();else stopAudio();};
@@ -274,8 +255,7 @@ export default function QuranPage(){
     setRecId(newId);recIdRef.current=newId;
     const q=playQueueRef.current;
     if(q&&isPlaying){
-      if(audio1Ref.current)audio1Ref.current.pause();
-      if(audio2Ref.current)audio2Ref.current.pause();
+      if(audioRef.current)audioRef.current.pause();
       setTimeout(()=>playVerse(q.sn,q.nis),50);
     }
   };
@@ -441,9 +421,8 @@ export default function QuranPage(){
 
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
-      {/* Dual Buffer Audio Elements for true Gapless play */}
-      <audio ref={audio1Ref} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
-      <audio ref={audio2Ref} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
+      {/* Single highly robust Audio Element for guaranteed web mobile playback */}
+      <audio ref={audioRef} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
       
       {/* TOP BAR */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-50" style={{paddingTop:'env(safe-area-inset-top,0px)',background:colors.bg,borderBottom:`1px solid ${colors.border}40`}}>
