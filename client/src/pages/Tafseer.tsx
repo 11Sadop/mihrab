@@ -11,8 +11,9 @@ const RECITERS:Rec[]=[
   {id:"shatri",name:"أبو بكر الشاطري",server:"https://server11.mp3quran.net/shatri",ev:"Abu_Bakr_Ash-Shaatree_128kbps"},
   {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
   // ح-خ
+  // ح-خ
   // م
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"},
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
@@ -40,19 +41,25 @@ const PS:Record<number,number>={1:1,2:2,3:50,4:77,5:106,6:128,7:151,8:177,9:187,
 const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9,182:10,201:11,222:12,242:13,262:14,282:15,302:16,322:17,342:18,362:19,382:20,402:21,422:22,442:23,462:24,482:25,502:26,522:27,542:28,562:29,582:30};
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
-// Normalize text - keep waqf marks (U+06D6..U+06DB) but strip tajweed marks (e.g. small meem U+06E2, U+06ED)
-const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'').replace(/[\u06DC-\u06ED]/g,'');
+// Normalize text - keep ALL marks for display except zero-width spaces
+const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'');
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
 const spaceMuqattaat=(t:string)=>{
-  const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A]/g,'');
+  // Preserve spacing for display but don't strip the actual diacritics
+  const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'');
   if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنص]+$/.test(base)){
-    return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670]*)/g,'$1 ').trim();
+    return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670\u06D6-\u06ED]*)/g,'$1 ').trim();
   }
   return t;
 };
 const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
+function pageForVerse(sn:number,nis:number){
+  // Basic approximation for simplicity: if on current page, keep it. 
+  // Otherwise search PS map.
+  return 1; // Handled fully dynamically via query in component
+}
 
 // Robust bismillah removal: strip diacritics then compare
 const BISM_PLAIN='بسم الله الرحمن الرحيم';
@@ -178,6 +185,15 @@ export default function QuranPage(){
   // ═══ AUDIO ═══
   const getReciter=()=>RECITERS.find(r=>r.id===recIdRef.current)||RECITERS[0];
 
+  const ensureVerseVisible=(sn:number,nis:number)=>{
+    const data=qc.getQueryData<any[]>(["qp",pgRef.current]);
+    if(data&&!data.some((a:any)=>a.sn===sn&&a.nis===nis)){
+      fetch(`https://api.alquran.cloud/v1/ayah/${sn}:${nis}`).then(r=>r.json()).then(d=>{if(d?.data?.page)setPg(d.data.page);}).catch(()=>{});
+    } else {
+      setTimeout(()=>{const el=document.getElementById(`verse-${sn}-${nis}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}, 100);
+    }
+  };
+
   const playVerse=(sn:number,nis:number)=>{
     const rec=getReciter();
     if(!audioRef.current){
@@ -192,7 +208,7 @@ export default function QuranPage(){
       navigator.mediaSession.metadata=new MediaMetadata({
         title:`سورة ${SURAHS.find(s=>s.id===sn)?.n||''}`,
         artist:rec.name,
-        album:'محراب',
+        album:`آية ${nis}`,
         artwork:[{src:'/icon-512x512.png',sizes:'512x512',type:'image/png'}]
       });
       navigator.mediaSession.setActionHandler('play',()=>togglePlay());
@@ -201,16 +217,21 @@ export default function QuranPage(){
       navigator.mediaSession.setActionHandler('nexttrack',()=>skipNext());
     }
 
-    if(!rec.ev){
-      a.src=`${rec.server}/${pad3(sn)}.mp3`;
-      a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
-      setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);return;
-    }
-    
-    a.src=`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3`;
+    const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
+    // If we have a prefetched audio that matches, we could swap it. But setting src is fast enough if browser cached it.
+    a.src=url;
     a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
+    ensureVerseVisible(sn,nis);
+
+    // Preload next audio for gapless playback
+    const maxNis=SURAHS.find(s=>s.id===sn)?.c||1;
+    if (nis < maxNis) {
+      if(!nextAudioRef.current) nextAudioRef.current = new Audio();
+      nextAudioRef.current.src = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
+      nextAudioRef.current.preload = 'auto';
+    }
   };
 
   const playSurahFrom=(sn:number,startNis:number)=>{
@@ -220,7 +241,7 @@ export default function QuranPage(){
   };
 
   const stopAudio=()=>{
-    if(audioRef.current)audioRef.current.pause();
+    if(audioRef.current){audioRef.current.pause();audioRef.current.removeAttribute('src');}
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
     if('mediaSession' in navigator)navigator.mediaSession.playbackState='none';
   };
@@ -241,16 +262,9 @@ export default function QuranPage(){
   const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}};
   const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;playVerse(q.sn,q.nis);}};
 
-  const ensureVerseVisible=(sn:number,nis:number)=>{
-    const data=qc.getQueryData<any[]>(["qp",pgRef.current]);
-    if(data&&!data.some((a:any)=>a.sn===sn&&a.nis===nis)){
-      if(pgRef.current>1)setPg(pgRef.current-1);
-    }
-  };
-
   onEndedRef.current=()=>{
     const q=playQueueRef.current;
-    if(q&&q.nis<q.maxNis&&getReciter().ev){q.nis++;ensureVerseVisible(q.sn,q.nis);playVerse(q.sn,q.nis);}
+    if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}
     else stopAudio();
   };
   onErrRef.current=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis)skipNext();else stopAudio();};
@@ -310,30 +324,55 @@ export default function QuranPage(){
   const shareAsImage=async(text:string,refs:string)=>{
     if(!selVerse)return;
     const c=QBG[qTheme]||QBG.dark;
-    const cv=document.createElement('canvas');cv.width=800;cv.height=900;
+    const cv=document.createElement('canvas');
+    // Using Ayah app vertical layout
+    cv.width=1080;cv.height=1080;
     const ctx=cv.getContext('2d');if(!ctx)return;
+    
     // Background matches theme
-    ctx.fillStyle=c.bg;ctx.fillRect(0,0,800,900);
-    // Ornamental border
-    ctx.strokeStyle='#C8A96E';ctx.lineWidth=3;ctx.strokeRect(20,20,760,860);
-    ctx.strokeStyle='#C8A96E40';ctx.lineWidth=1;ctx.strokeRect(30,30,740,840);
-    // Surah name header
+    ctx.fillStyle=c.bg;ctx.fillRect(0,0,1080,1080);
+    
+    // Header Ornament Box
+    const boxY = 220;
+    ctx.strokeStyle=c.border;ctx.lineWidth=3;
+    ctx.strokeRect(340,boxY,400,90);
+    ctx.fillStyle=c.text;ctx.textAlign='center';ctx.textBaseline='middle';
+    
+    // Draw decorative stars ❁ around the box
+    ctx.font='30px sans-serif';
+    ctx.fillText('❁', 310, boxY+45);
+    ctx.fillText('❁', 770, boxY+45);
+
+    // Surah name inside box
     const sname=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';
-    ctx.font='bold 22px sans-serif';ctx.fillStyle='#C8A96E';ctx.textAlign='center';
-    ctx.fillText(`سورة ${sname}`,400,65);
-    // Decorative line
-    ctx.strokeStyle='#C8A96E60';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(150,80);ctx.lineTo(650,80);ctx.stroke();
-    // Verse text
-    ctx.font='32px "Amiri Quran","KFGQPC Uthmanic Script HAFS",serif';
+    ctx.font='bold 45px "Amiri Quran","KFGQPC Uthmanic Script HAFS"';
+    ctx.fillText(`سُورَةُ ٱل${sname.replace('ال','').replace(' ','_')}`, 540, boxY+45); // Approximate diacritical rendering
+    
+    // Verse text layout
+    ctx.font='46px "Amiri Quran", "KFGQPC Uthmanic Script HAFS", serif';
     ctx.fillStyle=c.text;ctx.textAlign='center';ctx.direction='rtl';
-    const words=text.split(' ');let line='';let y=140;
-    for(const w of words){const test=line+w+' ';if(ctx.measureText(test).width>700&&line){ctx.fillText(line.trim(),400,y);y+=55;line=w+' ';}else line=test;}
-    if(line)ctx.fillText(line.trim(),400,y);
-    // Reference
-    ctx.font='18px sans-serif';ctx.fillStyle='#C8A96E';ctx.fillText(`${sname}: ${refs}`,400,y+70);
+    const words=text.split(' ');
+    let line='';let y=420;
+    for(const w of words){
+      const test=line+w+' ';
+      if(ctx.measureText(test).width>900&&line){
+        ctx.fillText(line.trim(),540,y);
+        y+=80;line=w+' ';
+      }else line=test;
+    }
+    if(line)ctx.fillText(line.trim(),540,y);
+    
+    // Divider line at bottom
+    ctx.strokeStyle=c.border;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(340,y+100);ctx.lineTo(740,y+100);ctx.stroke();
+    // Reference number
+    ctx.font='bold 22px sans-serif';
+    ctx.fillStyle=c.text;
+    ctx.fillText(`${selVerse.sn}:${selVerse.nis}`,540,y+100);
+
     // Watermark
-    ctx.font='12px sans-serif';ctx.fillStyle='#C8A96E40';ctx.fillText('mihrabapp.com',400,y+100);
+    ctx.font='16px sans-serif';ctx.fillStyle=c.border;ctx.fillText('تطبيق محراب - mihrabapp.com',540,1040);
+    
     cv.toBlob(blob=>{
       if(!blob)return;
       const dl=document.createElement('a');dl.href=URL.createObjectURL(blob);dl.download=`Quran_${selVerse.sn}_${refs}.png`;
@@ -523,7 +562,7 @@ export default function QuranPage(){
               <p className="font-quran" style={{fontSize:'clamp(16px,4vw,22px)',color:colors.text}}>بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ</p>
             </div>}
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(20px,5vw,28px)',lineHeight:'2.2',color:colors.text}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(24px, 6.5vw, 42px)',lineHeight:'2.1',letterSpacing:'normal',color:colors.text}}>
               {g.ayahs.map(a=>{
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                 const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
@@ -533,13 +572,13 @@ export default function QuranPage(){
                     style={{
                       color:hidden?'transparent':isP?'#fff':hr==='ok'?'#4ade80':hr==='err'?'#f87171':colors.text,
                       background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
-                      padding:(isP||isSel)?'2px 4px':'0',borderRadius:(isP||isSel)?'6px':'0',
+                      padding:(isP||isSel)?'3px 6px':'0',borderRadius:(isP||isSel)?'8px':'0',
                     }}>
                     {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text}
                   </span>
                   {/* Golden verse marker */}
-                  <span className="inline-flex items-center justify-center rounded-full align-middle font-sans font-bold mx-0.5"
-                    style={{width:'2.4em',height:'2.4em',fontSize:'0.5em',verticalAlign:'middle',
+                  <span className="inline-flex items-center justify-center rounded-full align-middle font-sans font-bold mx-1.5"
+                    style={{width:'2.3em',height:'2.3em',fontSize:'0.45em',verticalAlign:'middle',
                       border:`2px solid ${isP?'#22c55e':'#c8a96e'}`,
                       color:isP?'#22c55e':'#8b7355',
                       background:isP?'rgba(34,197,94,0.1)':'rgba(200,169,110,0.08)'
