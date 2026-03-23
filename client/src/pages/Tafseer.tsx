@@ -249,7 +249,7 @@ export default function QuranPage(){
     if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}
     else stopAudio();
   };
-  const handleErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis)skipNext();else stopAudio();};
+  const handleErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){setTimeout(skipNext,300);}else stopAudio();};
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
