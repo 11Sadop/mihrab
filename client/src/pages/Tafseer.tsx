@@ -553,33 +553,32 @@ export default function QuranPage(){
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
         :<div className="flex flex-col justify-center px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%'}}>
           {groups.map((g,gi)=><div key={`${g.sn}-${gi}`}>
-            {/* Decorated Surah Header - ornamental like Ayah */}
-            {g.ayahs[0].nis===1&&<div className="text-center my-6">
-              <div className="inline-block relative px-12 py-3" style={{border:`2px solid ${colors.border}40`,borderRadius:'4px',background:`linear-gradient(wrap, ${colors.border}10, transparent)`}}>
-                <div className="absolute -left-5 top-1/2 -translate-y-1/2 text-2xl font-serif" style={{color:colors.border}}>۞</div>
-                <div className="absolute -right-5 top-1/2 -translate-y-1/2 text-2xl font-serif" style={{color:colors.border}}>۞</div>
-                <span className="font-quran font-bold relative z-10" style={{fontSize:'clamp(28px, 6vw, 36px)',color:colors.text}}>سُورَةُ ٱل{g.sname.replace(/^سُورَةُ\s*/,'').replace('ال','')}</span>
+            {/* Surah Header - Match Ayah App Exactly */}
+            {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center">
+              <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
+                <div className="absolute -left-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
+                <div className="absolute -right-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
+                <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(26px, 5.5vw, 36px)',color:colors.text, paddingTop:'4px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
               </div>
             </div>}
             
-            {/* Bismillah - Grand and Centered */}
-            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-6">
-              {/* Highlight Fatiha Bismillah if playing */}
+            {/* Bismillah Header */}
+            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-4 mb-6" dir="rtl">
               <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
-                className="font-quran transition-all duration-200 rounded cursor-pointer" 
+                className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5]" 
                 style={{
-                  fontSize:'clamp(20px, 5.5vw, 30px)',
+                  fontSize:'clamp(22px, 5.5vw, 36px)',
                   color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#fff' : colors.text,
                   background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
                   padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 8px' : '0'
                 }}>
                 بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
-                {g.sn===1 && <span className="inline-flex items-center justify-center rounded-full mx-1.5" style={{width:'2em',height:'2em',fontSize:'0.4em',verticalAlign:'middle',border:`1px solid ${colors.border}`,color:colors.border}}>١</span>}
+                {g.sn===1 && <span className="inline-flex items-center justify-center rounded-full mx-2 font-sans font-bold" style={{width:'2.2em',height:'2.2em',fontSize:'0.45em',verticalAlign:'middle',border:`1px solid ${(playingKey===`${g.sn}-1`)?'#22c55e':colors.border}`,color:(playingKey===`${g.sn}-1`)?'#22c55e':colors.border,background:(playingKey===`${g.sn}-1`)?'rgba(34,197,94,0.1)':'transparent',opacity:0.8}}>1</span>}
               </span>
             </div>}
             
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(22px, 5.5vw, 36px)',lineHeight:'2.2',fontWeight:'normal',letterSpacing:'normal',color:colors.text, wordSpacing:'0.05em'}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(22px, 5.5vw, 36px)',lineHeight:'2.4',fontWeight:'normal',letterSpacing:'normal',color:colors.text, wordSpacing:'0.05em'}}>
               {g.ayahs.map(a=>{
                 if(a.nis===1 && g.sn===1) return null; // Rendered above as Bismillah block
                 
@@ -596,11 +595,12 @@ export default function QuranPage(){
                     {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text}
                   </span>
                   {/* Golden verse marker */}
-                  <span className="inline-flex items-center justify-center rounded-full align-middle font-sans font-bold mx-1.5"
+                  <span className="inline-flex items-center justify-center rounded-full align-middle font-sans font-bold mx-2"
                     style={{width:'2.2em',height:'2.2em',fontSize:'0.45em',verticalAlign:'middle',
                       border:`1px solid ${isP?'#22c55e':colors.border}`,
                       color:isP?'#22c55e':colors.border,
-                      background:isP?'rgba(34,197,94,0.1)':'transparent'
+                      background:isP?'rgba(34,197,94,0.1)':'transparent',
+                      opacity:0.8
                     }}>{hidden?"؟":a.nis}</span>
                 </span>;
               })}
