@@ -40,6 +40,14 @@
     ],
     "rewrites": [
         {
+            "source": "/api/cron/:path*",
+            "destination": "/api/cron/:path*"
+        },
+        {
+            "source": "/api/push/:path*",
+            "destination": "/api/push/:path*"
+        },
+        {
             "source": "/api/hadith-search",
             "destination": "/api/hadith-search"
         },
@@ -54,6 +62,12 @@
         {
             "source": "/((?!api).*)",
             "destination": "/index.html"
+        }
+    ],
+    "crons": [
+        {
+            "path": "/api/cron/prayer-notifications",
+            "schedule": "*/5 * * * *"
         }
     ],
     "functions": {
