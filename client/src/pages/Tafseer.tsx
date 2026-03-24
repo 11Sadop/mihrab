@@ -47,7 +47,7 @@ const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'');
 const spaceMuqattaat=(t:string)=>{
   // Preserve spacing for display but don't strip the actual diacritics
   const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'');
-  if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنص]+$/.test(base)){
+  if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنصل]+$/.test(base)){
     return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670\u06D6-\u06ED]*)/g,'$1 ').trim();
   }
   return t;
@@ -557,7 +557,7 @@ export default function QuranPage(){
             </div>}
             
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(22px, 5.5vw, 36px)',lineHeight:'2.4',fontWeight:'normal',letterSpacing:'normal',color:colors.text, wordSpacing:'0.05em'}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(18px, 4.5vw, 28px)',lineHeight:'2.8',fontWeight:'normal',letterSpacing:'normal',color:colors.text, wordSpacing:'0.12em'}}>
               {g.ayahs.map(a=>{
                 if(a.nis===1 && g.sn===1) return null; // Rendered above as Bismillah block
                 
