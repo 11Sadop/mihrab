@@ -557,7 +557,7 @@ export default function QuranPage(){
             </div>}
             
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(18px, 4.5vw, 28px)',lineHeight:'2.8',fontWeight:'normal',letterSpacing:'normal',color:colors.text, wordSpacing:'0.12em'}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(24px, 6vw, 34px)',lineHeight:'2.6',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.08em'}}>
               {g.ayahs.map(a=>{
                 if(a.nis===1 && g.sn===1) return null; // Rendered above as Bismillah block
                 
