@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/reahct-query";
 import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2, Square, Settings, ArrowRight } from "lucide-react";
 import { useSeo } from "@/hooks/use-seo";
 
@@ -626,7 +626,7 @@ export default function QuranPage(){
                       background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                       padding:(isP||isSel)?'3px 6px':'0',borderRadius:(isP||isSel)?'8px':'0',
                     }}>
-                    {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text.replace(//g,'')}
+                    {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text.replace(/[\u06D6-\u06E4\u06E7-\u06ED\u0600-\u0605]/g,'')}
                   </span>
                   {/* Ornamental golden verse marker ❁ */}
                   <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
