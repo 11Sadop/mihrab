@@ -10,13 +10,13 @@ const RECITERS:Rec[]=[
   // أ
   {id:"shatri",name:"أبو بكر الشاطري",server:"https://server11.mp3quran.net/shatri",ev:"Abu_Bakr_Ash-Shaatree_128kbps"},
   {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
-  // hح-خ
+  // ح-خ
   // ح-خ
   // م
   {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
-  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_12h8kbps"},
+  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
   {id:"jbrl",name:"محمد جبريل",server:"https://server8.mp3quran.net/jbrl",ev:"Muhammad_Jibreel_128kbps"},
   {id:"tablawi",name:"محمد الطبلاوي",server:"https://server12.mp3quran.net/tblawi",ev:"Mohammad_al_Tablaway_128kbps"},
   {id:"ayyub",name:"محمد أيوب",server:"https://server8.mp3quran.net/ayyub",ev:"Muhammad_Ayyoub_128kbps"},
@@ -125,6 +125,7 @@ export default function QuranPage(){
   const [playingSn,setPlayingSn]=useState(0);
 
   const audioRef=useRef<HTMLAudioElement>(null);
+  const preloadRef=useRef<HTMLAudioElement>(null);
   const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
   const recIdRef=useRef(recId);
   const pgRef=useRef(pg);
@@ -211,6 +212,13 @@ export default function QuranPage(){
     a.src=url;
     a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
+    // Preload next verse for smooth transition
+    const q=playQueueRef.current;
+    if(q&&nis<q.maxNis){
+      const nextUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3`:`${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
+      if(preloadRef.current){preloadRef.current.src=nextUrl;preloadRef.current.load();}
+    }
+    
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     ensureVerseVisible(sn,nis);
   };
@@ -246,7 +254,26 @@ export default function QuranPage(){
 
   const handleEnded=()=>{
     const q=playQueueRef.current;
-    if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}
+    if(q&&q.nis<q.maxNis){
+      q.nis++;
+      // Use preloaded audio if available for seamless transition
+      const rec=getReciter();
+      const expectedUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
+      if(preloadRef.current&&preloadRef.current.src===expectedUrl&&preloadRef.current.readyState>=2){
+        // Swap: copy preloaded src to main player
+        const a=audioRef.current;
+        if(a){a.src=expectedUrl;a.play().catch(()=>{});}
+        setPlayingKey(`${q.sn}-${q.nis}`);
+        ensureVerseVisible(q.sn,q.nis);
+        // Preload the next one
+        if(q.nis<q.maxNis){
+          const nn=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
+          preloadRef.current.src=nn;preloadRef.current.load();
+        }
+      } else {
+        playVerse(q.sn,q.nis);
+      }
+    }
     else stopAudio();
   };
   const handleErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){setTimeout(skipNext,300);}else stopAudio();};
@@ -304,63 +331,87 @@ export default function QuranPage(){
 
   const shareAsImage=async(text:string,refs:string)=>{
     if(!selVerse)return;
-    const c=QBG[qTheme]||QBG.dark;
-    const cv=document.createElement('canvas');
-    // Using Ayah app vertical layout
-    cv.width=1080;cv.height=1080;
-    const ctx=cv.getContext('2d');if(!ctx)return;
-    
-    // Background matches theme
-    ctx.fillStyle=c.bg;ctx.fillRect(0,0,1080,1080);
-    
-    // Header Ornament Box
-    const boxY = 220;
-    ctx.strokeStyle=c.border;ctx.lineWidth=3;
-    ctx.strokeRect(340,boxY,400,90);
-    ctx.fillStyle=c.text;ctx.textAlign='center';ctx.textBaseline='middle';
-    
-    // Draw decorative stars ۞ around the box
-    ctx.font='36px serif';
-    ctx.fillText('۞', 290, boxY+45);
-    ctx.fillText('۞', 790, boxY+45);
-
-    // Surah name inside box
+    const c=QBG[qTheme]||QBG.cream;
     const sname=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';
-    ctx.font='bold 45px "Amiri Quran","KFGQPC Uthmanic Script HAFS"';
-    ctx.fillText(`سُورَةُ ٱل${sname.replace('ال','').replace(' ','_')}`, 540, boxY+45); // Approximate diacritical rendering
-    
-    // Verse text layout
-    ctx.font='46px "Amiri Quran", "KFGQPC Uthmanic Script HAFS", serif';
-    ctx.fillStyle=c.text;ctx.textAlign='center';ctx.direction='rtl';
-    const words=text.split(' ');
-    let line='';let y=420;
-    for(const w of words){
-      const test=line+w+' ';
-      if(ctx.measureText(test).width>900&&line){
-        ctx.fillText(line.trim(),540,y);
-        y+=80;line=w+' ';
-      }else line=test;
-    }
-    if(line)ctx.fillText(line.trim(),540,y);
-    
-    // Divider line at bottom
-    ctx.strokeStyle=c.border;ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(340,y+100);ctx.lineTo(740,y+100);ctx.stroke();
-    // Reference number
-    ctx.font='bold 22px sans-serif';
-    ctx.fillStyle=c.text;
-    ctx.fillText(`${selVerse.sn}:${selVerse.nis}`,540,y+100);
-
+    // Use dom-to-image approach: create a hidden div, render, capture
+    const wrap=document.createElement('div');
+    wrap.style.cssText=`position:fixed;left:-9999px;top:0;width:1080px;padding:80px 60px;background:${c.bg};direction:rtl;text-align:center;font-family:'KFGQPC HAFS Uthmanic Script','Amiri Quran','Amiri',serif;`;
+    // Surah header
+    const hdr=document.createElement('div');
+    hdr.style.cssText=`display:inline-block;border:2px solid ${c.border};padding:16px 60px;margin-bottom:40px;position:relative;`;
+    hdr.innerHTML=`<span style="font-size:40px;color:${c.text};font-weight:bold;">سُورَةُ ${sname}</span>`;
+    wrap.appendChild(hdr);
+    // Verse text
+    const txt=document.createElement('p');
+    txt.style.cssText=`font-size:42px;line-height:2.2;color:${c.text};margin:20px 0 40px;padding:0 20px;`;
+    txt.textContent=text;
+    wrap.appendChild(txt);
+    // Divider + ref
+    const divider=document.createElement('div');
+    divider.style.cssText=`display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px;`;
+    divider.innerHTML=`<div style="width:80px;height:1px;background:${c.border}"></div><span style="font-size:20px;color:${c.border};font-family:sans-serif;font-weight:bold;">${selVerse.sn}:${refs}</span><div style="width:80px;height:1px;background:${c.border}"></div>`;
+    wrap.appendChild(divider);
     // Watermark
-    ctx.font='16px sans-serif';ctx.fillStyle=c.border;ctx.fillText('تطبيق محراب - mihrabapp.com',540,1040);
-    
-    cv.toBlob(blob=>{
-      if(!blob)return;
-      const dl=document.createElement('a');dl.href=URL.createObjectURL(blob);dl.download=`Quran_${selVerse.sn}_${refs}.png`;
-      const file=new File([blob],'ayah.png',{type:'image/png'});
-      if(navigator.share&&navigator.canShare?.({files:[file]}))navigator.share({files:[file]}).catch(()=>dl.click());
-      else dl.click();
-    },'image/png');
+    const wm=document.createElement('div');
+    wm.style.cssText=`margin-top:40px;font-size:16px;color:${c.border};font-family:sans-serif;direction:ltr;`;
+    wm.textContent='تطبيق محراب - mihrabapp.com';
+    wrap.appendChild(wm);
+    document.body.appendChild(wrap);
+    // Use html2canvas-like approach with canvas
+    try{
+      const cv=document.createElement('canvas');
+      const rect=wrap.getBoundingClientRect();
+      cv.width=1080;cv.height=Math.max(1080,rect.height+40);
+      const ctx=cv.getContext('2d');if(!ctx){document.body.removeChild(wrap);return;}
+      // Draw background
+      ctx.fillStyle=c.bg;ctx.fillRect(0,0,cv.width,cv.height);
+      // Since we can't perfectly render HTML to canvas without a library,
+      // fallback to the canvas text approach but using the CORRECT font
+      const fontQ="'KFGQPC HAFS Uthmanic Script','Amiri Quran','Amiri',serif";
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';
+      // Header box
+      const boxY=100;
+      ctx.strokeStyle=c.border;ctx.lineWidth=2.5;
+      ctx.strokeRect(290,boxY,500,80);
+      ctx.font=`36px serif`;ctx.fillStyle=c.text;
+      ctx.fillText('۞',245,boxY+40);ctx.fillText('۞',835,boxY+40);
+      ctx.font=`bold 42px ${fontQ}`;ctx.fillStyle=c.text;
+      ctx.fillText(`سُورَةُ ${sname}`,540,boxY+42);
+      // Verse text - word wrap
+      ctx.font=`42px ${fontQ}`;ctx.fillStyle=c.text;
+      const maxW=920;const words=text.split(' ');
+      let line='',y=280;
+      for(const w of words){
+        const test=line+w+' ';
+        if(ctx.measureText(test).width>maxW&&line){ctx.fillText(line.trim(),540,y);y+=88;line=w+' ';}
+        else line=test;
+      }
+      if(line){ctx.fillText(line.trim(),540,y);y+=88;}
+      // Divider
+      ctx.strokeStyle=c.border;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(340,y+10);ctx.lineTo(740,y+10);ctx.stroke();
+      ctx.font='bold 20px sans-serif';ctx.fillStyle=c.text;
+      ctx.fillText(`${selVerse.sn}:${refs}`,540,y+10);
+      // Watermark
+      const wmY=Math.max(y+80,cv.height-40);
+      ctx.font='16px sans-serif';ctx.fillStyle=c.border;
+      ctx.fillText('تطبيق محراب - mihrabapp.com',540,wmY);
+      // Resize canvas to actual content
+      if(y+120<cv.height){
+        const finalH=y+120;
+        const imgData=ctx.getImageData(0,0,cv.width,finalH);
+        cv.height=finalH;
+        ctx.putImageData(imgData,0,0);
+      }
+      document.body.removeChild(wrap);
+      cv.toBlob(blob=>{
+        if(!blob)return;
+        const dl=document.createElement('a');dl.href=URL.createObjectURL(blob);dl.download=`Quran_${selVerse.sn}_${refs}.png`;
+        const file=new File([blob],'ayah.png',{type:'image/png'});
+        if(navigator.share&&navigator.canShare?.({files:[file]}))navigator.share({files:[file]}).catch(()=>dl.click());
+        else dl.click();
+      },'image/png');
+    }catch{document.body.removeChild(wrap);}
   };
 
   const doShare=async()=>{
@@ -421,8 +472,9 @@ export default function QuranPage(){
 
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
-      {/* Single highly robust Audio Element for guaranteed web mobile playback */}
+      {/* Audio elements - main + preload for smooth transitions */}
       <audio ref={audioRef} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
+      <audio ref={preloadRef} style={{display:'none'}} preload="auto" />
       
       {/* TOP BAR */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-50" style={{paddingTop:'env(safe-area-inset-top,0px)',background:colors.bg,borderBottom:`1px solid ${colors.border}40`}}>
@@ -531,7 +583,9 @@ export default function QuranPage(){
         {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
         :<div className="flex flex-col justify-center px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%'}}>
-          {groups.map((g,gi)=><div key={`${g.sn}-${gi}`}>
+
+
+          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=totalChars>800?'clamp(17px,3.8vw,22px)':totalChars>600?'clamp(19px,4.2vw,25px)':totalChars>400?'clamp(21px,4.8vw,28px)':'clamp(23px,5.5vw,32px)';const dynLine=totalChars>800?'2.0':totalChars>600?'2.1':totalChars>400?'2.2':'2.4';return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
@@ -557,13 +611,13 @@ export default function QuranPage(){
             </div>}
             
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(19px,4.5vw,26px)',lineHeight:'2.1',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em'}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em'}}>
               {g.ayahs.map(a=>{
-                if(a.nis===1 && g.sn===1) return null; // Rendered above as Bismillah block
+                if(a.nis===1 && g.sn===1) return null;
                 
                 const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                 const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
-                return<span key={k} className="inline" data-v="1">
+                return<span key={k} className="inline" data-v="1" id={`verse-${g.sn}-${a.nis}`}>
                   <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
                     className="transition-all duration-200 rounded cursor-pointer"
                     style={{
@@ -573,18 +627,21 @@ export default function QuranPage(){
                     }}>
                     {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text}
                   </span>
-                  {/* Golden verse marker */}
-                  <span className="inline-flex items-center justify-center rounded-full align-middle font-sans font-bold mx-2"
-                    style={{width:'2.2em',height:'2.2em',fontSize:'0.45em',verticalAlign:'middle',
-                      border:`1px solid ${isP?'#22c55e':colors.border}`,
-                      color:isP?'#22c55e':colors.border,
-                      background:isP?'rgba(34,197,94,0.1)':'transparent',
-                      opacity:0.8
-                    }}>{hidden?"؟":a.nis}</span>
+                  {/* Ornamental golden verse marker ❁ */}
+                  <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
+                    style={{width:'1.6em',height:'1.6em',fontSize:'0.55em',verticalAlign:'middle',position:'relative',display:'inline-flex'}}>
+                    <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
+                      <circle cx="25" cy="25" r="22" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="1.5"/>
+                      <circle cx="25" cy="25" r="18" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="0.8"/>
+                      {[0,45,90,135,180,225,270,315].map(deg=><circle key={deg} cx={25+20*Math.cos(deg*Math.PI/180)} cy={25+20*Math.sin(deg*Math.PI/180)} r="1.8" fill={isP?'#22c55e':'#c8a96e'}/>)}
+                    </svg>
+                    <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:700,color:isP?'#22c55e':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
+                  </span>
                 </span>;
               })}
             </div>
-          </div>)}
+          </div>)})}
+
           {/* Page number - centered with ornamental lines */}
           <div className="flex items-center justify-center gap-2 mt-2 mb-1">
             <div className="w-16 h-px" style={{background:`linear-gradient(to left,${colors.border},transparent)`}}/>
