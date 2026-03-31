@@ -10,23 +10,23 @@ const RECITERS:Rec[]=[
   // أ
   {id:"shatri",name:"أبو بكر الشاطري",server:"https://server11.mp3quran.net/shatri",ev:"Abu_Bakr_Ash-Shaatree_128kbps"},
   {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
-  // ح-خ
+  // hح-خ
   // ح-خ
   // م
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"},
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
   {id:"jbrl",name:"محمد جبريل",server:"https://server8.mp3quran.net/jbrl",ev:"Muhammad_Jibreel_128kbps"},
   {id:"tablawi",name:"محمد الطبلاوي",server:"https://server12.mp3quran.net/tblawi",ev:"Mohammad_al_Tablaway_128kbps"},
   {id:"ayyub",name:"محمد أيوب",server:"https://server8.mp3quran.net/ayyub",ev:"Muhammad_Ayyoub_128kbps"},
-  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server8.mp3quran.net/lhdan",ev:"Muhammad_alLuhaidan_128kbps"},
+  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server8.mp3quran.net/lhdan"},
   // ن
   {id:"qatami",name:"ناصر القطامي",server:"https://server10.mp3quran.net/qht",ev:"Nasser_Alqatami_128kbps"},
   // س-ص
   {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
   {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"Abdul_Basit_Murattal_192kbps"},
-  {id:"bsfr",name:"عبدالله بصفر",server:"https://server6.mp3quran.net/bsfr",ev:"Abdullaah_3awwaad_Al-Juhaynee_128kbps"},
+  {id:"bsfr",name:"عبدالله بصفر",server:"https://server6.mp3quran.net/bsfr",ev:"Abdullah_Basfar_192kbps"},
   {id:"shuraim",name:"سعود الشريم",server:"https://server7.mp3quran.net/shur",ev:"Saood_ash-Shuraym_128kbps"},
   {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Ghamadi_40kbps"},
   {id:"budair",name:"صلاح البدير",server:"https://server6.mp3quran.net/s_bud",ev:"Salah_Al_Budair_128kbps"},
