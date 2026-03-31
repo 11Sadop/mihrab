@@ -262,7 +262,7 @@ export default function QuranPage(){
       if(preloadRef.current&&preloadRef.current.src===expectedUrl&&preloadRef.current.readyState>=2){
         // Swap: copy preloaded src to main player
         const a=audioRef.current;
-        if(a){a.src=expectedUrl;a.play().catch(()=>{});}
+        const old=audioRef.current;if(old){old.pause();old.removeAttribute('src');}audioRef.current=preloadRef.current;preloadRef.current=old||new Audio();audioRef.current.onended=handleEnded;audioRef.current.onerror=handleErr;audioRef.current.play().catch(()=>{});
         setPlayingKey(`${q.sn}-${q.nis}`);
         ensureVerseVisible(q.sn,q.nis);
         // Preload the next one
@@ -374,7 +374,7 @@ export default function QuranPage(){
       ctx.strokeStyle=c.border;ctx.lineWidth=2.5;
       ctx.strokeRect(290,boxY,500,80);
       ctx.font=`36px serif`;ctx.fillStyle=c.text;
-      ctx.fillText('۞',245,boxY+40);ctx.fillText('۞',835,boxY+40);
+      ctx.fillText('[\u06D6-\u06E4\u06E7-\u06ED\u0600-\u0605]',245,boxY+40);ctx.fillText('[\u06D6-\u06E4\u06E7-\u06ED\u0600-\u0605]',835,boxY+40);
       ctx.font=`bold 42px ${fontQ}`;ctx.fillStyle=c.text;
       ctx.fillText(`سُورَةُ ${sname}`,540,boxY+42);
       // Verse text - word wrap
@@ -589,8 +589,8 @@ export default function QuranPage(){
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
-                <div className="absolute -left-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
-                <div className="absolute -right-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
+                <div className="absolute -left-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>[\u06D6-\u06E4\u06E7-\u06ED\u0600-\u0605]</div>
+                <div className="absolute -right-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>[\u06D6-\u06E4\u06E7-\u06ED\u0600-\u0605]</div>
                 <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(26px, 5.5vw, 36px)',color:colors.text, paddingTop:'4px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
               </div>
             </div>}
