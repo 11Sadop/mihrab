@@ -10,7 +10,7 @@ firebase.initializeApp({
     authDomain: "mihrabapp-32e80.firebaseapp.com",
     projectId: "mihrabapp-32e80",
     storageBucket: "mihrabapp-32e80.firebasestorage.app",
-    messagingSenderId: "1057466774502",
+    messagingSenderId: "1057466774502",const INTERVAL_MS = 30 * 1000; // 
     appId: "1:1057466774502:web:0c8f703b608ac84d8c9c27"
 });
 
@@ -173,7 +173,7 @@ self.addEventListener('notificationclick', (event) => {
  * تُخبر المتصفح أن الـ SW ما زال بحاجة للتشغيل.
  */
 function scheduleNextCheck() {
-    const INTERVAL_MS = 60 * 1000; // كل دقيقة
+    const INTERVAL_MS = 30 * 1000; // كل دقيقة
 
     // استخدام event.waitUntil لإبقاء SW حياً
     const keepAlive = new Promise((resolve) => {
@@ -186,7 +186,7 @@ function scheduleNextCheck() {
 
     // هذا الـ "trick" يُبقي Service Worker نشطاً:
     // نستخدم waitUntil مع Promise لا تنتهي بشكل فوري
-    self.registration.update().catch(() => {});
+    self.registration.update().catch(() => {}); registerPeriodicSync();
 }
 
 /**
