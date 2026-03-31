@@ -625,7 +625,7 @@ export default function QuranPage(){
                       background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                       padding:(isP||isSel)?'3px 6px':'0',borderRadius:(isP||isSel)?'8px':'0',
                     }}>
-                    {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text}
+                    {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text.replace(/[\u06DD\u06DE\u0600-\u0605\u06E9]/g,'')}
                   </span>
                   {/* Ornamental golden verse marker ❁ */}
                   <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
