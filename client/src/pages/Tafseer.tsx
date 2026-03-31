@@ -16,7 +16,7 @@ const RECITERS:Rec[]=[
   {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
-  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
+  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_12h8kbps"},
   {id:"jbrl",name:"محمد جبريل",server:"https://server8.mp3quran.net/jbrl",ev:"Muhammad_Jibreel_128kbps"},
   {id:"tablawi",name:"محمد الطبلاوي",server:"https://server12.mp3quran.net/tblawi",ev:"Mohammad_al_Tablaway_128kbps"},
   {id:"ayyub",name:"محمد أيوب",server:"https://server8.mp3quran.net/ayyub",ev:"Muhammad_Ayyoub_128kbps"},
@@ -557,7 +557,7 @@ export default function QuranPage(){
             </div>}
             
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(20px, 5vw, 26px)',lineHeight:'2.0',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.08em'}}>
+            <div className="text-center font-quran" dir="rtl" style={{fontSize:'clamp(19px,4.5vw,26px)',lineHeight:'2.1',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em'}}>
               {g.ayahs.map(a=>{
                 if(a.nis===1 && g.sn===1) return null; // Rendered above as Bismillah block
                 
