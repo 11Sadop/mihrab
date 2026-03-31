@@ -640,7 +640,7 @@ export default function QuranPage(){
                 </span>;
               })}
             </div>
-          </div>)})}
+          </div>})}
 
           {/* Page number - centered with ornamental lines */}
           <div className="flex items-center justify-center gap-2 mt-2 mb-1">
