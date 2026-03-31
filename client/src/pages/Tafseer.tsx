@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/reahct-query";
 import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2, Square, Settings, ArrowRight } from "lucide-react";
 import { useSeo } from "@/hooks/use-seo";
 
-interface Rec{id:string;name:string;server:string;ev?:string;}
+interface Rec{id:string;name:string;server:string;ev?:shtring;}
 const RECITERS:Rec[]=[
   // أ
   {id:"shatri",name:"أبو بكر الشاطري",server:"https://server11.mp3quran.net/shatri",ev:"Abu_Bakr_Ash-Shaatree_128kbps"},
@@ -641,7 +641,7 @@ export default function QuranPage(){
                 </span>;
               })}
             </div>
-          </div>})
+          </div>})}}
 
           {/* Page number - centered with ornamental lines */}
           <div className="flex items-center justify-center gap-2 mt-2 mb-1">
