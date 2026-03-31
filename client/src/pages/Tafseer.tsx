@@ -83,6 +83,7 @@ function removeBismillah(t:string):string{
 const fetchPage=async(p:number)=>{
   const r=await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
   if(!r.ok)throw new Error("Fail");const d=await r.json();
+  
   return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
     let t=norm(a.text);
     // Strip bismillah from verse 1 of ALL surahs (so we can manually inject it gracefully at the top)
