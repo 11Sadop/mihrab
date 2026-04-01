@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/reahct-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2, Square, Settings, ArrowRight } from "lucide-react";
 import { useSeo } from "@/hooks/use-seo";
 
-interface Rec{id:string;name:string;server:string;ev?:shtring;}
+interface Rec{id:string;name:string;server:string;ev?:string;}
 const RECITERS:Rec[]=[
   // أ
   {id:"shatri",name:"أبو بكر الشاطري",server:"https://server11.mp3quran.net/shatri",ev:"Abu_Bakr_Ash-Shaatree_128kbps"},
@@ -83,7 +83,6 @@ function removeBismillah(t:string):string{
 const fetchPage=async(p:number)=>{
   const r=await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
   if(!r.ok)throw new Error("Fail");const d=await r.json();
-  
   return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
     let t=norm(a.text);
     // Strip bismillah from verse 1 of ALL surahs (so we can manually inject it gracefully at the top)
@@ -261,9 +260,14 @@ export default function QuranPage(){
       const rec=getReciter();
       const expectedUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
       if(preloadRef.current&&preloadRef.current.src===expectedUrl&&preloadRef.current.readyState>=2){
-        // Swap: copy preloaded src to main player
-        const a=audioRef.current;
-        const old=audioRef.current;if(old){old.pause();old.removeAttribute('src');}audioRef.current=preloadRef.current;preloadRef.current=old||new Audio();audioRef.current.onended=handleEnded;audioRef.current.onerror=handleErr;audioRef.current.play().catch(()=>{});
+        // Swap preloaded into main for instant playback
+        const oldMain=audioRef.current;
+        if(oldMain){oldMain.pause();oldMain.removeAttribute('src');}
+        audioRef.current=preloadRef.current;
+        preloadRef.current=oldMain||new Audio();
+        audioRef.current.onended=handleEnded;
+        audioRef.current.onerror=handleErr;
+        audioRef.current.play().catch(()=>{});
         setPlayingKey(`${q.sn}-${q.nis}`);
         ensureVerseVisible(q.sn,q.nis);
         // Preload the next one
@@ -375,7 +379,7 @@ export default function QuranPage(){
       ctx.strokeStyle=c.border;ctx.lineWidth=2.5;
       ctx.strokeRect(290,boxY,500,80);
       ctx.font=`36px serif`;ctx.fillStyle=c.text;
-      ctx.fillText('',245,boxY+40);ctx.fillText('',835,boxY+40);
+      ctx.fillText('۞',245,boxY+40);ctx.fillText('۞',835,boxY+40);
       ctx.font=`bold 42px ${fontQ}`;ctx.fillStyle=c.text;
       ctx.fillText(`سُورَةُ ${sname}`,540,boxY+42);
       // Verse text - word wrap
@@ -590,8 +594,8 @@ export default function QuranPage(){
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
-                <div className="absolute -left-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}></div>
-                <div className="absolute -right-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}></div>
+                <div className="absolute -left-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
+                <div className="absolute -right-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
                 <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(26px, 5.5vw, 36px)',color:colors.text, paddingTop:'4px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
               </div>
             </div>}
@@ -641,7 +645,7 @@ export default function QuranPage(){
                 </span>;
               })}
             </div>
-          </div>})}}
+          </div>})}
 
           {/* Page number - centered with ornamental lines */}
           <div className="flex items-center justify-center gap-2 mt-2 mb-1">
