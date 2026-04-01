@@ -13,7 +13,7 @@ const RECITERS:Rec[]=[
   // ح-خ
   // ح-خ
   // م
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"},
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_Al_Muaiqly_128kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
@@ -259,12 +259,12 @@ export default function QuranPage(){
       // Use preloaded audio if available for seamless transition
       const rec=getReciter();
       const expectedUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
-      if(preloadRef.current&&preloadRef.current.src===expectedUrl&&preloadRef.current.readyState>=2){
+      if(preloadRef.current&&preloadRef.current.src===expectedUrl){
         // Swap preloaded into main for instant playback
         const oldMain=audioRef.current;
         if(oldMain){oldMain.pause();oldMain.removeAttribute('src');}
         audioRef.current=preloadRef.current;
-        preloadRef.current=oldMain||new Audio();
+        preloadRef.current=new Audio();
         audioRef.current.onended=handleEnded;
         audioRef.current.onerror=handleErr;
         audioRef.current.play().catch(()=>{});
