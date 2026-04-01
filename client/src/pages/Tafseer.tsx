@@ -590,7 +590,7 @@ export default function QuranPage(){
         :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:2,paddingBottom:2}}>
 
 
-          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=totalChars>800?'clamp(20px,4.5vw,26px)':totalChars>600?'clamp(22px,5vw,29px)':totalChars>400?'clamp(24px,5.5vw,32px)':'clamp(26px,6vw,36px)';const dynLine=totalChars>800?'1.85':totalChars>600?'1.9':totalChars>400?'2.0':'2.2';return <div key={`${g.sn}-${gi}`}>
+          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=totalChars>800?'clamp(24px,6vw,34px)':totalChars>600?'clamp(26px,6.8vw,38px)':totalChars>400?'clamp(28px,7.5vw,42px)':'clamp(30px,8.5vw,48px)';const dynLine=totalChars>800?'1.6':totalChars>600?'1.65':totalChars>400?'1.7':'1.8';return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-2 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
