@@ -20,7 +20,7 @@ const RECITERS:Rec[]=[
   {id:"jbrl",name:"محمد جبريل",server:"https://server8.mp3quran.net/jbrl",ev:"Muhammad_Jibreel_128kbps"},
   {id:"tablawi",name:"محمد الطبلاوي",server:"https://server12.mp3quran.net/tblawi",ev:"Mohammad_al_Tablaway_128kbps"},
   {id:"ayyub",name:"محمد أيوب",server:"https://server8.mp3quran.net/ayyub",ev:"Muhammad_Ayyoub_128kbps"},
-  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server8.mp3quran.net/lhdan"},
+  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server8.mp3quran.net/lhdan",ev:"Muhammad_Alhaidan_128kbps"},
   // ن
   {id:"qatami",name:"ناصر القطامي",server:"https://server10.mp3quran.net/qht",ev:"Nasser_Alqatami_128kbps"},
   // س-ص
@@ -28,7 +28,7 @@ const RECITERS:Rec[]=[
   {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"Abdul_Basit_Murattal_192kbps"},
   {id:"bsfr",name:"عبدالله بصفر",server:"https://server6.mp3quran.net/bsfr",ev:"Abdullah_Basfar_192kbps"},
   {id:"shuraim",name:"سعود الشريم",server:"https://server7.mp3quran.net/shur",ev:"Saood_ash-Shuraym_128kbps"},
-  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Ghamadi_40kbps"},
+  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Sa3d_Al-Ghamidi_128kbps"},
   {id:"budair",name:"صلاح البدير",server:"https://server6.mp3quran.net/s_bud",ev:"Salah_Al_Budair_128kbps"},
   // ي
   {id:"dosari",name:"ياسر الدوسري",server:"https://server10.mp3quran.net/ibrahim_dosri",ev:"Yasser_Ad-Dussary_128kbps"},
@@ -210,9 +210,10 @@ export default function QuranPage(){
 
     const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
     a.src=url;
-    a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
-    
-    // Preload next verse for smooth transition
+    a.oncanplaythrough=()=>{a.oncanplaythrough=null;a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});};
+a.load();
+
+// Preload next verse for smooth transition
     const q=playQueueRef.current;
     if(q&&nis<q.maxNis){
       const nextUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3`:`${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
@@ -281,7 +282,7 @@ export default function QuranPage(){
     }
     else stopAudio();
   };
-  const handleErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){setTimeout(skipNext,300);}else stopAudio();};
+  const handleErr=()=>{const q=playQueueRef.current;if(!q)return;const rec=getReciter();if(rec.ev){const fb=`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;const a=audioRef.current;if(a&&a.src!==fb){a.src=fb;a.play().catch(()=>{if(q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}else stopAudio();});return;}}if(q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}else stopAudio();};;
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
@@ -582,17 +583,17 @@ export default function QuranPage(){
       {/* ═══ MUSHAF ═══ */}
       <div className="overflow-y-auto"
         style={{height:`calc(100dvh - ${showUI?40:0}px - ${hifz&&showUI?46:0}px - ${playingSn?72:0}px - env(safe-area-inset-top,0px))`,
-          marginTop:(showUI?40:0)+(hifz&&showUI?46:0),paddingTop:4}}
+          marginTop:(showUI?40:0)+(hifz&&showUI?46:0),paddingTop:0,paddingBottom:0}}
         onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]'))setShowUI(!showUI);}}
         onTouchStart={onTS} onTouchEnd={onTE}>
         {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col justify-center px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%'}}>
+        :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:2,paddingBottom:2}}}>
 
 
           {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=totalChars>800?'clamp(20px,4.5vw,26px)':totalChars>600?'clamp(22px,5vw,29px)':totalChars>400?'clamp(24px,5.5vw,32px)':'clamp(26px,6vw,36px)';const dynLine=totalChars>800?'1.85':totalChars>600?'1.9':totalChars>400?'2.0':'2.2';return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
-            {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center">
+            {g.ayahs[0].nis===1&&<div className="text-center my-2 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
                 <div className="absolute -left-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
                 <div className="absolute -right-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
@@ -601,7 +602,7 @@ export default function QuranPage(){
             </div>}
             
             {/* Bismillah Header */}
-            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-4 mb-6" dir="rtl">
+            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-3" dir="rtl">
               <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
                 className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5]" 
                 style={{
