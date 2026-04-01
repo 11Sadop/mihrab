@@ -210,10 +210,9 @@ export default function QuranPage(){
 
     const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
     a.src=url;
-    a.oncanplaythrough=()=>{a.oncanplaythrough=null;a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});};
-a.load();
-
-// Preload next verse for smooth transition
+    a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+    
+    // Preload next verse for smooth transition
     const q=playQueueRef.current;
     if(q&&nis<q.maxNis){
       const nextUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3`:`${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
@@ -282,7 +281,7 @@ a.load();
     }
     else stopAudio();
   };
-  const handleErr=()=>{const q=playQueueRef.current;if(!q)return;const rec=getReciter();if(rec.ev){const fb=`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;const a=audioRef.current;if(a&&a.src!==fb){a.src=fb;a.play().catch(()=>{if(q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}else stopAudio();});return;}}if(q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}else stopAudio();};;
+  const handleErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){setTimeout(skipNext,300);}else stopAudio();};
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
@@ -588,7 +587,7 @@ a.load();
         onTouchStart={onTS} onTouchEnd={onTE}>
         {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:2,paddingBottom:2}}}>
+        :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:2,paddingBottom:2}}>
 
 
           {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=totalChars>800?'clamp(20px,4.5vw,26px)':totalChars>600?'clamp(22px,5vw,29px)':totalChars>400?'clamp(24px,5.5vw,32px)':'clamp(26px,6vw,36px)';const dynLine=totalChars>800?'1.85':totalChars>600?'1.9':totalChars>400?'2.0':'2.2';return <div key={`${g.sn}-${gi}`}>
