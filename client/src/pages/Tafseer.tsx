@@ -587,7 +587,7 @@ export default function QuranPage(){
         onTouchStart={onTS} onTouchEnd={onTE}>
         {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:2,paddingBottom:2}}>
+        :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:16,paddingBottom:2}}>
 
 
           {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize = totalChars > 800 ? 'clamp(24px,6vw,32px)' : totalChars > 600 ? 'clamp(24px,6vw,32px)' : totalChars > 400 ? 'clamp(26px,6.5vw,34px)' : 'clamp(26px,7vw,36px)';const dynLine = totalChars > 800 ? '1.7' : totalChars > 600 ? '1.75' : totalChars > 400 ? '1.8' : '1.9';return <div key={`${g.sn}-${gi}`}>
@@ -616,7 +616,7 @@ export default function QuranPage(){
             </div>}
             
             {/* Verses */}
-            <div className="text-center font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em'}}>
+            <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em'}}>
               {g.ayahs.map(a=>{
                 if(a.nis===1 && g.sn===1) return null;
                 
