@@ -13,7 +13,7 @@ const RECITERS:Rec[]=[
   // ح-خ
   // ح-خ
   // م
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_Al_Muaiqly_128kbps"},
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
@@ -590,7 +590,7 @@ export default function QuranPage(){
         :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:20,paddingBottom:8}}>
 
 
-          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const cW=Math.min(window.innerWidth-32,648);const cH=window.innerHeight-80;const lh=totalChars>600?1.7:1.8;const rawF=Math.sqrt(cH*cW/(Math.max(totalChars,50)*lh));const dynSize=Math.min(Math.max(rawF,18),38)+'px';const dynLine=dynSize.replace('px','')>28?'1.85':dynSize.replace('px','')>24?'1.75':'1.7';return <div key={`${g.sn}-${gi}`}>
+          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize = 'clamp(21px, 5.5vw, 32px)';const dynLine = '1.85';return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-2 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
