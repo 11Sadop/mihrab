@@ -102,6 +102,23 @@ const QBG:Record<string,{bg:string;text:string;border:string;hi:string}>={
 };
 
 export default function QuranPage(){
+  const handleTimeUpdate = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    const bar = document.getElementById('scrubBar') as HTMLInputElement;
+    if (bar) bar.value = String((a.currentTime / (a.duration || 1)) * 100);
+    const q = playQueueRef.current;
+    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 0.4) {
+      if (!a.dataset.crossed) {
+        a.dataset.crossed = "1";
+        skipNext();
+      }
+    }
+    if (a.duration > 0 && a.duration - a.currentTime > 0.5) {
+      delete a.dataset.crossed;
+    }
+  };
+
   useSeo({title:"القرآن الكريم - محراب",description:"القرآن الكريم",canonicalPath:"/tafseer"});
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
@@ -478,7 +495,7 @@ export default function QuranPage(){
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
       {/* Audio elements - main + preload for smooth transitions */}
-      <audio ref={audioRef}   style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
+      <audio ref={audioRef} onTimeUpdate={handleTimeUpdate}   style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
       <audio ref={preloadRef} style={{display:'none'}} preload="auto" />
       
       {/* TOP BAR */}
