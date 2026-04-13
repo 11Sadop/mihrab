@@ -478,7 +478,7 @@ export default function QuranPage(){
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
       {/* Audio elements - main + preload for smooth transitions */}
-      <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} onTimeUpdate={handleTimeUpdate} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
+      <audio ref={audioRef}   style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
       <audio ref={preloadRef} style={{display:'none'}} preload="auto" />
       
       {/* TOP BAR */}
