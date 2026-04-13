@@ -123,7 +123,7 @@ export default function QuranPage(){
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
   const [recId,setRecId]=useState("maher");
-  const [showSearch,setShowSearch]=useState(false);
+  const [showSearch,setShowSearch]=useState(false);\n  const safeTop = 'calc(env(safe-area-inset-top, 20px) + 15px)';
   const [search,setSearch]=useState("");
   const [showUI,setShowUI]=useState(true);
   const [selVerse,setSelVerse]=useState<{sn:number;nis:number;text:string}|null>(null);
@@ -597,12 +597,16 @@ export default function QuranPage(){
       </div>}
 
       {/* ═══ MUSHAF ═══ */}
-      <div className="overflow-y-auto"
+      <div className="overflow-y-auto pt-10"
         style={{height:`calc(100dvh - ${showUI?40:0}px - ${hifz&&showUI?46:0}px - ${playingSn?72:0}px - env(safe-area-inset-top,0px))`,
           marginTop:(showUI?40:0)+(hifz&&showUI?46:0),paddingTop:0,paddingBottom:0}}
         onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]'))setShowUI(!showUI);}}
         onTouchStart={onTS} onTouchEnd={onTE}>
-        {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-2 text-[11px] font-bold" style={{paddingTop:'env(safe-area-inset-top, 25px)', background:colors.bg+'dd', borderBottom:`1px solid ${colors.border}20`, color:'#c8a96e'}}>
+          <div className="flex-1">سورة {surah.n}</div>
+          <div className="flex-1 text-center">الجزء {juzForPage(pg)}</div>
+          <div className="flex-1 text-left">صفحة {pg}</div>
+        </div>\n        {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
         :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:20,paddingBottom:8}}>
 
