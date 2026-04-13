@@ -20,7 +20,7 @@ const RECITERS:Rec[]=[
   {id:"jbrl",name:"محمد جبريل",server:"https://server8.mp3quran.net/jbrl",ev:"Muhammad_Jibreel_128kbps"},
   {id:"tablawi",name:"محمد الطبلاوي",server:"https://server12.mp3quran.net/tblawi",ev:"Mohammad_al_Tablaway_128kbps"},
   {id:"ayyub",name:"محمد أيوب",server:"https://server8.mp3quran.net/ayyub",ev:"Muhammad_Ayyoub_128kbps"},
-  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server8.mp3quran.net/lhdan",ev:"Muhammad_Alhaidan_128kbps"},
+  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server8.mp3quran.net/lhdan",ev:"Muhammad_al-Luhaidan_64kbps"},
   // ن
   {id:"qatami",name:"ناصر القطامي",server:"https://server10.mp3quran.net/qht",ev:"Nasser_Alqatami_128kbps"},
   // س-ص
@@ -281,7 +281,7 @@ export default function QuranPage(){
     }
     else stopAudio();
   };
-  const handleErr=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){setTimeout(skipNext,300);}else stopAudio();};
+  const handleErr=()=>{    const q=playQueueRef.current; if(!q) return;    const rec=getReciter();    if(rec.ev && audioRef.current && !audioRef.current.src.includes('mirrors.quranicaudio.com')){      audioRef.current.src = `https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;      audioRef.current.play().catch(()=>skipNext()); return;    } skipNext();  };
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
@@ -478,7 +478,7 @@ export default function QuranPage(){
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
       {/* Audio elements - main + preload for smooth transitions */}
-      <audio ref={audioRef} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
+      <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
       <audio ref={preloadRef} style={{display:'none'}} preload="auto" />
       
       {/* TOP BAR */}
@@ -590,7 +590,7 @@ export default function QuranPage(){
         :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:20,paddingBottom:8}}>
 
 
-          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize = 'clamp(21px, 5.5vw, 32px)';const dynLine = '1.85';return <div key={`${g.sn}-${gi}`}>
+          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize='clamp(32px, 8.5vw, 48px)';const dynLine = '1.85';return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-2 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
@@ -663,7 +663,8 @@ export default function QuranPage(){
 
       {/* ═══ BOTTOM PLAYER ═══ */}
       {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.2)]" style={{paddingBottom:'env(safe-area-inset-bottom,4px)'}}>
-        <div className="flex items-center justify-between px-3 pt-2 pb-1">
+        <div className="w-full px-6 mb-2 mt-2">            <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" style={{width:'100%', accentColor:'#10b981', height:'4px', cursor:'pointer'}}               onChange={(e)=>{ if(audioRef.current){ audioRef.current.currentTime = (Number(e.target.value)/100)*audioRef.current.duration; } }}/>          </div>
+<div className="flex items-center justify-between px-3 pt-2 pb-1">
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="bg-transparent text-foreground text-[12px] border-0 outline-none min-w-0 truncate max-w-[130px]">
               {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
