@@ -160,7 +160,6 @@ export default function QuranPage(){
   const [recTxt,setRecTxt]=useState("");
   const recRef=useRef<any>(null);
   const txRef=useRef(0);
-  const searchRef=useRef<HTMLInputElement>(null);
   
   useEffect(()=>{pgRef.current=pg;},[pg]);
   useEffect(()=>{recIdRef.current=recId;},[recId]);
