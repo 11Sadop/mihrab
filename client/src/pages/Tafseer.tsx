@@ -599,7 +599,7 @@ export default function QuranPage(){
       {/* ═══ MUSHAF ═══ */}
       <div className="overflow-y-auto pt-10"
         style={{height:`calc(100dvh - ${showUI?40:0}px - ${hifz&&showUI?46:0}px - ${playingSn?72:0}px - env(safe-area-inset-top,0px))`,
-          marginTop:(showUI?40:0)+(hifz&&showUI?46:0),paddingTop:0,paddingBottom:0}}
+          marginTop: (showUI ? 70 : 0) + (hifz && showUI ? 46 : 0) + 20,paddingTop:0,paddingBottom:0}}
         onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]'))setShowUI(!showUI);}}
         onTouchStart={onTS} onTouchEnd={onTE}>
                 {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
