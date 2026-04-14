@@ -24,9 +24,9 @@ import { useSeo } from "@/hooks/use-seo";
 
 export default function Home() {
   useSeo({
-    title: "محراب - مواقيت الصلاة، تفسير القرآن، صحة الأحاديث",
-    description: "موقع محراب الإسلامي - مواقيت صلاة دقيقة، تفسير القرآن الكريم، التحقق من صحة الأحاديث، حاسبة الزكاة، أذكار الصباح والمساء، بوصلة القبلة. رفيقك الإسلامي اليومي.",
-    keywords: "محراب، موقع إسلامي، مواقيت الصلاة، تفسير القرآن، صحة الأحاديث، حاسبة الزكاة، أذكار، بوصلة القبلة، mihrab islamic",
+    title: "سنن - مواقيت الصلاة، تفسير القرآن، صحة الأحاديث",
+    description: "موقع سنن الإسلامي - مواقيت صلاة دقيقة، تفسير القرآن الكريم، التحقق من صحة الأحاديث، حاسبة الزكاة، أذكار الصباح والمساء، بوصلة القبلة. رفيقك الإسلامي اليومي.",
+    keywords: "سنن، موقع إسلامي، مواقيت الصلاة، تفسير القرآن، صحة الأحاديث، حاسبة الزكاة، أذكار، بوصلة القبلة، mihrab islamic",
     canonicalPath: "/",
   });
   const { data: prayerData, isLoading: isPrayerLoading, isRequestingLocation } = usePrayerTimes();
@@ -44,13 +44,13 @@ export default function Home() {
   const handleShareHadith = async () => {
     if (!dailyHadith) return;
 
-    const textToShare = `${dailyHadith.arabicText || dailyHadith.text}\n\nيومك أجمل مع أحاديث ومواقيت محراب 🕋\nhttps://mihrab.app`;
+    const textToShare = `${dailyHadith.arabicText || dailyHadith.text}\n\nيومك أجمل مع أحاديث ومواقيت سنن 🕋\nhttps://mihrab.app`;
 
     // Check if the native Share API is available (usually works well on mobile devices)
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'حديث اليوم من محراب',
+          title: 'حديث اليوم من سنن',
           text: textToShare,
         });
       } catch (error) {
