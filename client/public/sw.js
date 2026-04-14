@@ -34,7 +34,7 @@ fcmMessaging.onBackgroundMessage((payload) => {
     return self.registration.showNotification(title, options);
 });
 
-const CACHE_NAME = 'mihrab-app-v80';
+const CACHE_NAME = 'mihrab-app-v85';
 const urlsToCache = ['/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 // ========== الإسماء العربية لأوقات الصلاة ==========
@@ -335,7 +335,7 @@ async function checkAndNotify() {
 async function showNotification(title, body, tag) {
     try {
         if (!self.registration || typeof self.registration.showNotification !== 'function') return;
-        await self.registration.showNotification(title, {
+        await self.registration.showNotification(title, { tag: "mihrab-" + Date.now(), renotify: false,
             body,
             icon: '/icon-192.png',
             badge: '/icon-192.png',
