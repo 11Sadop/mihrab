@@ -506,7 +506,7 @@ export default function QuranPage(){
           </div>
           {/* Center: Surah | Juz | Page */}
           <div className="flex-1 text-center">
-            <span className="text-[13px] font-bold" style={{color:colors.text}}>\u0633\u0648\u0631\u0629 {surah.n} | \u0627\u0644\u062C\u0632\u0621 {juzForPage(pg)} | \u0635\u0641\u062D\u0629 {pg}</span>
+            <span className="text-[13px] font-bold" style={{color:colors.text}}>سورة {surah.n} | الجزء {juzForPage(pg)} | صفحة {pg}</span>
           </div>
           {/* Left side: controls */}
           <div className="flex items-center gap-1">
@@ -680,7 +680,7 @@ export default function QuranPage(){
       {/* ═══ BOTTOM PLAYER ═══ */}
       {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.2)]" style={{paddingBottom:'env(safe-area-inset-bottom,4px)'}}>
         <div className="w-full px-6 mb-2 mt-2">            <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" style={{width:'100%', accentColor:'#10b981', height:'4px', cursor:'pointer'}}               onChange={(e)=>{ if(audioRef.current){ audioRef.current.currentTime = (Number(e.target.value)/100)*audioRef.current.duration; } }}/>          </div>
-</div> pt-2 pb-1">
+<div className="flex items-center justify-between px-4 pt-2 pb-1">
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="bg-transparent text-foreground text-[12px] border-0 outline-none min-w-0 truncate max-w-[130px]">
               {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
