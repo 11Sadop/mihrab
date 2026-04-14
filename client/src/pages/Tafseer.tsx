@@ -123,7 +123,7 @@ export default function QuranPage(){
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
   const [recId,setRecId]=useState("maher");
-  const [showSearch,setShowSearch]=useState(false);\n  const safeTop = 'calc(env(safe-area-inset-top, 20px) + 15px)';
+  const [showSearch,setShowSearch]=useState(false);  const safeTop = 'calc(env(safe-area-inset-top, 20px) + 15px)';
   const [search,setSearch]=useState("");
   const [showUI,setShowUI]=useState(true);
   const [selVerse,setSelVerse]=useState<{sn:number;nis:number;text:string}|null>(null);
@@ -440,7 +440,7 @@ export default function QuranPage(){
     if(!selVerse)return;const{text,refs}=await getShareRange();
     if(shareMode==='image'){shareAsImage(text,refs);return;}
     let t=text;if(shareMode==='noharakat')t=t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'');
-    const full=`${t}\n\n${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}\nmihrabapp.com`;
+    const full=`${t}${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}mihrabapp.com`;
     if(navigator.share)navigator.share({text:full}).catch(()=>{});
     else{navigator.clipboard.writeText(full);alert("تم النسخ!");}
     setShowSharePage(false);
@@ -602,7 +602,7 @@ export default function QuranPage(){
           marginTop:(showUI?40:0)+(hifz&&showUI?46:0),paddingTop:0,paddingBottom:0}}
         onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]'))setShowUI(!showUI);}}
         onTouchStart={onTS} onTouchEnd={onTE}>
-        \n        {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
+                {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
         :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:20,paddingBottom:8}}>
 
