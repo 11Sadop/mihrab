@@ -710,12 +710,13 @@ export default function QuranPage(){
           {groups.map((g,gi)=>{
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
-            // Normalized font sizes with much lower minimums to avoid mobile overflow
-            const dynSize=allChars<300?'clamp(16px, 6.5vw, 40px)':
-                          allChars<600?'clamp(15px, 6vw, 36px)':
-                          'clamp(14px, 5.5vw, 32px)';
+            // Advanced Mobile Screen Auto-Fitting (Ensures no vertical scrolling)
+            const dynSize=allChars<300?'clamp(15px, min(6.5vw, 4vh), 40px)':
+                          allChars<500?'clamp(14px, min(6vw, 3.8vh), 36px)':
+                          allChars<800?'clamp(12px, min(5vw, 3.2vh), 32px)':
+                          'clamp(10px, min(4.5vw, 2.8vh), 28px)';
                           
-            const dynLine=allChars<300?'2.3':allChars<600?'2.1':'1.9';
+            const dynLine=allChars<300?'2.2':allChars<500?'2.0':allChars<800?'1.8':'1.65';
             
             return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
