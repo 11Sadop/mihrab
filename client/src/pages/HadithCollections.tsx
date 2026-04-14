@@ -29,42 +29,75 @@ async function generateHadithImage(text: string, source: string, hadithNumber: n
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    const W = 1080, H = 1080;
+    
+    const W = 1080;
+    // Calculate dynamic height based on text
+    const words = text.split(' ');
+    let lines: string[] = [];
+    let currentLine = '';
+    
+    // We will use standard web-safe fonts that canvas easily supports reliably, 
+    // or a native Arabic stack
+    const fontStack = "'Amiri', 'KFGQPC Uthmanic Script HAFS', 'Traditional Arabic', serif";
+    ctx.font = `bold 46px ${fontStack}`;
+    
+    for (const word of words) {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        if (ctx.measureText(testLine).width > W - 160 && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+        } else { currentLine = testLine; }
+    }
+    if (currentLine) lines.push(currentLine);
+    
+    const lineH = 75;
+    const contentH = lines.length * lineH;
+    const H = Math.max(1080, contentH + 450); // Dynamic height, minimum 1080
+    
     canvas.width = W; canvas.height = H;
+    
+    // Rich background
     const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, '#0f172a'); bg.addColorStop(1, '#1e293b');
+    bg.addColorStop(0, '#15201c'); // Deep elegant green-black
+    bg.addColorStop(1, '#0c120f');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(16,185,129,0.3)'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.roundRect(40, 40, W - 80, H - 80, 30); ctx.stroke();
+    
+    // Luxury gold border
+    ctx.strokeStyle = 'rgba(212,197,160,0.4)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(40, 40, W - 80, H - 80, 20); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(50, 50, W - 100, H - 100, 10); ctx.stroke();
+    
     // Top decoration
-    const topG = ctx.createLinearGradient(100, 0, W - 100, 0);
-    topG.addColorStop(0, 'transparent'); topG.addColorStop(0.5, '#10b981'); topG.addColorStop(1, 'transparent');
-    ctx.strokeStyle = topG; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(100, 90); ctx.lineTo(W - 100, 90); ctx.stroke();
-    // Hadith number badge
-    ctx.fillStyle = '#10b981'; ctx.font = 'bold 28px Tajawal, Arial, sans-serif';
-    ctx.textAlign = 'center'; ctx.fillText(`حديث رقم ${hadithNumber}`, W / 2, 140);
-    // Text
-    let fontSize = 44;
-    ctx.font = `bold ${fontSize}px Tajawal, Arial, sans-serif`;
-    let lines = wrapTextLines(ctx, text, W - 200);
-    if (lines.length > 10) { fontSize = 32; }
-    else if (lines.length > 7) { fontSize = 36; }
-    ctx.font = `bold ${fontSize}px Tajawal, Arial, sans-serif`;
-    lines = wrapTextLines(ctx, text, W - 200);
-    const lineH = fontSize * 1.9;
-    let y = Math.max(200, (H - lines.length * lineH) / 2 + fontSize);
-    ctx.fillStyle = '#f1f5f9'; ctx.direction = 'rtl';
-    for (const line of lines) { ctx.fillText(line, W / 2, y); y += lineH; }
-    // Source
-    const btmG = ctx.createLinearGradient(100, 0, W - 100, 0);
-    btmG.addColorStop(0, 'transparent'); btmG.addColorStop(0.5, '#10b981'); btmG.addColorStop(1, 'transparent');
-    ctx.strokeStyle = btmG; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(100, H - 180); ctx.lineTo(W - 100, H - 180); ctx.stroke();
-    ctx.font = '24px Tajawal, Arial, sans-serif'; ctx.fillStyle = '#10b981';
-    ctx.fillText(source, W / 2, H - 130);
-    ctx.font = 'bold 28px Tajawal, Arial, sans-serif'; ctx.fillStyle = 'rgba(16,185,129,0.5)';
-    ctx.fillText('محراب  ❘  mihrab.app', W / 2, H - 70);
+    ctx.fillStyle = '#d4c5a0'; ctx.font = `bold 34px ${fontStack}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('❁', W / 2, 100);
+    ctx.font = `bold 32px ${fontStack}`;
+    ctx.fillText(`${source} - حديث رقم ${hadithNumber}`, W / 2, 150);
+    
+    // Line separator
+    const topG = ctx.createLinearGradient(200, 0, W - 200, 0);
+    topG.addColorStop(0, 'transparent'); topG.addColorStop(0.5, 'rgba(212,197,160,0.6)'); topG.addColorStop(1, 'transparent');
+    ctx.strokeStyle = topG; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(200, 190); ctx.lineTo(W - 200, 190); ctx.stroke();
+    
+    // Draw text
+    ctx.font = `bold 46px ${fontStack}`;
+    ctx.fillStyle = '#f8f9fa'; ctx.direction = 'rtl';
+    
+    let y = 280;
+    for (const line of lines) { 
+        ctx.fillText(line, W / 2, y); 
+        y += lineH; 
+    }
+    
+    // Bottom separator
+    ctx.strokeStyle = topG; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(200, H - 160); ctx.lineTo(W - 200, H - 160); ctx.stroke();
+    
+    // Watermark
+    ctx.font = `24px sans-serif`; ctx.fillStyle = 'rgba(212,197,160,0.8)';
+    ctx.fillText('تطبيق سنن  ❘  sunan.app', W / 2, H - 100);
+    
     return new Promise(r => canvas.toBlob(b => r(b), 'image/png', 1.0));
 }
 
@@ -106,7 +139,7 @@ export default function HadithCollections() {
 
   const shareHadithLink = async (hadith: Hadith) => {
     const collectionName = selectedCollection === 'bukhari' ? 'صحيح البخاري' : 'صحيح مسلم';
-    const text = `${hadith.text}\n\n📚 ${collectionName} - حديث رقم ${hadith.hadithNumber}\n\nمن تطبيق محراب 🕌\nhttps://mihrab.app/hadith-collections`;
+    const text = `${hadith.text}\n\n📚 ${collectionName} - حديث رقم ${hadith.hadithNumber}\n\nمن تطبيق سنن 🕌\nhttps://sunan.app/hadith-collections`;
     if (navigator.share) {
       try { await navigator.share({ title: `حديث من ${collectionName}`, text }); } catch {}
     } else {
