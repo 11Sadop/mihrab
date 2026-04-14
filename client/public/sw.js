@@ -10,7 +10,7 @@ firebase.initializeApp({
     authDomain: "mihrabapp-32e80.firebaseapp.com",
     projectId: "mihrabapp-32e80",
     storageBucket: "mihrabapp-32e80.firebasestorage.app",
-    messagingSenderId: "1057466774502",const INTERVAL_MS = 30 * 1000; // 
+    messagingSenderId: "1057466774502", // 
     appId: "1:1057466774502:web:0c8f703b608ac84d8c9c27"
 });
 
