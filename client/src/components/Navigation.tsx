@@ -13,7 +13,7 @@ export function Navigation() {
     { href: "/prayer-times", icon: Clock, label: "الصلوات" },
     { href: "/tafseer", icon: BookOpen, label: "القرآن" },
     { href: "/tasbeeh", icon: Fingerprint, label: "التسبيح" },
-    { href: "/assistant", icon: Bot, label: "المساعد" },
+    { href: "/assistant", icon: Bot, label: "سنن" },
     { href: "/settings", icon: Settings, label: "الإعدادات" },
   ];
 
