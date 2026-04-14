@@ -6,14 +6,13 @@ importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-    apiKey: "AIzaSyAxSyfXuj4pLzNbOBrMlX3HKGTxi0O2VuQ",
-    authDomain: "mihrabapp-32e80.firebaseapp.com",
-    projectId: "mihrabapp-32e80",
-    storageBucket: "mihrabapp-32e80.firebasestorage.app",
-    messagingSenderId: "1057466774502",
-    appId: "1:1057466774502:web:0c8f703b608ac84d8c9c27"
+        apiKey: "AIzaSyAxSyfXuj4pLzNbOBrMlX3HKGTxi0O2VuQ",
+        authDomain: "mihrabapp-32e80.firebaseapp.com",
+        projectId: "mihrabapp-32e80",
+        storageBucket: "mihrabapp-32e80.firebasestorage.app",
+        messagingSenderId: "1057466774502",
+        appId: "1:1057466774502:web:0c8f703b608ac84d8c9c27"
 });
-
 const fcmMessaging = firebase.messaging();
 
 // عند استقبال رسالة FCM في الخلفية
