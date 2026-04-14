@@ -7,32 +7,24 @@ import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
 const RECITERS:Rec[]=[
-  // أ
-  {id:"shatri",name:"أبو بكر الشاطري",server:"https://server11.mp3quran.net/shatri",ev:"Abu_Bakr_Ash-Shaatree_128kbps"},
-  {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
-  // ح-خ
-  // ح-خ
-  // م
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"},
-  {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
-  {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
-  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
-  {id:"jbrl",name:"محمد جبريل",server:"https://server8.mp3quran.net/jbrl",ev:"Muhammad_Jibreel_128kbps"},
-  {id:"tablawi",name:"محمد الطبلاوي",server:"https://server12.mp3quran.net/tblawi",ev:"Mohammad_al_Tablaway_128kbps"},
-  {id:"ayyub",name:"محمد أيوب",server:"https://server8.mp3quran.net/ayyub",ev:"Muhammad_Ayyoub_128kbps"},
-  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server8.mp3quran.net/lhdan",ev:""},
-  // ن
-  {id:"qatami",name:"ناصر القطامي",server:"https://server10.mp3quran.net/qht",ev:"Nasser_Alqatami_128kbps"},
-  // س-ص
-  {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
-  {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"Abdul_Basit_Murattal_192kbps"},
-  {id:"bsfr",name:"عبدالله بصفر",server:"https://server6.mp3quran.net/bsfr",ev:"Abdullah_Basfar_192kbps"},
-  {id:"shuraim",name:"سعود الشريم",server:"https://server7.mp3quran.net/shur",ev:"Saood_ash-Shuraym_128kbps"},
-  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Sa3d_Al-Ghamidi_128kbps"},
-  {id:"budair",name:"صلاح البدير",server:"https://server6.mp3quran.net/s_bud",ev:"Salah_Al_Budair_128kbps"},
-  // ي
-  {id:"dosari",name:"ياسر الدوسري",server:"https://server10.mp3quran.net/ibrahim_dosri",ev:"Yasser_Ad-Dussary_128kbps"},
-];
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher"},
+  {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs"},
+  {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds"},
+  {id:"shuraim",name:"سعود الشريم",server:"https://server7.mp3quran.net/shur"},
+  {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr"},
+  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh"},
+  {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit"},
+  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd"},
+  {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm"},
+  {id:"shatri",name:"أبو بكر الشاطري",server:"https://server11.mp3quran.net/shatri"},
+  {id:"jbrl",name:"محمد جبريل",server:"https://server8.mp3quran.net/jbrl"},
+  {id:"qatami",name:"ناصر القطامي",server:"https://server10.mp3quran.net/qht"},
+  {id:"dosari",name:"ياسر الدوسري",server:"https://server10.mp3quran.net/ibrahim_dosri"},
+  {id:"budair",name:"صلاح البدير",server:"https://server6.mp3quran.net/s_bud"},
+  {id:"bsfr",name:"عبدالله بصفر",server:"https://server6.mp3quran.net/bsfr"},
+  {id:"tablawi",name:"محمد الطبلاوي",server:"https://server12.mp3quran.net/tblawi"},
+  {id:"ayyub",name:"محمد أيوب",server:"https://server8.mp3quran.net/ayyub"},
+]
 
 const SURAHS=[{id:1,n:"الفاتحة",c:7},{id:2,n:"البقرة",c:286},{id:3,n:"آل عمران",c:200},{id:4,n:"النساء",c:176},{id:5,n:"المائدة",c:120},{id:6,n:"الأنعام",c:165},{id:7,n:"الأعراف",c:206},{id:8,n:"الأنفال",c:75},{id:9,n:"التوبة",c:129},{id:10,n:"يونس",c:109},{id:11,n:"هود",c:123},{id:12,n:"يوسف",c:111},{id:13,n:"الرعد",c:43},{id:14,n:"إبراهيم",c:52},{id:15,n:"الحجر",c:99},{id:16,n:"النحل",c:128},{id:17,n:"الإسراء",c:111},{id:18,n:"الكهف",c:110},{id:19,n:"مريم",c:98},{id:20,n:"طه",c:135},{id:21,n:"الأنبياء",c:112},{id:22,n:"الحج",c:78},{id:23,n:"المؤمنون",c:118},{id:24,n:"النور",c:64},{id:25,n:"الفرقان",c:77},{id:26,n:"الشعراء",c:227},{id:27,n:"النمل",c:93},{id:28,n:"القصص",c:88},{id:29,n:"العنكبوت",c:69},{id:30,n:"الروم",c:60},{id:31,n:"لقمان",c:34},{id:32,n:"السجدة",c:30},{id:33,n:"الأحزاب",c:73},{id:34,n:"سبأ",c:54},{id:35,n:"فاطر",c:45},{id:36,n:"يس",c:83},{id:37,n:"الصافات",c:182},{id:38,n:"ص",c:88},{id:39,n:"الزمر",c:75},{id:40,n:"غافر",c:85},{id:41,n:"فصلت",c:54},{id:42,n:"الشورى",c:53},{id:43,n:"الزخرف",c:89},{id:44,n:"الدخان",c:59},{id:45,n:"الجاثية",c:37},{id:46,n:"الأحقاف",c:35},{id:47,n:"محمد",c:38},{id:48,n:"الفتح",c:29},{id:49,n:"الحجرات",c:18},{id:50,n:"ق",c:45},{id:51,n:"الذاريات",c:60},{id:52,n:"الطور",c:49},{id:53,n:"النجم",c:62},{id:54,n:"القمر",c:55},{id:55,n:"الرحمن",c:78},{id:56,n:"الواقعة",c:96},{id:57,n:"الحديد",c:29},{id:58,n:"المجادلة",c:22},{id:59,n:"الحشر",c:24},{id:60,n:"الممتحنة",c:13},{id:61,n:"الصف",c:14},{id:62,n:"الجمعة",c:11},{id:63,n:"المنافقون",c:11},{id:64,n:"التغابن",c:18},{id:65,n:"الطلاق",c:12},{id:66,n:"التحريم",c:12},{id:67,n:"الملك",c:30},{id:68,n:"القلم",c:52},{id:69,n:"الحاقة",c:52},{id:70,n:"المعارج",c:44},{id:71,n:"نوح",c:28},{id:72,n:"الجن",c:28},{id:73,n:"المزمل",c:20},{id:74,n:"المدثر",c:56},{id:75,n:"القيامة",c:40},{id:76,n:"الإنسان",c:31},{id:77,n:"المرسلات",c:50},{id:78,n:"النبأ",c:40},{id:79,n:"النازعات",c:46},{id:80,n:"عبس",c:42},{id:81,n:"التكوير",c:29},{id:82,n:"الانفطار",c:19},{id:83,n:"المطففين",c:36},{id:84,n:"الانشقاق",c:25},{id:85,n:"البروج",c:22},{id:86,n:"الطارق",c:17},{id:87,n:"الأعلى",c:19},{id:88,n:"الغاشية",c:26},{id:89,n:"الفجر",c:30},{id:90,n:"البلد",c:20},{id:91,n:"الشمس",c:15},{id:92,n:"الليل",c:21},{id:93,n:"الضحى",c:11},{id:94,n:"الشرح",c:8},{id:95,n:"التين",c:8},{id:96,n:"العلق",c:19},{id:97,n:"القدر",c:5},{id:98,n:"البينة",c:8},{id:99,n:"الزلزلة",c:8},{id:100,n:"العاديات",c:11},{id:101,n:"القارعة",c:11},{id:102,n:"التكاثر",c:8},{id:103,n:"العصر",c:3},{id:104,n:"الهمزة",c:9},{id:105,n:"الفيل",c:5},{id:106,n:"قريش",c:4},{id:107,n:"الماعون",c:7},{id:108,n:"الكوثر",c:3},{id:109,n:"الكافرون",c:6},{id:110,n:"النصر",c:3},{id:111,n:"المسد",c:5},{id:112,n:"الإخلاص",c:4},{id:113,n:"الفلق",c:5},{id:114,n:"الناس",c:6}];
 
@@ -225,14 +217,14 @@ export default function QuranPage(){
       navigator.mediaSession.setActionHandler('nexttrack',()=>skipNext());
     }
 
-    const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
+    const url = `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
     a.src=url;
     a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
     // Preload next verse for smooth transition
     const q=playQueueRef.current;
     if(q&&nis<q.maxNis){
-      const nextUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3`:`${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
+      const nextUrl=`${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
       if(preloadRef.current){preloadRef.current.src=nextUrl;preloadRef.current.load();}
     }
     
@@ -275,7 +267,7 @@ export default function QuranPage(){
       q.nis++;
       // Use preloaded audio if available for seamless transition
       const rec=getReciter();
-      const expectedUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
+      const expectedUrl=`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
       if(preloadRef.current&&preloadRef.current.src===expectedUrl){
         // Swap preloaded into main for instant playback
         const oldMain=audioRef.current;
@@ -289,7 +281,7 @@ export default function QuranPage(){
         ensureVerseVisible(q.sn,q.nis);
         // Preload the next one
         if(q.nis<q.maxNis){
-          const nn=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
+          const nn=`${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
           preloadRef.current.src=nn;preloadRef.current.load();
         }
       } else {
@@ -298,7 +290,7 @@ export default function QuranPage(){
     }
     else stopAudio();
   };
-  const handleErr=()=>{    const q=playQueueRef.current; if(!q) return;    const rec=getReciter();    if(rec.ev && audioRef.current && !audioRef.current.src.includes('mirrors.quranicaudio.com')){      audioRef.current.src = `https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;      audioRef.current.play().catch(()=>skipNext()); return;    } skipNext();  };
+  const handleErr=()=>{ skipNext(); };
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
@@ -498,24 +490,21 @@ export default function QuranPage(){
       <audio ref={audioRef} onTimeUpdate={handleTimeUpdate}   style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
       <audio ref={preloadRef} style={{display:'none'}} preload="auto" />
       
-            {/* TOP BAR */}
-      {showUI&&<div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
-          {/* Right side: Surah name */}
+                  {/* TOP BAR */}
+      {showUI&&<div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
           <div className="flex items-center gap-2">
             <a href="/" className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><ArrowRight className="w-4 h-4"/></a>
+            <span className="text-[14px] font-bold" style={{color:colors.text}}>{surah.n}</span>
           </div>
-          {/* Center: Surah | Juz | Page */}
-          <div className="flex-1 text-center">
-            <span className="text-[13px] font-bold" style={{color:colors.text}}>سورة {surah.n} | الجزء {juzForPage(pg)} | صفحة {pg}</span>
-          </div>
-          {/* Left side: controls */}
           <div className="flex items-center gap-1">
-            <button onClick={()=>setShowSearch(true)} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><Search className="w-3.5 h-3.5"/></button>
-            <button onClick={()=>setShowSettings(!showSettings)} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><Settings className="w-3.5 h-3.5"/></button>
+            <button onClick={()=>setShowSearch(true)} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><Search className="w-4 h-4"/></button>
+            <button onClick={()=>setShowSettings(!showSettings)} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><Settings className="w-4 h-4"/></button>
             <button onClick={()=>{setHifz(!hifz);if(hifz)stopHifz();resetHifz();}} className={`p-1.5 rounded-lg ${hifz?'bg-amber-500 text-white':'opacity-60 hover:opacity-100'}`} style={hifz?{}:{color:colors.text}}>
-              <Mic className="w-3.5 h-3.5"/></button>
+              <Mic className="w-4 h-4"/></button>
           </div>
+          <span className="text-[13px] font-bold" style={{color:colors.text+'90'}}>الجزء {juzForPage(pg)}</span>
         </div>}
+      {!showUI&&<button onClick={()=>setShowUI(true)} className="fixed top-3 right-3 z-50 w-8 h-8 rounded-full flex items-center justify-center opacity-40 hover:opacity-80" style={{background:colors.bg+'cc',color:colors.text,paddingTop:'env(safe-area-inset-top, 0px)',border:'1px solid '+colors.border+'30'}}><ChevronLeft className="w-4 h-4" style={{transform:'rotate(-90deg)'}}/></button>}
 
       {/* SETTINGS */}
       {showSettings&&<div className="fixed inset-0 z-[58] flex items-end" onClick={()=>setShowSettings(false)}>
@@ -598,7 +587,7 @@ export default function QuranPage(){
       {/* ═══ MUSHAF ═══ */}
       <div className="overflow-y-auto pt-10"
         style={{height:`calc(100dvh - ${showUI?40:0}px - ${hifz&&showUI?46:0}px - ${playingSn?72:0}px - env(safe-area-inset-top,0px))`,
-          marginTop: (showUI ? 65 : 0) + (hifz && showUI ? 46 : 0),paddingTop:0,paddingBottom:0}}
+          marginTop: (showUI ? 60 : 0) + (hifz && showUI ? 46 : 0),paddingTop:0,paddingBottom:0}}
         onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]'))setShowUI(!showUI);}}
         onTouchStart={onTS} onTouchEnd={onTE}>
                 {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
