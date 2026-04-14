@@ -13,6 +13,32 @@ export default function Qibla() {
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  
+  // Add smoothing to heading to make it feel premium and precise
+  const [smoothedHeading, setSmoothedHeading] = useState<number>(0);
+  
+  useEffect(() => {
+    let animationFrameId: number;
+    const smoothFactor = 0.15; // Lower is smoother but slower
+    
+    const animate = () => {
+      setSmoothedHeading(prev => {
+        // Handle the 360 wrap-around
+        let diff = deviceHeading - prev;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+        
+        let next = prev + diff * smoothFactor;
+        next = (next + 360) % 360;
+        return next;
+      });
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [deviceHeading]);
+  
   const KAABA_LAT = 21.4225;
   const KAABA_LNG = 39.8262;
 
@@ -116,7 +142,7 @@ setTimeout(() => { if (headingRef.current === 0) setNoCompass(true); }, 3000);
   
   }, []);
 
-  const qiblaRotation = qiblaDirection !== null ? qiblaDirection - deviceHeading : 0;
+  const qiblaRotation = qiblaDirection !== null ? qiblaDirection - smoothedHeading : 0;
   const normalizedRotation = ((qiblaRotation % 360) + 360) % 360;
   const isAligned = normalizedRotation < 15 || normalizedRotation > 345;
 
@@ -153,7 +179,7 @@ setTimeout(() => { if (headingRef.current === 0) setNoCompass(true); }, 3000);
                 <svg 
                   viewBox="0 0 200 200" 
                   className="w-full h-full"
-                  style={{ transform: `rotate(${-deviceHeading}deg)`, transition: 'transform 0.3s ease-out' }}
+                  style={{ transform: `rotate(${-smoothedHeading}deg)` }}
                 >
                   <defs>
                     <linearGradient id="compassGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -245,7 +271,7 @@ setTimeout(() => { if (headingRef.current === 0) setNoCompass(true); }, 3000);
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground mb-1">اتجاهك</p>
                     <p className="text-3xl font-bold font-mono">
-                      {Math.round(deviceHeading)}°
+                      {Math.round(smoothedHeading)}°
                     </p>
                   </div>
                 )}
