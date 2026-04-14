@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2, Square, Settings, ArrowRight } from "lucide-react";
+import { Loader2, Search, X, Play, Pause, SkipForward, Skip, Mic, Volume2 } from "lucide-react";Back, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, MicOff, ChevronLeft, ChevronRight, BookOpen, Share2, Square, Settings, ArrowRight } from "lucide-react";
 import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
@@ -499,12 +499,12 @@ export default function QuranPage(){
       <audio ref={preloadRef} style={{display:'none'}} preload="auto" />
       
       {/* TOP BAR */}
-      {showUI&&<div className="fixed top-0 left-0 right-0 z-50" style={{paddingTop:'env(safe-area-inset-top,0px)',background:colors.bg,borderBottom:`1px solid ${colors.border}40`}}>
-        <div className="flex items-center justify-between px-3" style={{height:40}}>
+      {showUI&&<div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center" style={{ paddingTop: "30px", height: "80px", background: colors.paper, borderBottom: "1px solid " + colors.gold + "44" }}><div className="text-[15px] font-bold text-center" style={{ color: colors.gold }}> | Juz {juzForPage?.(pg)} | page {pg}</div></div>" style={{paddingTop:'env(safe-area-inset-top,0px)',background:colors.bg,borderBottom:`1px solid ${colors.border}40`}}>
+        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center" style={{ paddingTop: "30px", height: "80px", background: colors.paper, borderBottom: "1px solid " + colors.gold + "44" }}><div className="text-[15px] font-bold text-center" style={{ color: colors.gold }}> | Juz {juzForPage?.(pg)} | page {pg}</div></div>" style={{height:40}}>
           {/* Right side: Surah name */}
           <div className="flex items-center gap-2">
             <a href="/" className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><ArrowRight className="w-4 h-4"/></a>
-            <span className="text-[13px] font-bold" style={{color:colors.text}}>{surah.n}</span>
+            <span className="text-[13px] font-bold" style={{color:colors.text}}></span>
           </div>
           {/* Center: controls */}
           <div className="flex items-center gap-1">
@@ -535,7 +535,7 @@ export default function QuranPage(){
       {/* SEARCH */}
       {showSearch&&<div className="fixed inset-0 z-[60] bg-black/50" onClick={()=>setShowSearch(false)}>
         <div className="bg-card h-full w-full max-w-sm ml-auto flex flex-col" onClick={e=>e.stopPropagation()}>
-          <div className="bg-primary p-3 shrink-0"><div className="relative">
+          <div className="bg-primary p-3 shrink-0" style={{ paddingTop: "30px" }}" style={{ paddingTop: "30px" }}" style={{ paddingTop: "30px" }}" style={{ paddingTop: "30px" }}" style={{ paddingTop: "30px" }}" style={{ paddingTop: "30px" }}" style={{ paddingTop: "30px" }}" style={{ paddingTop: "30px" }}"><div className="relative">
             <Input ref={searchRef} placeholder="ابحث باسم السورة أو نص آية..." value={search} onChange={e=>handleSearch(e.target.value)}
               className="text-right pl-10 h-10 rounded-xl bg-white/10 border-white/20 text-primary-foreground placeholder:text-white/40" dir="rtl"/>
             <button onClick={()=>setShowSearch(false)} className="absolute left-3 top-2.5"><X className="w-5 h-5 text-white/60"/></button>
@@ -599,7 +599,7 @@ export default function QuranPage(){
       {/* ═══ MUSHAF ═══ */}
       <div className="overflow-y-auto pt-10"
         style={{height:`calc(100dvh - ${showUI?40:0}px - ${hifz&&showUI?46:0}px - ${playingSn?72:0}px - env(safe-area-inset-top,0px))`,
-          marginTop: (showUI ? 70 : 0) + (hifz && showUI ? 46 : 0) + 20,paddingTop:0,paddingBottom:0}}
+          marginTop: (showUI ?850 : 0) + (hifz && showUI ? 46 : 0) + 20,paddingTop:0,paddingBottom:0}}
         onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]'))setShowUI(!showUI);}}
         onTouchStart={onTS} onTouchEnd={onTE}>
                 {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
@@ -681,7 +681,7 @@ export default function QuranPage(){
       {/* ═══ BOTTOM PLAYER ═══ */}
       {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.2)]" style={{paddingBottom:'env(safe-area-inset-bottom,4px)'}}>
         <div className="w-full px-6 mb-2 mt-2">            <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" style={{width:'100%', accentColor:'#10b981', height:'4px', cursor:'pointer'}}               onChange={(e)=>{ if(audioRef.current){ audioRef.current.currentTime = (Number(e.target.value)/100)*audioRef.current.duration; } }}/>          </div>
-<div className="flex items-center justify-between px-3 pt-2 pb-1">
+<div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center" style={{ paddingTop: "30px", height: "80px", background: colors.paper, borderBottom: "1px solid " + colors.gold + "44" }}><div className="text-[15px] font-bold text-center" style={{ color: colors.gold }}> | Juz {juzForPage?.(pg)} | page {pg}</div></div> pt-2 pb-1">
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="bg-transparent text-foreground text-[12px] border-0 outline-none min-w-0 truncate max-w-[130px]">
               {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
@@ -691,7 +691,7 @@ export default function QuranPage(){
             <button onClick={skipPrev} className="p-1 text-muted-foreground"><SkipForward className="w-4 h-4"/></button>
             <button onClick={togglePlay} className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
               {isPlaying?<Pause className="w-4 h-4"/>:<Play className="w-4 h-4 ml-0.5"/>}</button>
-            <button onClick={skipNext} className="p-1 text-muted-foreground"><SkipBack className="w-4 h-4"/></button>
+            <button onClick={skipNext} className="p-1 text-muted-foreground"><SkipBack, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react";, Mic, Volume2 } from "lucide-react"; className="w-4 h-4"/></button>
             <button onClick={stopAudio} className="p-1"><Square className="w-4 h-4 text-red-400"/></button>
           </div>
         </div>
