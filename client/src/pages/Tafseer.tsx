@@ -373,14 +373,17 @@ export default function QuranPage(){
         if(bestScore >= 0.7) matched++;
         else wrongWords.push(w);
       }
-      const ratio=ew.length>0?matched/ew.length:0;
+      // Only check ratio of WHAT WAS SPOKEN so far
+      const partialRatio = sw.length > 0 ? matched / sw.length : 0;
+      const completeRatio = ew.length > 0 ? matched / ew.length : 0;
+
       const k=`${exp.sn}-${exp.nis}`;
       // Check if they said the WRONG verse entirely
       let isWrongVerse=false;
-      if(ratio<0.3&&sw.length>=3){
+      if(completeRatio<0.3&&sw.length>=3){
         for(const other of pq.data){
           if(other.gi===exp.gi)continue;
-          const ow=strip(other.text).split(' ').filter((w:string)=>w.length>1);
+          const ow=normAr(other.text).split(' ').filter((w:string)=>w.length>1);
           let om=0;for(const w of ow)if(sw.some((s:string)=>s.includes(w)||w.includes(s)))om++;
           if(ow.length>0&&om/ow.length>0.5){isWrongVerse=true;break;}
         }
@@ -389,16 +392,19 @@ export default function QuranPage(){
         setHifzFeedback({type:'wrong_verse',msg:'هذه ليست الآية الصحيحة'});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
         hifzTxtRef.current = ''; // Reset accumulation
-      } else if(ratio>=0.6){
+      } else if(completeRatio>=0.6){
+        // They completed the verse successfully
         setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'ok');return n;});
         setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
         hifzTxtRef.current = ''; // Perfect, clear for next verse
-      } else if(ratio>=0.25){
+      } else if(sw.length >= 3 && partialRatio < 0.4) {
+        // They spoke at least 3 words, and most were wrong
         setHifzFeedback({type:'wrong_pron',msg:'تحقق من النطق',details:wrongWords.slice(0,3)});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
       } else {
-        setHifzFeedback({type:'wrong_verse',msg:'حاول مرة أخرى'});
+        // They are doing okay, just haven't finished yet! Do nothing (silent feedback)
+        // Keep accumulating text safely
       }
       setRecTxt('');
       setTimeout(()=>setHifzFeedback(null),4000);
@@ -704,12 +710,12 @@ export default function QuranPage(){
           {groups.map((g,gi)=>{
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
-            // Normalized font sizes per user request (like picture 3)
-            const dynSize=allChars<300?'clamp(26px, 7vw, 40px)':
-                          allChars<600?'clamp(24px, 6.5vw, 36px)':
-                          'clamp(22px, 6vw, 32px)';
+            // Normalized font sizes with much lower minimums to avoid mobile overflow
+            const dynSize=allChars<300?'clamp(16px, 6.5vw, 40px)':
+                          allChars<600?'clamp(15px, 6vw, 36px)':
+                          'clamp(14px, 5.5vw, 32px)';
                           
-            const dynLine=allChars<300?'2.5':allChars<600?'2.3':'2.1';
+            const dynLine=allChars<300?'2.3':allChars<600?'2.1':'1.9';
             
             return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
@@ -751,7 +757,7 @@ export default function QuranPage(){
                       background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                       padding:(isP||isSel)?'3px 6px':'0',borderRadius:(isP||isSel)?'8px':'0',
                     }}>
-                    {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text.replace(/[\u0600-\u0605\u06D6-\u06DC\u06DE-\u06ED]/g,'')}
+                    {a.text.replace(/[\u0600-\u0605\u06D6-\u06DC\u06DE-\u06ED]/g,'')}
                   </span>
                   {/* Ornamental golden verse marker ❁ */}
                   <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
