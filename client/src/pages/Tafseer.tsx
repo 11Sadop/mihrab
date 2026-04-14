@@ -326,11 +326,33 @@ export default function QuranPage(){
       const ew=strip(exp.text).split(' ').filter((w:string)=>w.length>1);
       const sw=strip(txt).split(' ').filter((w:string)=>w.length>1);
       if(!e.results[e.results.length-1].isFinal||sw.length<2)return;
-      // Match words
+      // Strict Levenshtein Distance Pronunciation Matcher
+      const levenshtein = (a:string, b:string) => {
+        if (!a || !b) return (a || b || '').length;
+        if (a === b) return 0;
+        const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+        for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+        for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+        for (let j = 1; j <= b.length; j++) {
+          for (let i = 1; i <= a.length; i++) {
+            const ind = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[j][i] = Math.min(matrix[j][i - 1] + 1, matrix[j - 1][i] + 1, matrix[j - 1][i - 1] + ind);
+          }
+        }
+        return matrix[b.length][a.length];
+      };
+      
       let matched=0;const wrongWords:string[]=[];
       for(let wi=0;wi<ew.length;wi++){
         const w=ew[wi];
-        if(sw.some((s:string)=>s.includes(w)||w.includes(s)||(w.length>2&&s.length>2&&w.slice(0,3)===s.slice(0,3))))matched++;
+        let bestScore = 0;
+        for(const s of sw){
+          const dist = levenshtein(w, s);
+          const sim = 1 - (dist / Math.max(w.length, s.length));
+          if(sim > bestScore) bestScore = sim;
+        }
+        // Extremely strict check: 80% pronunciation accuracy required per word
+        if(bestScore >= 0.8) matched++;
         else wrongWords.push(w);
       }
       const ratio=ew.length>0?matched/ew.length:0;
@@ -662,15 +684,12 @@ export default function QuranPage(){
           {groups.map((g,gi)=>{
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
-            // Massively increased maximum font sizes for desktop monitors
-            const dynSize=allChars<250?'clamp(30px, 8vmin, 75px)':
-                          allChars<400?'clamp(28px, 7.5vmin, 65px)':
-                          allChars<600?'clamp(26px, 6.5vmin, 55px)':
-                          allChars<900?'clamp(24px, 5.5vmin, 48px)':
-                          'clamp(22px, 4.5vmin, 42px)';
+            // Normalized font sizes per user request (like picture 3)
+            const dynSize=allChars<300?'clamp(26px, 7vw, 40px)':
+                          allChars<600?'clamp(24px, 6.5vw, 36px)':
+                          'clamp(22px, 6vw, 32px)';
                           
-            // Use vmin so it scales well across portrait and landscape
-            const dynLine=allChars<250?'2.6':allChars<450?'2.4':allChars<700?'2.2':'2.0';
+            const dynLine=allChars<300?'2.5':allChars<600?'2.3':'2.1';
             
             return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
@@ -698,7 +717,7 @@ export default function QuranPage(){
             </div>}
             
             {/* Verses */}
-            <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em'}}>
+            <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em', textAlignLast: 'justify'}}>
               {g.ayahs.map(a=>{
                 if(a.nis===1 && g.sn===1) return null;
                 
@@ -708,7 +727,7 @@ export default function QuranPage(){
                   <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
                     className="transition-all duration-200 rounded cursor-pointer"
                     style={{
-                      color:hidden?'transparent':isP?'#fff':hr==='ok'?'#4ade80':hr==='err'?'#f87171':colors.text,
+                      color:hidden?'transparent':isP?'#fff':hr==='err'?'#f87171':colors.text,
                       background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                       padding:(isP||isSel)?'3px 6px':'0',borderRadius:(isP||isSel)?'8px':'0',
                     }}>
