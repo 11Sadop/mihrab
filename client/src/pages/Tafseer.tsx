@@ -93,6 +93,8 @@ const QBG:Record<string,{bg:string;text:string;border:string;hi:string}>={
   green:{bg:'#1a3a2a',text:'#d4c5a0',border:'#3d5a3d',hi:'rgba(34,197,94,0.25)'},
 };
 
+const SAJDA_VERSES=new Set(['7:206','13:15','16:50','17:109','19:58','22:18','22:77','25:60','27:26','32:15','38:24','41:38','53:62','84:21','96:19']);
+
 const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'التفسير الميسر'},{id:'ar.jalalayn',name:'تفسير الجلالين'},{id:'ar.ibn-katheer',name:'تفسير ابن كثير'},{id:'ar.qurtubi',name:'تفسير القرطبي'},{id:'ar.baghawi',name:'تفسير البغوي'},{id:'ar.saddi',name:'تفسير السعدي'},{id:'ar.tabari',name:'تفسير الطبري'},];
 
 export default function QuranPage(){
@@ -119,7 +121,7 @@ export default function QuranPage(){
           audioRef.current.onended = handleEnded;
           audioRef.current.onerror = handleErr;
           audioRef.current.play().catch(() => {});
-          setTimeout(() => { if(prev){prev.pause(); prev.removeAttribute('src');} }, 200);
+          setTimeout(() => { if(prev){prev.onended=null;prev.ontimeupdate=null;prev.pause();prev.removeAttribute('src');} }, 200);
           setPlayingKey(`${q.sn}-${q.nis}`);
           ensureVerseVisible(q.sn, q.nis);
           // Preload next+1
@@ -650,6 +652,7 @@ export default function QuranPage(){
       {hifz&&showUI&&<div className="fixed left-0 right-0 z-40 px-3 py-1.5" style={{top:'calc(48px + env(safe-area-inset-top,0px))',background:colors.bg,borderBottom:`1px solid ${colors.border}`}}>
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold">🎤 الحفظ</span>
+          {recTxt&&<span className="text-[9px] opacity-60 mr-2 truncate max-w-[150px]">🗣️ {recTxt.split(" ").slice(-4).join(" ")}</span>}
           <div className="flex gap-1">
             <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">✓{[...hifzRes.values()].filter(v=>v==="ok").length}</span>
             <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">✗{[...hifzRes.values()].filter(v=>v==="err").length}</span>
@@ -670,11 +673,11 @@ export default function QuranPage(){
         onTouchStart={onTS} onTouchEnd={onTE}>
                 {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:16,paddingBottom:8,display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+        :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:8,paddingBottom:4,display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
 
 
           <div style={{flex:1}}>
-          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const tc=g.ayahs.reduce((s,a)=>s+a.text.length,0);const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=allChars<300?'clamp(26px,7.5vw,42px)':allChars<600?'clamp(22px,6.5vw,36px)':allChars<1000?'clamp(20px,5.5vw,32px)':'clamp(18px,5vw,28px)';const dynLine=allChars<300?'2.1':allChars<600?'1.95':'1.85';return <div key={`${g.sn}-${gi}`}>
+          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const tc=g.ayahs.reduce((s,a)=>s+a.text.length,0);const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=allChars<250?'clamp(28px,8vw,44px)':allChars<450?'clamp(24px,7vw,38px)':allChars<700?'clamp(22px,6vw,34px)':allChars<1100?'clamp(20px,5.5vw,30px)':'clamp(18px,5vw,26px)';const dynLine=allChars<250?'2.2':allChars<450?'2.0':allChars<700?'1.9':'1.8';return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-2 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
@@ -714,7 +717,7 @@ export default function QuranPage(){
                       background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                       padding:(isP||isSel)?'3px 6px':'0',borderRadius:(isP||isSel)?'8px':'0',
                     }}>
-                    {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text.replace(/[\u0600-\u0605]/g,'')}
+                    {hidden?a.text.replace(/[^\s]/g,"\u00B7"):a.text.replace(/[\u0600-\u0605\u06D6-\u06DC\u06DE-\u06ED]/g,'')}
                   </span>
                   {/* Ornamental golden verse marker ❁ */}
                   <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
@@ -725,7 +728,7 @@ export default function QuranPage(){
                       {[0,45,90,135,180,225,270,315].map(deg=><circle key={deg} cx={25+20*Math.cos(deg*Math.PI/180)} cy={25+20*Math.sin(deg*Math.PI/180)} r="1.8" fill={isP?'#22c55e':'#c8a96e'}/>)}
                     </svg>
                     <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:700,color:isP?'#22c55e':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
-                  </span>
+                  </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:'#e74c3c',fontSize:'0.6em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
                 </span>;
               })}
             </div>
