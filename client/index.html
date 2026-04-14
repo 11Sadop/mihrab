@@ -155,7 +155,31 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
         rel="stylesheet">
-</head>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          let hasUnregistered = false;
+          for(let registration of registrations) {
+            registration.unregister();
+            hasUnregistered = true;
+          }
+          // If we unregistered something, force reload the page to get the new app
+          if (hasUnregistered && !window.location.search.includes('cleared')) {
+            window.location.href = window.location.pathname + '?cleared=true';
+          }
+        });
+      }
+      
+      // Also clear local cache storage
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+    </script>
+    
+  </head>
 
 <body class="dark" style="background-color: #111827;">
     <script>
@@ -214,7 +238,7 @@
             });
         }
     </script>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx?v=1776187966226"></script>
 </body>
 
 </html>
