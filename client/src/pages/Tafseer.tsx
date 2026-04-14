@@ -93,6 +93,8 @@ const QBG:Record<string,{bg:string;text:string;border:string;hi:string}>={
   green:{bg:'#1a3a2a',text:'#d4c5a0',border:'#3d5a3d',hi:'rgba(34,197,94,0.25)'},
 };
 
+const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'التفسير الميسر'},{id:'ar.jalalayn',name:'تفسير الجلالين'},{id:'ar.ibn-katheer',name:'تفسير ابن كثير'},{id:'ar.qurtubi',name:'تفسير القرطبي'},{id:'ar.baghawi',name:'تفسير البغوي'},{id:'ar.saddi',name:'تفسير السعدي'},{id:'ar.tabari',name:'تفسير الطبري'},];
+
 export default function QuranPage(){
   const handleTimeUpdate = () => {
     const a = audioRef.current;
@@ -128,6 +130,11 @@ export default function QuranPage(){
   const [ayahSearchResults,setAyahSearchResults]=useState<any[]>([]);
   const [qTheme,setQTheme]=useState('cream');
   const [showSettings,setShowSettings]=useState(false);
+  const [showTafseer,setShowTafseer]=useState(false);
+  const [tafseerText,setTafseerText]=useState('');
+  const [tafseerLoading,setTafseerLoading]=useState(false);
+  const [tafseerSource,setTafseerSource]=useState('ar.muyassar');
+  const [hifzFeedback,setHifzFeedback]=useState<{type:'ok'|'wrong_verse'|'wrong_pron';msg:string;details?:string[]}|null>(null);
 
   const [isPlaying,setIsPlaying]=useState(false);
   const [playingKey,setPlayingKey]=useState("");
@@ -307,18 +314,46 @@ export default function QuranPage(){
     if(!SR){alert("جرب Chrome");return;}
     const r=new SR();r.lang="ar-SA";r.continuous=true;r.interimResults=true;r.maxAlternatives=5;
     r.onresult=(e:any)=>{
-      let txt="";for(let i=e.resultIndex;i<e.results.length;i++)for(let j=0;j<e.results[i].length;j++)txt+=" "+e.results[i][j].transcript;
+      let txt='';for(let i=e.resultIndex;i<e.results.length;i++)for(let j=0;j<e.results[i].length;j++)txt+=' '+e.results[i][j].transcript;
       setRecTxt(txt.trim());if(!pq.data)return;
       const exp=pq.data[hifzIdx];if(!exp)return;
       const ew=strip(exp.text).split(' ').filter((w:string)=>w.length>1);
-      const sw=strip(txt).split(' ');
-      let m=0;for(const w of ew)if(sw.some((s:string)=>s.includes(w)||w.includes(s)||(w.length>2&&s.length>2&&w.slice(0,3)===s.slice(0,3))))m++;
-      const ratio=ew.length>0?m/ew.length:0;
-      if(ew.length>0&&e.results[e.results.length-1].isFinal&&(ratio>=0.2||m>=2)){
-        const k=`${exp.sn}-${exp.nis}`;
-        setHifzRes(prev=>{const n=new Map(prev);n.set(k,ratio>=0.5?"ok":"err");return n;});
-        setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));setRecTxt("");
+      const sw=strip(txt).split(' ').filter((w:string)=>w.length>1);
+      if(!e.results[e.results.length-1].isFinal||sw.length<2)return;
+      // Match words
+      let matched=0;const wrongWords:string[]=[];
+      for(let wi=0;wi<ew.length;wi++){
+        const w=ew[wi];
+        if(sw.some((s:string)=>s.includes(w)||w.includes(s)||(w.length>2&&s.length>2&&w.slice(0,3)===s.slice(0,3))))matched++;
+        else wrongWords.push(w);
       }
+      const ratio=ew.length>0?matched/ew.length:0;
+      const k=`${exp.sn}-${exp.nis}`;
+      // Check if they said the WRONG verse entirely
+      let isWrongVerse=false;
+      if(ratio<0.3&&sw.length>=3){
+        for(const other of pq.data){
+          if(other.gi===exp.gi)continue;
+          const ow=strip(other.text).split(' ').filter((w:string)=>w.length>1);
+          let om=0;for(const w of ow)if(sw.some((s:string)=>s.includes(w)||w.includes(s)))om++;
+          if(ow.length>0&&om/ow.length>0.5){isWrongVerse=true;break;}
+        }
+      }
+      if(isWrongVerse){
+        setHifzFeedback({type:'wrong_verse',msg:'هذه ليست الآية الصحيحة'});
+        setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
+      } else if(ratio>=0.7){
+        setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
+        setHifzRes(prev=>{const n=new Map(prev);n.set(k,'ok');return n;});
+        setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
+      } else if(ratio>=0.3){
+        setHifzFeedback({type:'wrong_pron',msg:'تحقق من الكلمات',details:wrongWords.slice(0,5)});
+        setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
+      } else if(sw.length>=3){
+        setHifzFeedback({type:'wrong_verse',msg:'حاول مرة أخرى'});
+      }
+      setRecTxt('');
+      setTimeout(()=>setHifzFeedback(null),4000);
     };
     r.onerror=()=>{};r.onend=()=>{if(recording)try{r.start();}catch{}};
     recRef.current=r;r.start();setRecording(true);
@@ -558,13 +593,33 @@ export default function QuranPage(){
                 <button onClick={()=>{playSurahFrom(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>من هنا</button>
                 <button onClick={()=>{playQueueRef.current=null;playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>الآية</button>
               </div></div>
-            <div><h3 className="text-xs font-bold mb-1.5 opacity-60">التفسير</h3>
-              <div className="flex gap-2">
-                <button onClick={async()=>{try{const r=await fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/ar.muyassar`);const d=await r.json();alert(d.data.text);}catch{alert("فشل");}}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>الميسر</button>
-                <button onClick={async()=>{try{const r=await fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/ar.jalalayn`);const d=await r.json();alert(d.data.text);}catch{alert("فشل");}}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>الجلالين</button>
-              </div></div>
+            <button onClick={()=>{setShowOptions(false);setShowTafseer(true);setTafseerText('');setTafseerLoading(true);fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${tafseerSource}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل في تحميل التفسير');setTafseerLoading(false);});}} className="w-full py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>التفسير</button>
             <button onClick={()=>{setShowOptions(false);setShowSharePage(true);}} className="w-full py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"><Share2 className="w-4 h-4"/>مشاركة / حفظ كصورة</button>
           </div>
+        </div>
+      </div>}
+
+      {/* TAFSEER MODAL */}
+      {showTafseer&&selVerse&&<div className="fixed inset-0 z-[62] flex flex-col" style={{background:colors.bg}}>
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{borderColor:colors.border+'40',paddingTop:'calc(env(safe-area-inset-top,12px) + 8px)'}}>
+          <button onClick={()=>setShowTafseer(false)} className="p-2"><X className="w-5 h-5"/></button>
+          <span className="text-sm font-bold" style={{color:colors.text}}>{SURAHS.find(s=>s.id===selVerse.sn)?.n}: {selVerse.nis}</span>
+          <span className="w-9"/>
+        </div>
+        <div className="px-4 py-3 border-b" style={{borderColor:colors.border+'40'}} dir="rtl">
+          <select value={tafseerSource} onChange={e=>{setTafseerSource(e.target.value);setTafseerLoading(true);setTafseerText('');            fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${e.target.value}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل');setTafseerLoading(false);});          }} className="w-full h-10 rounded-xl border px-3 text-sm outline-none" style={{borderColor:colors.border,background:colors.bg,color:colors.text}}>
+            {TAFSEER_SOURCES.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4" dir="rtl">
+          <div className="p-4 rounded-xl mb-4" style={{background:colors.border+'15',border:'1px solid '+colors.border+'30'}}>
+            <p className="font-quran text-center leading-[2.2]" style={{fontSize:'clamp(18px,4.5vw,24px)',color:colors.text}}>{selVerse.text}</p>
+          </div>
+          {tafseerLoading?<div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" style={{color:colors.text}}/></div>
+          :<div className="leading-[2] text-[15px]" style={{color:colors.text+'dd'}}>{tafseerText}</div>}
+        </div>
+        <div className="p-3 border-t flex gap-2" style={{borderColor:colors.border+'40',paddingBottom:'calc(env(safe-area-inset-bottom,8px) + 4px)'}}>
+          <button onClick={()=>{const t=tafseerText;const sn=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';const full=selVerse.text+'\n\n'+t+'\n\n'+sn+': '+selVerse.nis;if(navigator.share)navigator.share({text:full}).catch(()=>{});else{navigator.clipboard.writeText(full);alert("تم النسخ!");}}} className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1" style={{background:colors.border+'30',color:colors.text}}><Share2 className="w-4 h-4"/>مشاركة</button>
         </div>
       </div>}
 
@@ -576,6 +631,7 @@ export default function QuranPage(){
             <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">✓{[...hifzRes.values()].filter(v=>v==="ok").length}</span>
             <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">✗{[...hifzRes.values()].filter(v=>v==="err").length}</span>
           </div></div>
+        {hifzFeedback&&<div className="mt-1 px-2 py-1 rounded-lg text-[11px] font-bold text-center animate-pulse" style={{background:hifzFeedback.type==='ok'?'rgba(34,197,94,0.2)':hifzFeedback.type==='wrong_verse'?'rgba(239,68,68,0.2)':'rgba(245,158,11,0.2)',color:hifzFeedback.type==='ok'?'#4ade80':hifzFeedback.type==='wrong_verse'?'#f87171':'#fbbf24'}}>{hifzFeedback.msg}{hifzFeedback.details&&<span className="block text-[10px] opacity-80 mt-0.5">{hifzFeedback.details.join(' • ')}</span>}</div>}
         <div className="flex gap-1.5 mt-1">
           <button onClick={()=>recording?stopHifz():startHifz()} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 ${recording?"bg-red-500 text-white animate-pulse":"bg-amber-500 text-white"}`}>
             {recording?<><MicOff className="w-3 h-3"/>إيقاف</>:<><Mic className="w-3 h-3"/>ابدأ</>}</button>
