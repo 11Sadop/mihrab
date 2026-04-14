@@ -102,38 +102,20 @@ export default function QuranPage(){
     const a = audioRef.current;
     if (!a) return;
     const bar = document.getElementById('scrubBar') as HTMLInputElement;
-    if (bar) bar.value = String((a.currentTime / (a.duration || 1)) * 100);
+    if (bar && a.duration) { bar.value = String((a.currentTime / a.duration) * 100); }
+    
     const q = playQueueRef.current;
-    // Start preloaded audio 0.15s before current ends for seamless transition
-    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 0.15) {
+    // On iOS Safari, playing a new Audio() object outside a user interaction fails.
+    // So if smooth crossfade fails, we must rely on standard onended.
+    // Instead of instantiating new Audio, we use a single audio player and preload the next verse over network.
+    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 0.1) {
       if (!a.dataset.crossed) {
         a.dataset.crossed = '1';
-        // Seamless crossfade: start preloaded immediately
+        // Let handleEnded trigger naturally, but we fetch the next file into browser cache right now
         const rec = getReciter();
-        const nextNis = q.nis + 1;
-        const nextUrl = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
-        if (preloadRef.current && preloadRef.current.readyState >= 2) {
-          q.nis = nextNis;
-          const prev = audioRef.current;
-          audioRef.current = preloadRef.current;
-          preloadRef.current = new Audio();
-          audioRef.current.ontimeupdate = handleTimeUpdate;
-          audioRef.current.onended = handleEnded;
-          audioRef.current.onerror = handleErr;
-          audioRef.current.play().catch(() => {});
-          setTimeout(() => { if(prev){prev.onended=null;prev.ontimeupdate=null;prev.pause();prev.removeAttribute('src');} }, 200);
-          setPlayingKey(`${q.sn}-${q.nis}`);
-          ensureVerseVisible(q.sn, q.nis);
-          // Preload next+1
-          if (q.nis < q.maxNis) {
-            const nn = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
-            preloadRef.current.src = nn; preloadRef.current.load();
-          }
-        }
+        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
+        fetch(url, {mode: 'no-cors'}).catch(()=>{}); 
       }
-    }
-    if (a.duration > 0 && a.duration - a.currentTime > 0.5) {
-      delete a.dataset.crossed;
     }
   };
 
@@ -677,7 +659,7 @@ export default function QuranPage(){
 
 
           <div style={{flex:1}}>
-          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const tc=g.ayahs.reduce((s,a)=>s+a.text.length,0);const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=allChars<250?'clamp(28px,8vw,44px)':allChars<450?'clamp(24px,7vw,38px)':allChars<700?'clamp(22px,6vw,34px)':allChars<1100?'clamp(20px,5.5vw,30px)':'clamp(18px,5vw,26px)';const dynLine=allChars<250?'2.2':allChars<450?'2.0':allChars<700?'1.9':'1.8';return <div key={`${g.sn}-${gi}`}>
+          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const tc=g.ayahs.reduce((s,a)=>s+a.text.length,0);const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=allChars<250?'clamp(30px, 9vw, 48px)':allChars<400?'clamp(26px, 8vw, 42px)':allChars<600?'clamp(24px, 7vw, 36px)':allChars<900?'clamp(22px, 6vw, 32px)':'clamp(20px, 5.5vw, 28px)';const dynLine=allChars<250?'2.2':allChars<450?'2.0':allChars<700?'1.9':'1.8';return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-2 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
