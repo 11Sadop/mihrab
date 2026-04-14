@@ -717,7 +717,7 @@ export default function QuranPage(){
             </div>}
             
             {/* Verses */}
-            <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em', textAlignLast: 'justify'}}>
+            <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em', textAlignLast: 'center'}}>
               {g.ayahs.map(a=>{
                 if(a.nis===1 && g.sn===1) return null;
                 
