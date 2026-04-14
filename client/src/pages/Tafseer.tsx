@@ -659,7 +659,20 @@ export default function QuranPage(){
 
 
           <div style={{flex:1}}>
-          {groups.map((g,gi)=>{const totalChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const tc=g.ayahs.reduce((s,a)=>s+a.text.length,0);const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);const dynSize=allChars<250?'clamp(30px, 9vw, 48px)':allChars<400?'clamp(26px, 8vw, 42px)':allChars<600?'clamp(24px, 7vw, 36px)':allChars<900?'clamp(22px, 6vw, 32px)':'clamp(20px, 5.5vw, 28px)';const dynLine=allChars<250?'2.2':allChars<450?'2.0':allChars<700?'1.9':'1.8';return <div key={`${g.sn}-${gi}`}>
+          {groups.map((g,gi)=>{
+            const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
+            
+            // Massively increased maximum font sizes for desktop monitors
+            const dynSize=allChars<250?'clamp(30px, 8vmin, 75px)':
+                          allChars<400?'clamp(28px, 7.5vmin, 65px)':
+                          allChars<600?'clamp(26px, 6.5vmin, 55px)':
+                          allChars<900?'clamp(24px, 5.5vmin, 48px)':
+                          'clamp(22px, 4.5vmin, 42px)';
+                          
+            // Use vmin so it scales well across portrait and landscape
+            const dynLine=allChars<250?'2.6':allChars<450?'2.4':allChars<700?'2.2':'2.0';
+            
+            return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
             {g.ayahs[0].nis===1&&<div className="text-center my-2 flex justify-center">
               <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
