@@ -147,8 +147,9 @@ export default function QuranPage(){
   const [playingSn,setPlayingSn]=useState(0);
 
   const audioRef=useRef<HTMLAudioElement>(null);
-  const preloadRef=useRef<HTMLAudioElement>(null);
-  const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
+  const searchRef=useRef<HTMLInputElement>(null);
+  const playQueueRef=useRef<{sn:number;nis:number}[]>([]);
+  const hifzTxtRef=useRef(''); // Stores cumulative speech text per verse
   const recIdRef=useRef(recId);
   const pgRef=useRef(pg);
 
@@ -320,13 +321,30 @@ export default function QuranPage(){
     if(!SR){alert("جرب Chrome");return;}
     const r=new SR();r.lang="ar-SA";r.continuous=true;r.interimResults=true;r.maxAlternatives=5;
     r.onresult=(e:any)=>{
-      let txt='';for(let i=e.resultIndex;i<e.results.length;i++)for(let j=0;j<e.results[i].length;j++)txt+=' '+e.results[i][j].transcript;
-      setRecTxt(txt.trim());if(!pq.data)return;
+      // Arabic character normalization for flawless Speech matching
+      const normAr = (s:string) => s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF\u06E0\u06E2\u06E3\u06E5\u06E6\u06E8\u06EA\u06EB\u06EC\u06ED]/g,'')
+        .replace(/[أإآء]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و');
+        
+      let newTxt='';
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        for(let j=0;j<e.results[i].length;j++)
+          newTxt+=' '+e.results[i][j].transcript;
+      }
+      const isFinal = e.results[e.results.length-1].isFinal;
+      const fullTxt = hifzTxtRef.current + ' ' + newTxt;
+      setRecTxt(fullTxt.trim());
+      
+      if(!pq.data)return;
       const exp=pq.data[hifzIdx];if(!exp)return;
-      const ew=strip(exp.text).split(' ').filter((w:string)=>w.length>1);
-      const sw=strip(txt).split(' ').filter((w:string)=>w.length>1);
-      if(!e.results[e.results.length-1].isFinal||sw.length<2)return;
-      // Strict Levenshtein Distance Pronunciation Matcher
+      
+      // Extremely robust matching based on cumulative speech history
+      const ew=normAr(exp.text).split(' ').filter(w=>w.length>1);
+      const sw=normAr(fullTxt).split(' ').filter(w=>w.length>1);
+      if(!isFinal||sw.length<2)return;
+      
+      hifzTxtRef.current += ' ' + newTxt; // Append permanently
+      
+      // Levenshtein Pronunciation Matcher
       const levenshtein = (a:string, b:string) => {
         if (!a || !b) return (a || b || '').length;
         if (a === b) return 0;
@@ -351,8 +369,8 @@ export default function QuranPage(){
           const sim = 1 - (dist / Math.max(w.length, s.length));
           if(sim > bestScore) bestScore = sim;
         }
-        // Extremely strict check: 80% pronunciation accuracy required per word
-        if(bestScore >= 0.8) matched++;
+        // Very tolerant per word checking due to Speech dictation inaccuracies
+        if(bestScore >= 0.7) matched++;
         else wrongWords.push(w);
       }
       const ratio=ew.length>0?matched/ew.length:0;
@@ -370,14 +388,16 @@ export default function QuranPage(){
       if(isWrongVerse){
         setHifzFeedback({type:'wrong_verse',msg:'هذه ليست الآية الصحيحة'});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
-      } else if(ratio>=0.7){
+        hifzTxtRef.current = ''; // Reset accumulation
+      } else if(ratio>=0.6){
         setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'ok');return n;});
         setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
-      } else if(ratio>=0.3){
-        setHifzFeedback({type:'wrong_pron',msg:'تحقق من الكلمات',details:wrongWords.slice(0,5)});
+        hifzTxtRef.current = ''; // Perfect, clear for next verse
+      } else if(ratio>=0.25){
+        setHifzFeedback({type:'wrong_pron',msg:'تحقق من النطق',details:wrongWords.slice(0,3)});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
-      } else if(sw.length>=3){
+      } else {
         setHifzFeedback({type:'wrong_verse',msg:'حاول مرة أخرى'});
       }
       setRecTxt('');
