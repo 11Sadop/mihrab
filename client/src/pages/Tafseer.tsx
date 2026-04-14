@@ -102,10 +102,32 @@ export default function QuranPage(){
     const bar = document.getElementById('scrubBar') as HTMLInputElement;
     if (bar) bar.value = String((a.currentTime / (a.duration || 1)) * 100);
     const q = playQueueRef.current;
-    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 0.4) {
+    // Start preloaded audio 0.15s before current ends for seamless transition
+    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 0.15) {
       if (!a.dataset.crossed) {
-        a.dataset.crossed = "1";
-        skipNext();
+        a.dataset.crossed = '1';
+        // Seamless crossfade: start preloaded immediately
+        const rec = getReciter();
+        const nextNis = q.nis + 1;
+        const nextUrl = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
+        if (preloadRef.current && preloadRef.current.readyState >= 2) {
+          q.nis = nextNis;
+          const prev = audioRef.current;
+          audioRef.current = preloadRef.current;
+          preloadRef.current = new Audio();
+          audioRef.current.ontimeupdate = handleTimeUpdate;
+          audioRef.current.onended = handleEnded;
+          audioRef.current.onerror = handleErr;
+          audioRef.current.play().catch(() => {});
+          setTimeout(() => { if(prev){prev.pause(); prev.removeAttribute('src');} }, 200);
+          setPlayingKey(`${q.sn}-${q.nis}`);
+          ensureVerseVisible(q.sn, q.nis);
+          // Preload next+1
+          if (q.nis < q.maxNis) {
+            const nn = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
+            preloadRef.current.src = nn; preloadRef.current.load();
+          }
+        }
       }
     }
     if (a.duration > 0 && a.duration - a.currentTime > 0.5) {
@@ -113,7 +135,7 @@ export default function QuranPage(){
     }
   };
 
-  useSeo({title:"القرآن الكريم - محراب",description:"القرآن الكريم",canonicalPath:"/tafseer"});
+  useSeo({title:"القرآن الكريم - سنن",description:"القرآن الكريم",canonicalPath:"/tafseer"});
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
   const [recId,setRecId]=useState("maher");
@@ -538,8 +560,9 @@ export default function QuranPage(){
               <Mic className="w-4 h-4"/></button>
           </div>
           <span className="text-[13px] font-bold" style={{color:colors.text+'90'}}>الجزء {juzForPage(pg)}</span>
+          <button onClick={()=>setShowUI(false)} className="p-1.5 rounded-lg opacity-50 hover:opacity-100" style={{color:colors.text}} title="إخفاء"><ChevronLeft className="w-4 h-4" style={{transform:'rotate(90deg)'}}/></button>
         </div>}
-      {!showUI&&<button onClick={()=>setShowUI(true)} className="fixed top-3 right-3 z-50 w-8 h-8 rounded-full flex items-center justify-center opacity-40 hover:opacity-80" style={{background:colors.bg+'cc',color:colors.text,paddingTop:'env(safe-area-inset-top, 0px)',border:'1px solid '+colors.border+'30'}}><ChevronLeft className="w-4 h-4" style={{transform:'rotate(-90deg)'}}/></button>}
+      {!showUI&&<button onClick={()=>setShowUI(true)} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity" style={{background:colors.bg+'ee',color:colors.text,border:'1px solid '+colors.border+'50',paddingTop:'calc(env(safe-area-inset-top,0px) + 4px)',fontSize:'11px',fontWeight:700}}><ChevronLeft className="w-3 h-3" style={{transform:'rotate(-90deg)'}}/> إظهار</button>}
 
       {/* SETTINGS */}
       {showSettings&&<div className="fixed inset-0 z-[58] flex items-end" onClick={()=>setShowSettings(false)}>
@@ -643,7 +666,7 @@ export default function QuranPage(){
       {/* ═══ MUSHAF ═══ */}
       <div className="overflow-y-auto"
         style={{height:'calc(100dvh - env(safe-area-inset-top,0px))',marginTop:(showUI?55:0)+(hifz&&showUI?46:0),paddingTop:0,paddingBottom:(playingSn?80:20)}}
-        onClick={e=>{if(!(e.target as HTMLElement).closest('[data-v]'))setShowUI(!showUI);}}
+        
         onTouchStart={onTS} onTouchEnd={onTE}>
                 {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
