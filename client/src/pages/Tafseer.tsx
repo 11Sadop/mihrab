@@ -34,7 +34,7 @@ const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
 // Normalize text - keep ALL marks for display except zero-width spaces
-const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'').replace(/لْء/g, 'لْـٔ');
+const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'').replace(/لْءَا/g, 'لْـَٔا').replace(/لْء/g, 'لْـٔ');
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
 const spaceMuqattaat=(t:string)=>{
   // Preserve spacing for display but don't strip the actual diacritics
@@ -706,27 +706,36 @@ export default function QuranPage(){
           {groups.map((g,gi)=>{
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
-            // Elegant sizing matching Ayah App exactly
-            const dynSize=allChars<300?'clamp(20px, 6vw, 34px)':
-                          allChars<400?'clamp(18px, 5.5vw, 30px)':
-                          allChars<600?'clamp(16px, 5vw, 28px)':
-                          allChars<800?'clamp(15px, 4.5vw, 24px)':
-                          'clamp(14px, 4vw, 22px)';
+            // Consistent elegant sizing
+            const dynSize=allChars<300?'clamp(20px, 6.5vw, 32px)':
+                          allChars<500?'clamp(18px, 6vw, 28px)':
+                          allChars<800?'clamp(16px, 5.5vw, 24px)':
+                          'clamp(14px, 5vw, 20px)';
                           
-            const dynLine=allChars<400?'2.5':allChars<600?'2.4':allChars<800?'2.3':'2.2';
+            const dynLine=allChars<400?'2.5':allChars<600?'2.3':allChars<800?'2.1':'1.9';
             
-            return <div key={`${g.sn}-${gi}`}>
-            {/* Surah Header - Match Ayah App Exactly */}
-            {g.ayahs[0].nis===1&&<div className="text-center my-2 flex justify-center">
-              <div className="relative px-12 py-3 min-w-[200px]" style={{border:`1px solid ${colors.border}60`, backgroundColor:`${colors.border}10`}}>
-                <div className="absolute -left-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
-                <div className="absolute -right-[14px] top-1/2 -translate-y-1/2 bg-transparent flex items-center justify-center" style={{color:colors.border}}>۞</div>
-                <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(26px, 5.5vw, 36px)',color:colors.text, paddingTop:'4px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
+            return <div key={`${g.sn}-${gi}`} className="relative pb-10">
+              {/* Ayah App Page Headers */}
+              <div className="flex justify-between items-center mb-6 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
+                <span>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
+                <span>الْجُزْءُ {juzForPage(pg).toLocaleString('ar-EG')}</span>
+              </div>
+
+            {/* Surah Header - Ornate SVG Frame */}
+            {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center">
+              <div className="relative px-12 py-4 min-w-[220px]">
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 60" preserveAspectRatio="none">
+                  <path d="M10 5 L190 5 L195 10 L195 50 L190 55 L10 55 L5 50 L5 10 Z" fill={colors.border+'10'} stroke={colors.border} strokeWidth="1"/>
+                  <path d="M20 10 L180 10 L185 15 L185 45 L180 50 L20 50 L15 45 L15 15 Z" fill="none" stroke={colors.border} strokeWidth="0.5" opacity="0.5"/>
+                  <circle cx="10" cy="30" r="3" fill={colors.border}/>
+                  <circle cx="190" cy="30" r="3" fill={colors.border}/>
+                </svg>
+                <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(24px, 5vw, 32px)',color:colors.text, paddingTop:'2px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
               </div>
             </div>}
             
             {/* Bismillah Header */}
-            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-3" dir="rtl">
+            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-6" dir="rtl">
               <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
                 className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5]" 
                 style={{
@@ -770,15 +779,20 @@ export default function QuranPage(){
                 </span>;
               })}
             </div>
-          </div>})}
 
-          </div>
-          {/* Page number - centered with ornamental lines */}
-          <div className="flex items-center justify-center gap-2 mt-2 mb-1">
-            <div className="w-16 h-px" style={{background:`linear-gradient(to left,${colors.border},transparent)`}}/>
-            <span className="text-[13px] font-bold font-sans" style={{color:'#c8a96e'}}>{pg}</span>
-            <div className="w-16 h-px" style={{background:`linear-gradient(to right,${colors.border},transparent)`}}/>
-          </div>
+            {/* Ayah App Page Footer (Page Number) */}
+            <div className="mt-8 flex justify-center items-center opacity-40">
+              <div className="relative w-10 h-10 flex items-center justify-center font-bold text-xs" style={{color:colors.text}}>
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 40 40">
+                  <path d="M20 2 C10 2 2 10 2 20 C2 30 10 38 20 38 C30 38 38 30 38 20 C38 10 30 2 20 2" fill="none" stroke={colors.text} strokeWidth="0.5"/>
+                  <path d="M20 5 L22 18 L35 20 L22 22 L20 35 L18 22 L5 20 L18 18 Z" fill="none" stroke={colors.text} strokeWidth="0.5" opacity="0.3"/>
+                </svg>
+                {pg.toLocaleString('ar-EG')}
+              </div>
+            </div>
+          </div>;
+        })}
+      </div>
           {/* Desktop navigation */}
           {!isMobile&&showUI&&<div className="flex justify-center gap-3 mt-1 mb-3">
             <button onClick={()=>{if(pg>1)setPg(p=>p-1);}} disabled={pg<=1} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold disabled:opacity-30 flex items-center gap-1"><ChevronRight className="w-4 h-4"/>التالية</button>
