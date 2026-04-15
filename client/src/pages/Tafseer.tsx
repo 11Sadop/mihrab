@@ -730,13 +730,13 @@ export default function TafseerPage(){
         {pq.isLoading?<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p>فشل تحميل الصفحة</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة المحاولة</Button></div>
         :<div className="flex-1 w-full max-w-2xl mx-auto px-4 md:px-8 relative">
-            <div className="flex flex-col pt-24 pb-32">
+            <div className="flex flex-col pt-32 pb-32">
               {groups.map((g,gi)=>{
                 const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
-                const dynSize=allChars<350?'clamp(26px, 8.5vw, 42px)':
-                               allChars<550?'clamp(24px, 7.5vw, 40px)':
-                               allChars<800?'clamp(20px, 6vw, 34px)':
-                               'clamp(18px, 5.5vw, 30px)';
+                const dynSize=allChars<350?'clamp(22px, 5vw, 32px)':
+                               allChars<550?'clamp(20px, 4.5vw, 28px)':
+                               allChars<800?'clamp(18px, 4vw, 24px)':
+                               'clamp(16px, 3.5vw, 22px)';
                 const dynLine=allChars<400?'2.5':allChars<600?'2.3':allChars<800?'2.1':'2.0';
                 
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
