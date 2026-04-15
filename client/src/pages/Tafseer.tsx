@@ -34,7 +34,7 @@ const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
 // Normalize text - keep ALL marks for display except zero-width spaces
-const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'');
+const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED]/g,'');
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
 const spaceMuqattaat=(t:string)=>{
   // Preserve spacing for display but don't strip the actual diacritics
