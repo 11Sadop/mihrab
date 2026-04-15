@@ -173,7 +173,7 @@ export default function TafseerPage(){
   const toggleBookmark=(k:string)=>{
     setBookmarks(p=>{
       const n=new Set(p); if(n.has(k))n.delete(k); else n.add(k);
-      localStorage.setItem('q-bookmarks',JSON.stringify([...n]));
+      localStorage.setItem('q-bookmarks',JSON.stringify(Array.from(n)));
       return n;
     });
   };
@@ -657,8 +657,8 @@ export default function TafseerPage(){
           <span className="text-[10px] font-bold">🎤 الحفظ</span>
           {recTxt&&<span className="text-[9px] opacity-60 mr-2 truncate max-w-[150px]">🗣️ {recTxt.split(" ").slice(-4).join(" ")}</span>}
           <div className="flex gap-1">
-            <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">✓{[...hifzRes.values()].filter(v=>v==="ok").length}</span>
-            <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">✗{[...hifzRes.values()].filter(v=>v==="err").length}</span>
+            <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">✓{Array.from(hifzRes.values()).filter(v=>v==="ok").length}</span>
+            <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">✗{Array.from(hifzRes.values()).filter(v=>v==="err").length}</span>
           </div></div>
         {hifzFeedback&&<div className="mt-1 px-2 py-1 rounded-lg text-[11px] font-bold text-center animate-pulse" style={{background:hifzFeedback.type==='ok'?'rgba(34,197,94,0.2)':hifzFeedback.type==='wrong_verse'?'rgba(239,68,68,0.2)':'rgba(245,158,11,0.2)',color:hifzFeedback.type==='ok'?'#4ade80':hifzFeedback.type==='wrong_verse'?'#f87171':'#fbbf24'}}>{hifzFeedback.msg}{hifzFeedback.details&&<span className="block text-[10px] opacity-80 mt-0.5">{hifzFeedback.details.join(' • ')}</span>}</div>}
         <div className="flex gap-1.5 mt-1">

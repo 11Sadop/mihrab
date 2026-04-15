@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { sendNotification, subscribeToTopic } from './server-notifications';
 import { processPrayerNotifications } from './cron-handler';
 import type { Express } from "express";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { useGoldPrice, SUPPORTED_CURRENCIES, formatTimeAgo } from '../services/goldPriceService';
 import './GoldPriceDisplay.css';

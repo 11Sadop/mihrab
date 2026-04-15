@@ -344,7 +344,7 @@ const IQAMA_OFFSETS: Record<string, number> = {
     Isha: 15,
 };
 
-export function usePrayerNotifications(prayerTimings: Record<string, string> | null) {
+export function usePrayerNotifications(prayerTimings: Record<string, string> | null, hijriDate?: any) {
     const sentNotificationsRef = useRef<Set<string>>(new Set());
     const lastCheckMinuteRef = useRef<number>(-1);
 

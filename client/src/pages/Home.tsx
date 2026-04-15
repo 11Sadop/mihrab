@@ -13,6 +13,8 @@ import {
   Search,
   Library,
   ChevronLeft,
+  Mic,
+  Quote,
   RotateCcw,
   Share2
 } from "lucide-react";
@@ -46,7 +48,7 @@ export default function Home() {
   const handleShareHadith = async () => {
     if (!dailyHadith) return;
 
-    const textToShare = `${dailyHadith.arabicText || dailyHadith.text}\n\nيومك أجمل مع تطبيق محراب رفيقك الإسلامي 🕋\nhttps://mihrabapp.com`;
+    const textToShare = `${dailyHadith.arabicText || dailyHadith.translation}\n\nيومك أجمل مع تطبيق محراب رفيقك الإسلامي 🕋\nhttps://mihrabapp.com`;
 
     // Check if the native Share API is available (usually works well on mobile devices)
     if (navigator.share) {
@@ -179,7 +181,7 @@ export default function Home() {
             <div className="space-y-4">
               {/* Increased Font Size and Weight for clarity */}
               <p className="text-white text-lg sm:text-xl leading-loose font-bold font-arabic text-center px-2">
-                {dailyHadith.arabicText || dailyHadith.text}
+                {dailyHadith.arabicText}
               </p>
               {dailyHadith.translation && (
                 <p className="text-sm text-slate-300 text-center italic border-t border-white/5 pt-3">
