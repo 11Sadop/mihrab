@@ -119,7 +119,7 @@ export default function QuranPage(){
     }
   };
 
-  useSeo({title:"محراب رفيقك الاسلامي سنن مواقيت صلاة القران والتفسير صحة الاحاديث والقبلة",description:"محراب رفيقك الاسلامي سنن مواقيت صلاة القران والتفسير صحة الاحاديث والقبلة",canonicalPath:"/tafseer"});
+  useSeo({title:"محراب رفيقك الاسلامي",description:"محراب رفيقك الاسلامي - القران الكريم والتفسير ومواقيت الصلاة",canonicalPath:"/tafseer"});
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
   const [recId,setRecId]=useState("maher");
@@ -584,7 +584,6 @@ export default function QuranPage(){
       {showUI&&<div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-4" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
           <div className="flex items-center gap-2">
             <a href="/" className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><ArrowRight className="w-4 h-4"/></a>
-            <span className="text-[10px] md:text-[11px] opacity-80" style={{color:colors.text}}>محراب رفيقك الإسلامي - سنن مواقيت صلاة القران والتفسير صحة الاحاديث والقبلة</span>
           </div>
           
           {/* Hifz Indicators HUD */}
@@ -719,9 +718,10 @@ export default function QuranPage(){
             
             // Consistent elegant sizing
             const dynSize=allChars<300?'clamp(20px, 6.5vw, 32px)':
-                          allChars<500?'clamp(18px, 6vw, 28px)':
-                          allChars<800?'clamp(16px, 5.5vw, 24px)':
-                          'clamp(14px, 5vw, 20px)';
+                          allChars<400?'clamp(20px, 6.5vw, 31px)':
+                          allChars<600?'clamp(19px, 6.2vw, 30px)':
+                          allChars<850?'clamp(18.5px, 6vw, 28px)':
+                          'clamp(17px, 5.5vw, 25px)';
                           
             const dynLine=allChars<400?'2.5':allChars<600?'2.3':allChars<800?'2.1':'1.9';
             

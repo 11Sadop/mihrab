@@ -103,83 +103,55 @@ export default function Home() {
         </div>
       </section>
 
-
-
-      {/* 2. Primary Action: Mushaf/Quran - VERY PROMINENT */}
-      <Link href="/tafseer">
-        <div className="relative overflow-hidden group h-36 rounded-3xl bg-gradient-to-br from-[#c19e5d] via-[#d4b57e] to-[#8b6b35] p-6 shadow-xl shadow-amber-900/10 cursor-pointer overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]">
-           <div className="absolute right-[-10%] top-[-10%] w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all" />
-           <Book className="absolute left-4 top-1/2 -translate-y-1/2 w-32 h-32 text-white/10 -rotate-12 transition-transform group-hover:scale-110" />
-           <div className="relative z-10 h-full flex flex-col justify-center">
-             <div className="flex items-center gap-3">
-               <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
-                 <Book className="w-7 h-7 text-white" />
-               </div>
-               <div>
-                 <h2 className="text-2xl font-black text-white leading-tight">القرآن الكريم</h2>
-                 <p className="text-white/80 text-sm font-medium">مصحف محراب - تلاوة وتفسير</p>
-               </div>
-             </div>
-           </div>
-           <div className="absolute bottom-4 right-4 bg-white/20 p-2 rounded-full backdrop-blur-sm">
-             <ChevronLeft className="w-5 h-5 text-white" />
-           </div>
-        </div>
-      </Link>
-
-      {/* 3. Middle Stacked Cards (Verification & Sunnan) */}
-      <section className="grid grid-cols-2 gap-3">
-        {/* Verification Card */}
-        <Link href="/hadith-verify">
-          <div className="bg-[#0f172a] hover:bg-[#1e293b] text-white p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
-            <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-500 group-hover:bg-amber-500/20 transition-colors">
-              <Search className="w-6 h-6" />
+      {/* 2. Main Grid */}
+      <section className="grid grid-cols-2 gap-4">
+        <Link href="/tafseer">
+          <div className="bg-[#0f172a] hover:bg-[#1e293b] p-6 rounded-[2rem] flex flex-col items-center text-center gap-4 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
+            <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">
+              <Book className="w-8 h-8 font-bold" />
             </div>
             <div>
-              <h3 className="font-bold text-xs sm:text-sm">تأكد من الحديث</h3>
-              <p className="text-[10px] text-slate-500 mt-1">التحقق اللحظي</p>
+              <h3 className="font-bold text-base">القرآن الكريم</h3>
+              <p className="text-xs text-slate-500 mt-1">تفسير وتلاوة</p>
             </div>
           </div>
         </Link>
 
-        {/* Sunnah Card - Symbolic for Sunnah */}
         <Link href="/assistant">
-          <div className="bg-[#0f172a] hover:bg-[#1e293b] text-white p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
-            <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">
-              <Sun className="w-6 h-6" />
+          <div className="bg-[#0f172a] hover:bg-[#1e293b] p-6 rounded-[2rem] flex flex-col items-center text-center gap-4 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
+            <div className="p-4 bg-amber-500/10 rounded-2xl text-amber-500 group-hover:bg-amber-500/20 transition-colors">
+              <Sun className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="font-bold text-xs sm:text-sm">محراب رفيقك</h3>
-              <p className="text-[10px] text-slate-500 mt-1">السنن والأذكار</p>
+              <h3 className="font-bold text-base">محراب رفيقك</h3>
+              <p className="text-xs text-slate-500 mt-1">السنن والأذكار</p>
             </div>
           </div>
         </Link>
       </section>
 
-      {/* 4. Large Action Cards (Adhkar & Hadith Books) */}
-      <section className="grid grid-cols-2 gap-3">
-        {/* Adhkar */}
+      {/* 3. Mid Grid */}
+      <section className="grid grid-cols-2 gap-4">
         <Link href="/adhkar">
-          <div className="relative overflow-hidden h-32 rounded-2xl bg-gradient-to-br from-indigo-500 via-blue-600 to-indigo-800 p-4 flex flex-col items-center justify-center text-center shadow-lg shadow-indigo-900/20 cursor-pointer hover:scale-[1.02] transition-transform group">
-            <Shield className="absolute right-[-10%] bottom-[-10%] w-16 h-16 text-white/10 -rotate-12" />
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                <Heart className="w-6 h-6 text-white" />
-              </div>
-              <span className="font-bold text-white text-sm">الأذكار اليومية</span>
+          <div className="bg-[#0f172a] hover:bg-[#1e293b] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
+            <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500 group-hover:bg-indigo-500/20 transition-colors">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm">الأذكار</h3>
+              <p className="text-[10px] text-slate-500 mt-1">حصن المسلم</p>
             </div>
           </div>
         </Link>
 
-        {/* Hadith Books */}
         <Link href="/hadith-collections">
-          <div className="relative overflow-hidden h-32 rounded-2xl bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 p-4 flex flex-col items-center justify-center text-center shadow-lg shadow-black/20 cursor-pointer hover:scale-[1.02] transition-transform group">
-            <Library className="absolute right-[-10%] bottom-[-10%] w-16 h-16 text-white/10 -rotate-12" />
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                <Library className="w-6 h-6 text-white" />
-              </div>
-              <span className="font-bold text-white text-sm">أمهات الكتب</span>
+          <div className="bg-[#0f172a] hover:bg-[#1e293b] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
+            <div className="p-3 bg-slate-500/10 rounded-2xl text-slate-400 group-hover:bg-slate-500/20 transition-colors">
+              <Library className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm">أمهات الكتب</h3>
+              <p className="text-[10px] text-slate-500 mt-1">صحيح البخاري ومسلم</p>
             </div>
           </div>
         </Link>
