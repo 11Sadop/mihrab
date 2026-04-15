@@ -100,6 +100,27 @@ const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'التفسير الميسر'},{id
 export default function TafseerPage(){
   const nextAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  const handleEnded = () => {
+    const q = playQueueRef.current;
+    if (q && q.nis < q.maxNis) {
+      const nextNis = q.nis + 1;
+      playQueueRef.current = { ...q, nis: nextNis };
+      const rec = getReciter();
+      const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
+      
+      const a = audioRef.current;
+      if (a) {
+        a.src = url;
+        a.play().catch(() => setPlayingKey(""));
+        a.dataset.preloaded = ''; 
+        setPlayingKey(`${q.sn}-${nextNis}`);
+        ensureVerseVisible(q.sn, nextNis);
+      }
+    } else {
+      setPlayingKey("");
+    }
+  };
+
   const handleTimeUpdate = () => {
     const a = audioRef.current;
     if (!a) return;
@@ -283,13 +304,6 @@ export default function TafseerPage(){
   const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}};
   const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;playVerse(q.sn,q.nis);}};
 
-      const a=audioRef.current;
-      if(a){a.src=url;a.play().catch(()=>{});a.dataset.crossed='';}
-      setPlayingKey(`${q.sn}-${q.nis}`);
-      ensureVerseVisible(q.sn,q.nis);
-    }
-    else stopAudio();
-  };
 
   const handleErr=()=>{
     const q=playQueueRef.current;if(!q)return;

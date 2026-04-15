@@ -60,7 +60,7 @@ export interface IStorage {
     getMuslimBooks(): Promise<{ bookNumber: number; bookName: string; count: number }[]>;
     getBukhariHadiths(page: number, limit: number, bookNumber?: number, search?: string): Promise<HadithQueryResult>;
     getMuslimHadiths(page: number, limit: number, bookNumber?: number, search?: string): Promise<HadithQueryResult>;
-    registerPushToken(token: string): Promise<void>;
+    registerPushToken(token: string, city?: string, country?: string, latitude?: number, longitude?: number, method?: number, isActive?: boolean): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

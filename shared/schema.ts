@@ -125,8 +125,13 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 });
 // === SCHEMAS ===
 
-export const insertAdhkarSchema = createInsertSchema(adhkar).omit({ id: true });
+export const insertAdhkarSchema = createInsertSchema(adhkar, {
+    isCompleted: z.boolean(),
+}).omit({ id: true });
+
 export const insertDuaSchema = createInsertSchema(duas).omit({ id: true });
 export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions);
 export type PushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+export type Adhkar = typeof adhkar.$inferSelect;
+export type Dua = typeof duas.$inferSelect;
 
