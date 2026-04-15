@@ -800,9 +800,8 @@ export default function QuranPage(){
                 {pg.toLocaleString('ar-EG')}
               </div>
             </div>
-          </div>;
+            </div>
         })}
-      </div>
           {/* Desktop navigation */}
           {!isMobile&&showUI&&<div className="flex justify-center gap-3 mt-1 mb-3">
             <button onClick={()=>{if(pg>1)setPg(p=>p-1);}} disabled={pg<=1} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold disabled:opacity-30 flex items-center gap-1"><ChevronRight className="w-4 h-4"/>التالية</button>
