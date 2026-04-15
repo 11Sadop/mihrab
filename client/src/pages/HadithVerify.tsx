@@ -328,7 +328,7 @@ export default function HadithVerifyPage() {
 
                                     {/* Hadith Text */}
                                     <p
-                                        className="text-foreground leading-relaxed font-arabic"
+                                        className="text-foreground leading-relaxed font-hadith text-right"
                                         dir="rtl"
                                     >
                                         {hadith.text}

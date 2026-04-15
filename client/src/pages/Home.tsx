@@ -69,12 +69,12 @@ export default function Home() {
 
 
   return (
-    <main className="container max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pb-32 space-y-5 pt-12 sm:pt-14">
+    <main className="container max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pb-32 space-y-6 pt-12 sm:pt-14">
 
-      {/* 1. Next Prayer Hero - Premium Gold/Emerald Gradient */}
-      <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#0c4a3e] via-[#10b981] to-[#047857] text-white shadow-2xl shadow-emerald-900/40">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+      {/* 1. Next Prayer Hero - Emerald Glassmorphism */}
+      <section className="relative overflow-hidden rounded-[2.5rem] bg-[#064e3b] text-white shadow-2xl shadow-emerald-900/40">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#10b981]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
         <div className="relative p-8 text-center space-y-2">
           {isPrayerLoading || isRequestingLocation ? (
@@ -87,11 +87,11 @@ export default function Home() {
                 <span className="bg-white/10 px-4 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-emerald-100 backdrop-blur-md border border-white/5 mb-2">محراب رفيقك الإسلامي</span>
                 <p className="text-emerald-50/70 font-medium text-xs sm:text-sm">الصلاة القادمة</p>
               </div>
-              <h2 className="text-5xl sm:text-6xl font-black font-display tracking-tight text-white mb-2 drop-shadow-lg">{nextPrayer.name}</h2>
+              <h2 className="text-5xl sm:text-6xl font-black font-display tracking-tight text-white mb-2">{nextPrayer.name}</h2>
               <div className="text-4xl sm:text-5xl font-mono font-bold text-emerald-50" dir="ltr">{nextPrayer.time}</div>
 
               {prayerData?.date?.hijri && (
-                <div className="mt-6 pt-4 border-t border-white/10 text-xs text-white/70 font-bold flex items-center justify-center gap-2">
+                <div className="mt-6 pt-4 border-t border-white/5 text-xs text-white/50 font-bold flex items-center justify-center gap-2">
                   <Sun className="w-3 h-3 text-amber-400" />
                   <span>{prayerData.date.hijri.day} {prayerData.date.hijri.month.ar} {prayerData.date.hijri.year} هـ</span>
                 </div>
@@ -101,69 +101,94 @@ export default function Home() {
             <div className="text-center py-10">
               <Compass className="w-12 h-12 mx-auto text-white/30 mb-4 animate-pulse" />
               <p className="text-white/80 font-bold">يرجى تفعيل الموقع لعرض المواقيت</p>
-              <Link href="/settings" className="mt-3 inline-block bg-white/20 px-6 py-2 rounded-full text-xs font-bold text-white hover:bg-white/30 transition-colors">ضبط الإعدادات</Link>
+              <Link href="/settings" className="mt-3 inline-block bg-white/10 px-6 py-2 rounded-full text-xs font-bold text-white hover:bg-white/20 transition-colors">ضبط الإعدادات</Link>
             </div>
           )}
         </div>
       </section>
 
-      <section className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <Link href="/adhkar">
-          <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
-            <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500">
-              <Shield className="w-6 h-6" />
-            </div>
-            <h3 className="font-bold text-sm text-white">الأذكار</h3>
-          </div>
-        </Link>
+      {/* 2. List Actions (Hadith) */}
+      <section className="space-y-3">
         <Link href="/hadith-collections">
-          <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
-            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-400">
-              <BookText className="w-6 h-6" />
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 p-4 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-card transition-colors">
+            <div className="flex items-center gap-4 flex-row-reverse w-full">
+              <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-500">
+                <Library className="w-6 h-6" />
+              </div>
+              <div className="text-right flex-1">
+                <h3 className="font-bold text-base">كتب الحديث الصحيحة</h3>
+                <p className="text-xs text-muted-foreground">البخاري ومسلم والكتب الستة</p>
+              </div>
+              <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:-translate-x-1 transition-transform" />
             </div>
-            <h3 className="font-bold text-sm text-white">مكتبة الأحاديث</h3>
           </div>
         </Link>
         <Link href="/hadith-verify">
-          <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
-            <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400">
-              <Search className="w-6 h-6" />
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 p-4 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-card transition-colors">
+            <div className="flex items-center gap-4 flex-row-reverse w-full">
+              <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-500">
+                <Search className="w-6 h-6" />
+              </div>
+              <div className="text-right flex-1">
+                <h3 className="font-bold text-base">التحقق من صحة الحديث</h3>
+                <p className="text-xs text-muted-foreground">تأكد من صحة الأحاديث المروية</p>
+              </div>
+              <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:-translate-x-1 transition-transform" />
             </div>
-            <h3 className="font-bold text-sm text-white">تحقق من الحديث</h3>
+          </div>
+        </Link>
+      </section>
+
+      {/* 3. Main Action Grid (Adhkar/Duas) */}
+      <section className="grid grid-cols-2 gap-4">
+        <Link href="/duas">
+          <div className="relative overflow-hidden group cursor-pointer h-40 bg-gradient-to-br from-blue-600 to-blue-700 rounded-[2.5rem] shadow-lg shadow-blue-900/20 p-6 flex flex-col justify-end">
+            <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center font-black text-white text-2xl border border-white/20">د</div>
+            <div className="relative z-10 text-right">
+              <h3 className="text-white font-black text-xl">الأدعية</h3>
+              <p className="text-blue-100/70 text-xs font-medium">أدعية من الكتاب والسنة</p>
+            </div>
+          </div>
+        </Link>
+        <Link href="/adhkar">
+          <div className="relative overflow-hidden group cursor-pointer h-40 bg-gradient-to-br from-amber-500 to-amber-600 rounded-[2.5rem] shadow-lg shadow-amber-900/20 p-6 flex flex-col justify-end">
+            <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center font-black text-white text-2xl border border-white/20">أ</div>
+            <div className="relative z-10 text-right">
+              <h3 className="text-white font-black text-xl">الأذكار</h3>
+              <p className="text-amber-50/70 text-xs font-medium">الحصن والورد اليومي</p>
+            </div>
           </div>
         </Link>
       </section>
 
       {/* 4. Daily Hadith */}
-      <section className="bg-[#0f172a] rounded-2xl p-6 border border-white/5 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <Quote className="w-16 h-16 text-white" />
+      <section className="bg-card/30 backdrop-blur-md rounded-[2rem] p-6 border border-border/50 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-5">
+          <Quote className="w-16 h-16 text-foreground" />
         </div>
 
         <div className="relative z-10 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-emerald-400 font-bold text-sm flex items-center gap-2">
+            <h3 className="text-primary font-bold text-sm flex items-center gap-2">
               <Quote className="w-4 h-4" />
               حديث اليوم
             </h3>
             <div className="flex gap-1">
-              {/* Share Button */}
               {dailyHadith && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent"
                   onClick={handleShareHadith}
                   title="مشاركة الحديث"
                 >
                   <Share2 className="w-4 h-4" />
                 </Button>
               )}
-              {/* Refresh Button */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
                 title="تحديث الحديث"
@@ -175,48 +200,39 @@ export default function Home() {
 
           {isHadithLoading ? (
             <div className="flex justify-center py-4">
-              <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : dailyHadith ? (
             <div className="space-y-4">
-              {/* Increased Font Size and Weight for clarity */}
-              <p className="text-white text-lg sm:text-xl leading-loose font-bold font-arabic text-center px-2">
+              <p className="text-foreground text-lg sm:text-xl leading-loose font-bold font-arabic text-center px-2">
                 {dailyHadith.arabicText}
               </p>
-              {dailyHadith.translation && (
-                <p className="text-sm text-slate-300 text-center italic border-t border-white/5 pt-3">
-                  "{dailyHadith.translation}"
-                </p>
-              )}
               <div className="flex justify-center">
-                <span className="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full font-medium">
+                <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">
                   {dailyHadith.source}
                 </span>
               </div>
             </div>
           ) : (
-            <p className="text-center text-slate-500 text-sm">لا يوجد حديث</p>
+            <p className="text-center text-muted-foreground text-sm">لا يوجد حديث</p>
           )}
         </div>
       </section>
 
-      {/* 5. Bottom Grid */}
-      <section className="grid grid-cols-2 gap-3">
+      {/* 5. Bottom Tool Grid */}
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          // Order for grid:
-          // Row 1: أذكار الوقاية (Left), الورد اليومي (Right)
-          // Row 2: اتجاه القبلة (Left), حاسبة الزكاة (Right)
-          { href: "/protection", label: "أذكار الوقاية", icon: Shield, color: "text-indigo-400 bg-indigo-500/10" },
-          { href: "/ward", label: "الورد اليومي", icon: Book, color: "text-emerald-400 bg-emerald-500/10" },
-          { href: "/qibla", label: "اتجاه القبلة", icon: Compass, color: "text-teal-400 bg-teal-500/10" },
-          { href: "/zakat", label: "حاسبة الزكاة", icon: Calculator, color: "text-amber-400 bg-amber-500/10" },
+          { href: "/ward", label: "الورد اليومي", icon: Book, color: "text-emerald-500 bg-emerald-500/10" },
+          { href: "/qibla", label: "اتجاه القبلة", icon: Compass, color: "text-teal-500 bg-teal-500/10" },
+          { href: "/zakat", label: "حاسبة الزكاة", icon: Calculator, color: "text-amber-500 bg-amber-500/10" },
+          { href: "/protection", label: "أذكار الوقاية", icon: Shield, color: "text-indigo-500 bg-indigo-500/10" },
         ].map((item) => (
           <Link key={item.label} href={item.href}>
-            <div className="bg-[#0f172a] hover:bg-[#1e293b] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 h-24 border border-white/5 transition-colors cursor-pointer group">
+            <div className="bg-card/40 hover:bg-card border border-border/50 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 h-24 transition-all cursor-pointer group">
               <div className={cn("p-2 rounded-lg transition-transform group-hover:scale-110", item.color)}>
                 <item.icon className="w-5 h-5" />
               </div>
-              <span className="text-xs font-medium text-slate-300">{item.label}</span>
+              <span className="text-[11px] font-bold text-muted-foreground">{item.label}</span>
             </div>
           </Link>
         ))}

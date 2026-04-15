@@ -388,7 +388,7 @@ export default function HadithCollections() {
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1">{hadith.bookName}</p>
                             <p 
-                              className={`font-arabic text-base leading-relaxed ${expandedHadith === hadith.id ? '' : 'line-clamp-2'}`}
+                              className={`font-hadith text-base leading-relaxed text-right ${expandedHadith === hadith.id ? '' : 'line-clamp-2'}`}
                               dir="rtl"
                             >
                               {hadith.text}
@@ -469,7 +469,7 @@ export default function HadithCollections() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p 
-                                  className={`font-arabic text-sm leading-relaxed ${expandedHadith === hadith.id ? '' : 'line-clamp-2'}`}
+                                  className={`font-hadith text-sm leading-relaxed text-right ${expandedHadith === hadith.id ? '' : 'line-clamp-2'}`}
                                   dir="rtl"
                                 >
                                   {hadith.text}

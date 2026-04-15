@@ -98,23 +98,69 @@ const SAJDA_VERSES=new Set(['7:206','13:15','16:50','17:109','19:58','22:18','22
 const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'التفسير الميسر'},{id:'ar.jalalayn',name:'تفسير الجلالين'},{id:'ar.ibn-katheer',name:'تفسير ابن كثير'},{id:'ar.qurtubi',name:'تفسير القرطبي'},{id:'ar.baghawi',name:'تفسير البغوي'},{id:'ar.saddi',name:'تفسير السعدي'},{id:'ar.tabari',name:'تفسير الطبري'},];
 
 export default function TafseerPage(){
-  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audio1Ref = useRef<HTMLAudioElement | null>(null);
+  const audio2Ref = useRef<HTMLAudioElement | null>(null);
+  const activeAudioRef = useRef<'1'|'2'>('1');
+  const nextPreloadedKey = useRef<string>("");
+
+  useEffect(() => {
+    audio1Ref.current = new Audio();
+    audio2Ref.current = new Audio();
+    
+    const setup = (a: HTMLAudioElement) => {
+      a.addEventListener('ended', handleEnded);
+      a.addEventListener('timeupdate', handleTimeUpdate);
+      a.addEventListener('error', handleErr);
+    };
+    if(audio1Ref.current) setup(audio1Ref.current);
+    if(audio2Ref.current) setup(audio2Ref.current);
+
+    return () => {
+      audio1Ref.current?.pause();
+      audio2Ref.current?.pause();
+    };
+  }, []);
+
+  const playLocalSound = (type: 'ok'|'error') => {
+    const urls = {
+      ok: 'https://cdn.pixabay.com/audio/2022/03/15/audio_7833324f4e.mp3', // Short ding
+      error: 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb6430386c.mp3' // Subtle error
+    };
+    new Audio(urls[type]).play().catch(()=>{});
+  };
+
+  const currentAudio = () => activeAudioRef.current === '1' ? audio1Ref.current : audio2Ref.current;
+  const bufferAudio = () => activeAudioRef.current === '1' ? audio2Ref.current : audio1Ref.current;
 
   const handleEnded = () => {
     const q = playQueueRef.current;
     if (q && q.nis < q.maxNis) {
       const nextNis = q.nis + 1;
-      playQueueRef.current = { ...q, nis: nextNis };
-      const rec = getReciter();
-      const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
+      const nextKey = `${q.sn}-${nextNis}`;
       
-      const a = audioRef.current;
-      if (a) {
-        a.src = url;
-        a.play().catch(() => setPlayingKey(""));
-        a.dataset.preloaded = ''; 
-        setPlayingKey(`${q.sn}-${nextNis}`);
-        ensureVerseVisible(q.sn, nextNis);
+      // Swap to buffer if it's ready
+      if (nextPreloadedKey.current === nextKey) {
+        activeAudioRef.current = activeAudioRef.current === '1' ? '2' : '1';
+        const a = currentAudio();
+        if (a) {
+          a.play().catch(() => setPlayingKey(""));
+          setPlayingKey(nextKey);
+          ensureVerseVisible(q.sn, nextNis);
+          playQueueRef.current = { ...q, nis: nextNis };
+          nextPreloadedKey.current = "";
+        }
+      } else {
+        // Fallback if not preloaded
+        const rec = getReciter();
+        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
+        const a = currentAudio();
+        if (a) {
+          a.src = url;
+          a.play().catch(() => setPlayingKey(""));
+          setPlayingKey(nextKey);
+          ensureVerseVisible(q.sn, nextNis);
+          playQueueRef.current = { ...q, nis: nextNis };
+        }
       }
     } else {
       setPlayingKey("");
@@ -122,26 +168,32 @@ export default function TafseerPage(){
   };
 
   const handleTimeUpdate = () => {
-    const a = audioRef.current;
+    const a = currentAudio();
     if (!a) return;
+    
+    // UI Progress
     const bar = document.getElementById('scrubBar') as HTMLInputElement;
     if (bar && a.duration) { bar.value = String((a.currentTime / a.duration) * 100); }
     
+    // Preload Logic
     const q = playQueueRef.current;
-    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 0.3) {
-      if (!a.dataset.preloaded) {
-        a.dataset.preloaded = '1';
+    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 1.5) {
+      const nextNis = q.nis + 1;
+      const nextKey = `${q.sn}-${nextNis}`;
+      if (nextPreloadedKey.current !== nextKey) {
         const rec = getReciter();
-        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
-        // Pre-buffer next verse in a hidden element
-        if(!nextAudioRef.current) nextAudioRef.current = new Audio();
-        nextAudioRef.current.src = url;
-        nextAudioRef.current.load();
+        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
+        const b = bufferAudio();
+        if (b) {
+          b.src = url;
+          b.load();
+          nextPreloadedKey.current = nextKey;
+        }
       }
     }
   };
 
-  useSeo({title:"محراب رفيقك الإسلامي",description:"محراب رفيقك الإسلامي - القرآن الكريم والتفسير ومواقيت الصلاة",canonicalPath:"/tafseer"});
+  useSeo({title:"محراب - رفيقك الإسلامي",description:"محراب رفيقك الإسلامي - القرآن الكريم والتفسير ومواقيت الصلاة",canonicalPath:"/tafseer"});
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
   const [recId,setRecId]=useState("maher");
@@ -182,7 +234,6 @@ export default function TafseerPage(){
   const [playingKey,setPlayingKey]=useState("");
   const [playingSn,setPlayingSn]=useState(0);
 
-  const audioRef=useRef<HTMLAudioElement>(null);
   const searchRef=useRef<HTMLInputElement>(null);
   const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
   const hifzTxtRef=useRef(''); 
@@ -251,7 +302,7 @@ export default function TafseerPage(){
 
   const playVerse=(sn:number,nis:number)=>{
     const rec=getReciter();
-    const a=audioRef.current;
+    const a=currentAudio();
     if(!a)return;
     
     if('mediaSession' in navigator){
@@ -282,13 +333,17 @@ export default function TafseerPage(){
   };
 
   const stopAudio=()=>{
-    if(audioRef.current){audioRef.current.pause();audioRef.current.removeAttribute('src');}
+    audio1Ref.current?.pause();
+    if(audio1Ref.current) audio1Ref.current.src = "";
+    audio2Ref.current?.pause();
+    if(audio2Ref.current) audio2Ref.current.src = "";
+    
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
     if('mediaSession' in navigator)navigator.mediaSession.playbackState='none';
   };
 
   const togglePlay=()=>{
-    const a=audioRef.current;
+    const a=currentAudio();
     if(isPlaying){
       if(a)a.pause();
       setIsPlaying(false);
@@ -304,13 +359,13 @@ export default function TafseerPage(){
   const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}};
   const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;playVerse(q.sn,q.nis);}};
 
-
   const handleErr=()=>{
     const q=playQueueRef.current;if(!q)return;
     const rec=getReciter();
-    if(rec.ev&&audioRef.current&&!audioRef.current.src.includes('mirrors.quranicaudio.com')){
-      audioRef.current.src=`https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
-      audioRef.current.play().catch(()=>skipNext());
+    const a = currentAudio();
+    if(rec.ev && a && !a.src.includes('mirrors.quranicaudio.com')){
+      a.src=`https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
+      a.play().catch(()=>skipNext());
       return;
     }
     skipNext();
@@ -320,7 +375,7 @@ export default function TafseerPage(){
     setRecId(newId);recIdRef.current=newId;
     const q=playQueueRef.current;
     if(q&&isPlaying){
-      if(audioRef.current)audioRef.current.pause();
+      currentAudio()?.pause();
       setTimeout(()=>playVerse(q.sn,q.nis),50);
     }
   };
@@ -339,22 +394,32 @@ export default function TafseerPage(){
       const exp=pq.data[hifzIdx]; if(!exp) return;
 
       let transcript='';
-      for(let i=e.resultIndex;i<e.results.length;i++) transcript+=e.results[i][0].transcript;
+      // Use only the latest results to avoid "carrying over" previous verse matches
+      const latestIdx = e.results.length - 1;
+      transcript = e.results[latestIdx][0].transcript;
       
       const sw=normAr(transcript).split(' ').filter(w=>w.length>1);
       hifzTxtRef.current = transcript;
       setRecTxt(transcript);
 
       const ew=normAr(exp.text).split(' ').filter(w=>w.length>1);
-      let matched=0;
-      for(const w of ew) if(sw.some(s=>s.includes(w)||w.includes(s))) matched++;
+      // More robust matching: check if many words from current verse are present in the recent transcript
+      let matchedCount=0;
+      const recentWindow = sw.slice(-Math.min(sw.length, ew.length + 5));
+      for(const targetWord of ew) {
+        if(recentWindow.some(saidWord => saidWord.includes(targetWord) || targetWord.includes(saidWord))) {
+          matchedCount++;
+        }
+      }
       
-      const completeRatio = ew.length>0?matched/ew.length:0;
+      const completeRatio = ew.length>0 ? matchedCount/ew.length : 0;
       
-      if(completeRatio >= 0.7 && !isAdvancingRef.current){
+      // Higher threshold (0.75) for better accuracy, must be currently memorizing
+      if(completeRatio >= 0.75 && !isAdvancingRef.current){
         isAdvancingRef.current = true;
         setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
         setHifzStatus('ok');
+        playLocalSound('ok');
         const k=`${exp.sn}-${exp.nis}`;
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'ok');return n;});
         
@@ -369,7 +434,7 @@ export default function TafseerPage(){
           setHifzFeedback(null);
           hifzTxtRef.current = '';
           setRecTxt('');
-        }, 800);
+        }, 1200);
       }
     };
 
@@ -381,7 +446,13 @@ export default function TafseerPage(){
   },[hifzIdx,pq.data,recording]);
 
   const stopHifz=useCallback(()=>{if(recRef.current){recRef.current.onend=null;try{recRef.current.stop();}catch{}recRef.current=null;}setRecording(false);},[]);
-  const reveal=(i:number)=>{if(!pq.data)return;const a=pq.data[i];setHifzRes(prev=>{const m=new Map(prev);m.set(`${a.sn}-${a.nis}`,"err");return m;});if(i===hifzIdx)setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));};
+  const reveal=(i:number)=>{
+    if(!pq.data)return;
+    const a=pq.data[i];
+    playLocalSound('error');
+    setHifzRes(prev=>{const m=new Map(prev);m.set(`${a.sn}-${a.nis}`,"err");return m;});
+    if(i===hifzIdx)setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
+  };
 
   useEffect(()=>{return()=>{stopHifz();stopAudio();};},[]);
   useEffect(()=>{if(showSearch&&searchRef.current)setTimeout(()=>searchRef.current?.focus(),100);},[showSearch]);
@@ -403,50 +474,39 @@ export default function TafseerPage(){
     if(!selVerse)return;
     const c=QBG[qTheme]||QBG.cream;
     const sname=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';
-    // Use dom-to-image approach: create a hidden div, render, capture
     const wrap=document.createElement('div');
     wrap.style.cssText=`position:fixed;left:-9999px;top:0;width:1080px;padding:80px 60px;background:${c.bg};direction:rtl;text-align:center;font-family:'KFGQPC HAFS Uthmanic Script','Amiri Quran','Amiri',serif;`;
-    // Surah header
     const hdr=document.createElement('div');
     hdr.style.cssText=`display:inline-block;border:2px solid ${c.border};padding:16px 60px;margin-bottom:40px;position:relative;`;
     hdr.innerHTML=`<span style="font-size:40px;color:${c.text};font-weight:bold;">سُورَةُ ${sname}</span>`;
     wrap.appendChild(hdr);
-    // Verse text
     const txt=document.createElement('p');
     txt.style.cssText=`font-size:42px;line-height:2.2;color:${c.text};margin:20px 0 40px;padding:0 20px;`;
     txt.textContent=text;
     wrap.appendChild(txt);
-    // Divider + ref
     const divider=document.createElement('div');
     divider.style.cssText=`display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px;`;
     divider.innerHTML=`<div style="width:80px;height:1px;background:${c.border}"></div><span style="font-size:20px;color:${c.border};font-family:sans-serif;font-weight:bold;">${selVerse.sn}:${refs}</span><div style="width:80px;height:1px;background:${c.border}"></div>`;
     wrap.appendChild(divider);
-    // Watermark
     const wm=document.createElement('div');
     wm.style.cssText=`margin-top:40px;font-size:16px;color:${c.border};font-family:sans-serif;direction:ltr;`;
     wm.textContent='تطبيق محراب - mihrabapp.com';
     wrap.appendChild(wm);
     document.body.appendChild(wrap);
-    // Use html2canvas-like approach with canvas
     try{
       const cv=document.createElement('canvas');
       const rect=wrap.getBoundingClientRect();
       cv.width=1080;cv.height=Math.max(1080,rect.height+40);
       const ctx=cv.getContext('2d');if(!ctx){document.body.removeChild(wrap);return;}
-      // Draw background
       ctx.fillStyle=c.bg;ctx.fillRect(0,0,cv.width,cv.height);
-      // Since we can't perfectly render HTML to canvas without a library,
-      // fallback to the canvas text approach but using the CORRECT font
       const fontQ="'KFGQPC HAFS Uthmanic Script','Amiri Quran','Amiri',serif";
       ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';
-      // Header box
       const boxY=100;
       ctx.strokeStyle=c.border;ctx.lineWidth=2.5;
       ctx.strokeRect(290,boxY,500,80);
       ctx.font=`۞`; ctx.fillText('۞',245,boxY+40);ctx.fillText('۞',835,boxY+40);
       ctx.font=`bold 42px ${fontQ}`;ctx.fillStyle=c.text;
       ctx.fillText(`سُورَةُ ${sname}`,540,boxY+42);
-      // Verse text - word wrap
       ctx.font=`42px ${fontQ}`;ctx.fillStyle=c.text;
       const maxW=920;const words=text.split(' ');
       let line='',y=280;
@@ -456,16 +516,13 @@ export default function TafseerPage(){
         else line=test;
       }
       if(line){ctx.fillText(line.trim(),540,y);y+=88;}
-      // Divider
       ctx.strokeStyle=c.border;ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(340,y+10);ctx.lineTo(740,y+10);ctx.stroke();
       ctx.font='bold 20px sans-serif';ctx.fillStyle=c.text;
       ctx.fillText(`${selVerse.sn}:${refs}${pg ? `  |  صفحة ${pg}` : ''}`, 540, y + 10);
-      // Watermark
       const wmY=Math.max(y+80,cv.height-40);
       ctx.font='16px sans-serif';ctx.fillStyle=c.border;
       ctx.fillText('تشرفت بالمشاركة عبر تطبيق محراب - mihrabapp.com',540,wmY);
-      // Resize canvas to actual content
       if(y+120<cv.height){
         const finalH=y+120;
         const imgData=ctx.getImageData(0,0,cv.width,finalH);
@@ -541,9 +598,6 @@ export default function TafseerPage(){
 
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
-      {/* Audio elements - main + preload for smooth transitions */}
-      <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
-      
       {/* ═══ TOP BAR (Unified) ═══ */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-4" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
           <div className="flex items-center gap-2">
@@ -670,124 +724,124 @@ export default function TafseerPage(){
       </div>}
 
       {/* ═══ MUSHAF ═══ */}
-      <div className="overflow-y-auto"
-        style={{height:'calc(100dvh - env(safe-area-inset-top,0px))',marginTop:(showUI?55:0)+(hifz&&showUI?46:0),paddingTop:0,paddingBottom:(playingSn?80:20)}}
-        
+      <div className="overflow-y-auto scrollbar-hide flex flex-col"
+        style={{height:'calc(100dvh - env(safe-area-inset-top,0px))', marginTop:(showUI?55:0)+(hifz&&showUI?46:0)}}
         onTouchStart={onTS} onTouchEnd={onTE}>
-                {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
-        :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col flex-1 px-4 md:px-6 min-h-screen justify-center overflow-hidden" style={{maxWidth:680,margin:'0 auto',width:'100%',paddingTop:40,paddingBottom:20}}>
-            <div className="flex-1 flex flex-col justify-center scrollbar-hide" id="mushaf-container">
-          {groups.map((g,gi)=>{
-            const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
-            
-            // Dynamic sizing for high density and vertical fit
-            const dynSize=allChars<300?'clamp(26px, 8vw, 48px)':
-                          allChars<450?'clamp(24px, 7vw, 40px)':
-                          allChars<700?'clamp(22px, 6vw, 34px)':
-                          'clamp(18px, 5.5vw, 28px)';
-            
-            const dynLine=allChars<400?'2.4':allChars<600?'2.2':allChars<800?'2.0':'1.9';
-            
-            return <div key={`${g.sn}-${gi}`} className="relative pb-10">
-              {/* Ayah App Page Headers */}
-              <div className="flex justify-between items-center mb-6 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
-                <span>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
-                <span>الْجُزْءُ {juzForPage(pg).toLocaleString('ar-EG')}</span>
-              </div>
-
-            {/* Surah Header - Ornate SVG Frame */}
-            {g.ayahs[0].nis===1&&<div className="text-center my-4 flex justify-center scale-90">
-              <div className="relative px-10 py-3 min-w-[180px]">
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 60" preserveAspectRatio="none">
-                  <path d="M10 5 L190 5 L195 10 L195 50 L190 55 L10 55 L5 50 L5 10 Z" fill={colors.border+'10'} stroke={colors.border} strokeWidth="1"/>
-                  <path d="M20 10 L180 10 L185 15 L185 45 L180 50 L20 50 L15 45 L15 15 Z" fill="none" stroke={colors.border} strokeWidth="0.5" opacity="0.5"/>
-                </svg>
-                <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(18px, 4vw, 24px)',color:colors.text, paddingTop:'1px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
-              </div>
-            </div>}
-            
-            {/* Bismillah Header */}
-            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-1 mb-4" dir="rtl">
-              <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
-                className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.2] block" 
-                style={{
-                  fontSize: dynSize,
-                  color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#fff' : colors.text,
-                  background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
-                  padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '2px 6px' : '0'
-                }}>
-                بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
-                {g.sn===1 && <span className="inline-flex items-center justify-center rounded-full mx-2 font-sans font-bold" style={{width:'2.2em',height:'2.2em',fontSize:'0.45em',verticalAlign:'middle',border:`1px solid ${(playingKey===`${g.sn}-1`)?'#22c55e':colors.border}`,color:(playingKey===`${g.sn}-1`)?'#22c55e':colors.border,background:(playingKey===`${g.sn}-1`)?'rgba(34,197,94,0.1)':'transparent',opacity:0.8}}>1</span>}
-              </span>
-            </div>}
-            
-            {/* Verses */}
-            <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em', textAlignLast: 'center'}}>
-              {g.ayahs.map(a=>{
-                if(a.nis===1 && g.sn===1) return null;
+        {pq.isLoading?<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
+        :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p>فشل تحميل الصفحة</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة المحاولة</Button></div>
+        :<div className="flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 md:px-8 justify-center min-h-full py-4 relative">
+            <div className="flex-1 flex flex-col justify-center">
+              {groups.map((g,gi)=>{
+                const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
+                const dynSize=allChars<350?'clamp(32px, 10vw, 56px)':
+                               allChars<550?'clamp(26px, 8vw, 46px)':
+                               allChars<800?'clamp(22px, 6.5vw, 38px)':
+                               'clamp(19px, 5.8vw, 32px)';
+                const dynLine=allChars<400?'2.5':allChars<600?'2.3':allChars<800?'2.1':'2.0';
                 
-                const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
-                const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
-                return<span key={k} className="inline" data-v="1" id={`verse-${g.sn}-${a.nis}`}>
-                  <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
-                    className="transition-all duration-200 rounded cursor-pointer"
-                    style={{
-                      color:hidden?'transparent':isP?'#fff':hr==='err'?'#f87171':colors.text,
-                      background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
-                      padding:(isP||isSel)?'3px 6px':'0',borderRadius:(isP||isSel)?'8px':'0',
-                    }}>
-                    {a.text}
-                  </span>
-                  {/* Ornamental golden verse marker ❁ */}
-                  <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
-                    style={{width:'1.6em',height:'1.6em',fontSize:'0.55em',verticalAlign:'middle',position:'relative',display:'inline-flex'}}>
-                    <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
-                      <circle cx="25" cy="25" r="22" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="1.5"/>
-                      <circle cx="25" cy="25" r="18" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="0.8"/>
-                      {[0,45,90,135,180,225,270,315].map(deg=><circle key={deg} cx={25+20*Math.cos(deg*Math.PI/180)} cy={25+20*Math.sin(deg*Math.PI/180)} r="1.8" fill={isP?'#22c55e':'#c8a96e'}/>)}
-                    </svg>
-                    <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:700,color:isP?'#22c55e':bookmarks.has(k)?'#ec4899':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
-                  </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#22c55e':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
-                </span>;
+                return <div key={`${g.sn}-${gi}`} className="relative w-full">
+                  {/* Surah/Juz Header */}
+                  <div className="flex justify-between items-center mb-6 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
+                    <span>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
+                    <span>الْجُزْءُ {juzForPage(pg).toLocaleString('ar-EG')}</span>
+                  </div>
+
+                  {/* Surah Frame (Only for verse 1) */}
+                  {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center scale-110">
+                    <div className="relative px-12 py-3 min-w-[220px]">
+                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 60" preserveAspectRatio="none">
+                        <path d="M10 5 L190 5 L195 10 L195 50 L190 55 L10 55 L5 50 L5 10 Z" fill={colors.border+'10'} stroke={colors.border} strokeWidth="1.5"/>
+                        <circle cx="10" cy="30" r="3" fill={colors.border}/> <circle cx="190" cy="30" r="3" fill={colors.border}/>
+                      </svg>
+                      <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(20px, 4.5vw, 26px)',color:colors.text, paddingTop:'2px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
+                    </div>
+                  </div>}
+                  
+                  {/* Basmala */}
+                  {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-8" dir="rtl">
+                    <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
+                      className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5] block" 
+                      style={{
+                        fontSize: dynSize,
+                        color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#fff' : colors.text,
+                        background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
+                        padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 12px' : '0'
+                      }}>
+                      بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
+                      {g.sn===1 && (
+                        <span className="inline-flex items-center justify-center align-middle mx-3" 
+                          style={{width:'1.7em',height:'1.7em',fontSize:'0.52em',verticalAlign:'middle',position:'relative'}}>
+                          <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
+                            <circle cx="25" cy="25" r="23" fill="none" stroke={(playingKey===`${g.sn}-1`)?'#22c55e':'#c8a96e'} strokeWidth="1.5"/>
+                            <circle cx="25" cy="25" r="19" fill="none" stroke={(playingKey===`${g.sn}-1`)?'#22c55e':'#c8a96e'} strokeWidth="0.8" opacity="0.6"/>
+                          </svg>
+                          <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:800,color:(playingKey===`${g.sn}-1`)?'#22c55e':'#8b7355',lineHeight:1}}>1</span>
+                        </span>
+                      )}
+                    </span>
+                  </div>}
+                  
+                  {/* Ayahs Grid */}
+                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em', textAlignLast: 'center'}}>
+                    {g.ayahs.map(a=>{
+                      if(a.nis===1 && g.sn===1) return null;
+                      const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
+                      const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
+                      return<span key={k} className="inline" data-v="1" id={`verse-${g.sn}-${a.nis}`}>
+                        <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
+                          className="transition-all duration-200 rounded cursor-pointer"
+                          style={{
+                            color:hidden?'transparent':isP?'#fff':hr==='err'?'#f87171':colors.text,
+                            background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
+                            padding:(isP||isSel)?'4px 10px':'0',borderRadius:(isP||isSel)?'10px':'0',
+                          }}>
+                          {a.text}
+                        </span>
+                        <span className="inline-flex items-center justify-center align-middle mx-1.5" data-v="1"
+                          style={{width:'1.7em',height:'1.7em',fontSize:'0.52em',verticalAlign:'middle',position:'relative',display:'inline-flex'}}>
+                          <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
+                            <circle cx="25" cy="25" r="23" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="1.5"/>
+                            <circle cx="25" cy="25" r="19" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="0.8" opacity="0.6"/>
+                            {[0,45,90,135,180,225,270,315].map(deg=><circle key={deg} cx={25+21*Math.cos(deg*Math.PI/180)} cy={25+21*Math.sin(deg*Math.PI/180)} r="2" fill={isP?'#22c55e':'#c8a96e'}/>)}
+                          </svg>
+                          <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:800,color:isP?'#22c55e':bookmarks.has(k)?'#ec4899':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
+                        </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#22c55e':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
+                      </span>;
+                    })}
+                  </div>
+                </div>
               })}
             </div>
-
-            {/* Simple Elegant Page Footer */}
-            <div className="mt-8 mb-10 flex justify-center items-center opacity-40">
-              <div className="relative w-12 h-12 flex items-center justify-center font-sans font-bold text-[14px]" style={{color:colors.text}}>
-                <svg className="absolute inset-0 w-full h-full opacity-60" viewBox="0 0 40 40">
-                   <path d="M20 2L24.5 9H31L31 15.5L38 20L31 24.5V31H24.5L20 38L15.5 31H9V24.5L2 20L9 15.5V9H15.5Z" fill="none" stroke={colors.text} strokeWidth="1.5"/>
-                </svg>
-                {pg.toLocaleString('ar-EG')}
-              </div>
+            
+            {/* Elegant Fixed Page Footer */}
+            <div className="mt-12 mb-20 flex justify-center items-center gap-6 opacity-60">
+                <div className="h-px flex-1 max-w-[80px]" style={{background:`linear-gradient(to right, transparent, ${colors.border})`}} />
+                <div className="flex flex-col items-center">
+                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 mb-1" style={{color:colors.text}}>صفحة</span>
+                    <span className="text-sm font-bold tracking-widest" style={{color:colors.text}}>{pg.toLocaleString('ar-EG')}</span>
+                </div>
+                <div className="h-px flex-1 max-w-[80px]" style={{background:`linear-gradient(to left, transparent, ${colors.border})`}} />
             </div>
-            </div>
-        })}
-          {/* Desktop navigation */}
-          {!isMobile&&showUI&&<div className="flex justify-center gap-3 mt-1 mb-3">
-            <button onClick={()=>{if(pg>1)setPg(p=>p-1);}} disabled={pg<=1} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold disabled:opacity-30 flex items-center gap-1"><ChevronRight className="w-4 h-4"/>التالية</button>
-            <button onClick={()=>{if(pg<604)setPg(p=>p+1);}} disabled={pg>=604} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold disabled:opacity-30 flex items-center gap-1">السابقة<ChevronLeft className="w-4 h-4"/></button>
-          </div>}
-        </div>
-      </div>}
-    </div>
+        </div>}
+      </div>
 
       {/* ═══ BOTTOM PLAYER ═══ */}
-      {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.2)]" style={{paddingBottom:'env(safe-area-inset-bottom,4px)'}}>
-        <div className="w-full px-6 mb-2 mt-2">            <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" style={{width:'100%', accentColor:'#10b981', height:'4px', cursor:'pointer'}}               onChange={(e)=>{ if(audioRef.current){ audioRef.current.currentTime = (Number(e.target.value)/100)*audioRef.current.duration; } }}/>          </div>
-<div className="flex items-center justify-between px-4 pt-2 pb-1">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="bg-transparent text-foreground text-[12px] border-0 outline-none min-w-0 truncate max-w-[130px]">
+      {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card/90 backdrop-blur-md border-t border-border shadow-[0_-4px_25px_rgba(0,0,0,0.15)]" style={{paddingBottom:'env(safe-area-inset-bottom,6px)'}}>
+        <div className="w-full px-6 mb-1 mt-1">
+          <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" className="w-full h-1 bg-emerald-500/10 accent-emerald-500 rounded-full appearance-none cursor-pointer"/>
+        </div>
+        <div className="flex items-center justify-between px-5 pt-1 pb-1 flex-row-reverse">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[10px] text-muted-foreground">{playingName} |</span>
+            <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="bg-transparent text-foreground text-[12px] font-bold border-0 outline-none max-w-[120px] truncate">
               {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
-            <span className="text-[10px] text-muted-foreground">| {playingName}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={skipPrev} className="p-1 text-muted-foreground"><SkipForward className="w-4 h-4"/></button>
-            <button onClick={togglePlay} className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
-              {isPlaying?<Pause className="w-4 h-4"/>:<Play className="w-4 h-4 ml-0.5"/>}</button>
-            <button onClick={skipNext} className="p-1 text-muted-foreground"><SkipBack className="w-4 h-4"/></button>
-            <button onClick={stopAudio} className="p-1"><Square className="w-4 h-4 text-red-400"/></button>
+          <div className="flex items-center gap-4">
+            <button onClick={skipPrev} className="p-1.5 text-muted-foreground hover:text-foreground"><SkipForward className="w-5 h-5"/></button>
+            <button onClick={togglePlay} className="w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg transition-transform active:scale-90">
+              {isPlaying?<Pause className="w-5 h-5"/>:<Play className="w-5 h-5 ml-1"/>}</button>
+            <button onClick={skipNext} className="p-1.5 text-muted-foreground hover:text-foreground"><SkipBack className="w-5 h-5"/></button>
+            <button onClick={stopAudio} className="p-1.5"><Square className="w-4 h-4 text-red-500 opacity-60 hover:opacity-100"/></button>
           </div>
         </div>
       </div>}

@@ -248,39 +248,6 @@ export default function SettingsPage() {
 
       <main className="container max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
 
-        <section>
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 px-2 text-right">مظهر التطبيق</h3>
-          <div className="bg-card rounded-2xl border border-border p-4">
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-              {[
-                {id:'emerald', color:'#10b981', name:'زمردي'},
-                {id:'blue', color:'#3b82f6', name:'أزرق'},
-                {id:'maroon', color:'#be123c', name:'عنابي'},
-                {id:'sand', color:'#d97706', name:'رملي'},
-                {id:'purple', color:'#a855f7', name:'بنفسجي'},
-                {id:'gold', color:'#eab308', name:'ذهبي'},
-                {id:'slate', color:'#475569', name:'رمادي'},
-                {id:'teal', color:'#0d9488', name:'تيل'},
-                {id:'rose', color:'#f43f5e', name:'وردي'},
-                {id:'forest', color:'#14532d', name:'غابة'},
-                {id:'ocean', color:'#0284c7', name:'محيط'},
-                {id:'lavender', color:'#a78bfa', name:'خزامى'},
-              ].map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setAppTheme(t.id)}
-                  className={`group relative flex flex-col items-center gap-1`}
-                >
-                  <div 
-                    className={`w-10 h-10 rounded-full border-2 transition-all ${appTheme === t.id ? 'border-primary scale-110 shadow-md ring-2 ring-primary/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
-                    style={{ backgroundColor: t.color }}
-                  />
-                  <span className={`text-[10px] ${appTheme === t.id ? 'font-bold text-primary' : 'text-muted-foreground'}`}>{t.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
 
         <section>
           <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 px-2 text-right">الموقع والوقت</h3>
@@ -805,6 +772,41 @@ export default function SettingsPage() {
             </div>
           </section>
         )}
+        <section>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 px-2 text-right">مظهر التطبيق</h3>
+          <div className="bg-card rounded-2xl border border-border p-5">
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
+              {[
+                {id:'emerald', color:'#10b981', name:'زمردي'},
+                {id:'blue', color:'#3b82f6', name:'أزرق'},
+                {id:'maroon', color:'#be123c', name:'عنابي'},
+                {id:'sand', color:'#d97706', name:'رملي'},
+                {id:'purple', color:'#a855f7', name:'بنفسجي'},
+                {id:'gold', color:'#eab308', name:'ذهبي'},
+                {id:'slate', color:'#475569', name:'رمادي'},
+                {id:'teal', color:'#0d9488', name:'تيل'},
+                {id:'rose', color:'#f43f5e', name:'وردي'},
+                {id:'forest', color:'#14532d', name:'غابة'},
+                {id:'ocean', color:'#0284c7', name:'محيط'},
+                {id:'lavender', color:'#a78bfa', name:'خزامى'},
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setAppTheme(t.id)}
+                  className={`group relative flex flex-col items-center gap-2 transition-all active:scale-95`}
+                >
+                  <div 
+                    className={`w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${appTheme === t.id ? 'border-primary scale-110 shadow-[0_0_15px_rgba(var(--primary),0.3)] ring-2 ring-primary/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                    style={{ backgroundColor: t.color }}
+                  >
+                    {appTheme === t.id && <Check className="w-6 h-6 text-white drop-shadow-md" />}
+                  </div>
+                  <span className={`text-[11px] font-bold ${appTheme === t.id ? 'text-primary' : 'text-muted-foreground'}`}>{t.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {isInstalled && (
           <section>

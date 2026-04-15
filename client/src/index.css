@@ -92,6 +92,12 @@
               -webkit-font-smoothing: antialiased;
               -moz-osx-font-smoothing: grayscale;
       }
+      .font-hadith {
+              font-family: 'Scheherazade New', 'Amiri', serif;
+              line-height: 1.8;
+              font-size: 1.15em;
+              font-feature-settings: "liga" 1, "calt" 1;
+      }
 }
 
 ::-webkit-scrollbar { width: 6px; }
