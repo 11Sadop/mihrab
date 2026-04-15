@@ -41,10 +41,10 @@ export const SmartAssistant: React.FC = () => {
         <>
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent mb-3">
-              المساعد الإسلامي الذكي 🤖
+              السنن 🕌
             </h2>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              أكتب حالتك (مثلاً: "طفشان"، "بروح اصلي"، "عندي اختبار")
+              اكتشف السنن الصحيحة والأدعية المناسبة لكل موقف في حياتك اليومية
             </p>
           </div>
 

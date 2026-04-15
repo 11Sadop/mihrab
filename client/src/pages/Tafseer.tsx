@@ -141,13 +141,24 @@ export default function QuranPage(){
   const [tafseerLoading,setTafseerLoading]=useState(false);
   const [tafseerSource,setTafseerSource]=useState('ar.muyassar');
   const [hifzFeedback,setHifzFeedback]=useState<{type:'ok'|'wrong_verse'|'wrong_pron';msg:string;details?:string[]}|null>(null);
+  const [bookmarks,setBookmarks]=useState<Set<string>>(new Set());
+
+  useEffect(()=>{
+    try{const b=localStorage.getItem('q-bookmarks');if(b)setBookmarks(new Set(JSON.parse(b)));}catch{}
+  },[]);
+  const toggleBookmark=(k:string)=>{
+    setBookmarks(p=>{
+      const n=new Set(p); if(n.has(k))n.delete(k); else n.add(k);
+      localStorage.setItem('q-bookmarks',JSON.stringify([...n]));
+      return n;
+    });
+  };
 
   const [isPlaying,setIsPlaying]=useState(false);
   const [playingKey,setPlayingKey]=useState("");
   const [playingSn,setPlayingSn]=useState(0);
 
   const audioRef=useRef<HTMLAudioElement>(null);
-  const preloadRef=useRef<HTMLAudioElement>(null);
   const searchRef=useRef<HTMLInputElement>(null);
   const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
   const hifzTxtRef=useRef(''); // Stores cumulative speech text per verse
@@ -235,13 +246,6 @@ export default function QuranPage(){
     a.src=url;
     a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
-    // Preload next verse for smooth transition
-    const q=playQueueRef.current;
-    if(q&&nis<q.maxNis){
-      const nextUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis+1)}.mp3`:`${rec.server}/${pad3(sn)}${pad3(nis+1)}.mp3`;
-      if(preloadRef.current){preloadRef.current.src=nextUrl;preloadRef.current.load();}
-    }
-    
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     ensureVerseVisible(sn,nis);
   };
@@ -279,28 +283,20 @@ export default function QuranPage(){
     const q=playQueueRef.current;
     if(q&&q.nis<q.maxNis){
       q.nis++;
-      // Use preloaded audio if available for seamless transition
+      // We rely on the browser cache (primed in handleTimeUpdate or preloadRef) for gapless playback.
+      // We MUST reuse the same DOM audio element so React and iOS keep background playback alive.
       const rec=getReciter();
       const expectedUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
-      if(preloadRef.current&&preloadRef.current.src===expectedUrl){
-        // Swap preloaded into main for instant playback
-        const oldMain=audioRef.current;
-        if(oldMain){oldMain.pause();oldMain.removeAttribute('src');}
-        audioRef.current=preloadRef.current;
-        preloadRef.current=new Audio();
-        audioRef.current.onended=handleEnded;
-        audioRef.current.onerror=handleErr;
-        audioRef.current.play().catch(()=>{});
-        setPlayingKey(`${q.sn}-${q.nis}`);
-        ensureVerseVisible(q.sn,q.nis);
-        // Preload the next one
-        if(q.nis<q.maxNis){
-          const nn=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
-          preloadRef.current.src=nn;preloadRef.current.load();
-        }
-      } else {
-        playVerse(q.sn,q.nis);
+      
+      const a = audioRef.current;
+      if(a){
+        a.src = expectedUrl;
+        a.play().catch(()=>{});
+        a.dataset.crossed = ''; // reset crossed flag
       }
+      
+      setPlayingKey(`${q.sn}-${q.nis}`);
+      ensureVerseVisible(q.sn,q.nis);
     }
     else stopAudio();
   };
@@ -370,7 +366,7 @@ export default function QuranPage(){
           if(sim > bestScore) bestScore = sim;
         }
         // Very tolerant per word checking due to Speech dictation inaccuracies
-        if(bestScore >= 0.7) matched++;
+        if(bestScore >= 0.5) matched++;
         else wrongWords.push(w);
       }
       // Only check ratio of WHAT WAS SPOKEN so far
@@ -392,14 +388,14 @@ export default function QuranPage(){
         setHifzFeedback({type:'wrong_verse',msg:'هذه ليست الآية الصحيحة'});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
         hifzTxtRef.current = ''; // Reset accumulation
-      } else if(completeRatio>=0.6){
+      } else if(completeRatio>=0.45){
         // They completed the verse successfully
         setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'ok');return n;});
         setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
         hifzTxtRef.current = ''; // Perfect, clear for next verse
-      } else if(sw.length >= 3 && partialRatio < 0.4) {
-        // They spoke at least 3 words, and most were wrong
+      } else if(sw.length >= 5 && partialRatio < 0.25) {
+        // They spoke at least 5 words, and most were wrong
         setHifzFeedback({type:'wrong_pron',msg:'تحقق من النطق',details:wrongWords.slice(0,3)});
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
       } else {
@@ -647,6 +643,7 @@ export default function QuranPage(){
               <div className="flex gap-2">
                 <button onClick={()=>{playSurahFrom(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>من هنا</button>
                 <button onClick={()=>{playQueueRef.current=null;playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>الآية</button>
+                <button onClick={()=>{toggleBookmark(`${selVerse.sn}-${selVerse.nis}`);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4"/>{bookmarks.has(`${selVerse.sn}-${selVerse.nis}`)?"إزالة الحفظ":"حفظ العلامة"}</button>
               </div></div>
             <button onClick={()=>{setShowOptions(false);setShowTafseer(true);setTafseerText('');setTafseerLoading(true);fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${tafseerSource}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل في تحميل التفسير');setTafseerLoading(false);});}} className="w-full py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>التفسير</button>
             <button onClick={()=>{setShowOptions(false);setShowSharePage(true);}} className="w-full py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"><Share2 className="w-4 h-4"/>مشاركة / حفظ كصورة</button>
@@ -666,12 +663,12 @@ export default function QuranPage(){
             {TAFSEER_SOURCES.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
-        <div className="flex-1 overflow-y-auto p-4" dir="rtl">
-          <div className="p-4 rounded-xl mb-4" style={{background:colors.border+'15',border:'1px solid '+colors.border+'30'}}>
-            <p className="font-quran text-center leading-[2.2]" style={{fontSize:'clamp(18px,4.5vw,24px)',color:colors.text}}>{selVerse.text}</p>
+        <div className="flex-1 overflow-y-auto p-5" dir="rtl">
+          <div className="p-5 rounded-xl mb-5" style={{background:colors.border+'15',border:'1px solid '+colors.border+'30'}}>
+            <p className="font-quran text-center leading-[2.2]" style={{fontSize:'clamp(22px,6vw,28px)',color:colors.text}}>{selVerse.text}</p>
           </div>
           {tafseerLoading?<div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" style={{color:colors.text}}/></div>
-          :<div className="leading-[2] text-[15px]" style={{color:colors.text+'dd'}}>{tafseerText}</div>}
+          :<div className="leading-[2.2] font-medium" style={{fontSize:'clamp(16px,4.5vw,20px)',color:colors.text}}>{tafseerText}</div>}
         </div>
         <div className="p-3 border-t flex gap-2" style={{borderColor:colors.border+'40',paddingBottom:'calc(env(safe-area-inset-bottom,8px) + 4px)'}}>
           <button onClick={()=>{const t=tafseerText;const sn=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';const full=selVerse.text+'\n\n'+t+'\n\n'+sn+': '+selVerse.nis;if(navigator.share)navigator.share({text:full}).catch(()=>{});else{navigator.clipboard.writeText(full);alert("تم النسخ!");}}} className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1" style={{background:colors.border+'30',color:colors.text}}><Share2 className="w-4 h-4"/>مشاركة</button>
@@ -711,10 +708,10 @@ export default function QuranPage(){
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
             // Advanced Mobile Screen Auto-Fitting (Ensures no vertical scrolling)
-            const dynSize=allChars<300?'clamp(15px, min(6.5vw, 4vh), 40px)':
-                          allChars<500?'clamp(14px, min(6vw, 3.8vh), 36px)':
-                          allChars<800?'clamp(12px, min(5vw, 3.2vh), 32px)':
-                          'clamp(10px, min(4.5vw, 2.8vh), 28px)';
+            const dynSize=allChars<300?'clamp(18px, 7.5vw, 42px)':
+                          allChars<500?'clamp(16px, 7vw, 40px)':
+                          allChars<800?'clamp(14px, 6.5vw, 36px)':
+                          'clamp(12px, 5.5vw, 32px)';
                           
             const dynLine=allChars<300?'2.2':allChars<500?'2.0':allChars<800?'1.8':'1.65';
             
@@ -758,7 +755,7 @@ export default function QuranPage(){
                       background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                       padding:(isP||isSel)?'3px 6px':'0',borderRadius:(isP||isSel)?'8px':'0',
                     }}>
-                    {a.text.replace(/[\u0600-\u0605\u06D6-\u06DC\u06DE-\u06ED]/g,'')}
+                    {a.text}
                   </span>
                   {/* Ornamental golden verse marker ❁ */}
                   <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
@@ -768,8 +765,8 @@ export default function QuranPage(){
                       <circle cx="25" cy="25" r="18" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="0.8"/>
                       {[0,45,90,135,180,225,270,315].map(deg=><circle key={deg} cx={25+20*Math.cos(deg*Math.PI/180)} cy={25+20*Math.sin(deg*Math.PI/180)} r="1.8" fill={isP?'#22c55e':'#c8a96e'}/>)}
                     </svg>
-                    <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:700,color:isP?'#22c55e':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
-                  </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:'#e74c3c',fontSize:'0.6em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
+                    <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:700,color:isP?'#22c55e':bookmarks.has(k)?'#ec4899':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
+                  </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#22c55e':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
                 </span>;
               })}
             </div>
