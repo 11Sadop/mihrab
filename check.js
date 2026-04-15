@@ -1,0 +1,1 @@
+fetch('https://api.alquran.cloud/v1/ayah/2:4/quran-uthmani').then(r=>r.json()).then(d=>console.log(d.data.text.split('').map(c=>`${c} (U+${c.charCodeAt(0).toString(16).padStart(4,'0')})`).join('\n')));
