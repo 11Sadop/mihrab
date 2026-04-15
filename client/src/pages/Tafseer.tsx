@@ -682,12 +682,12 @@ export default function TafseerPage(){
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
             // Dynamic sizing for high density and vertical fit
-            const dynSize=allChars<300?'clamp(24px, 7vw, 38px)':
-                          allChars<450?'clamp(22px, 6.5vw, 34px)':
-                          allChars<700?'clamp(20px, 6vw, 30px)':
-                          'clamp(18px, 5.5vw, 26px)';
+            const dynSize=allChars<300?'clamp(26px, 8vw, 48px)':
+                          allChars<450?'clamp(24px, 7vw, 40px)':
+                          allChars<700?'clamp(22px, 6vw, 34px)':
+                          'clamp(18px, 5.5vw, 28px)';
             
-            const dynLine=allChars<400?'2.3':allChars<600?'2.1':allChars<800?'1.9':'1.8';
+            const dynLine=allChars<400?'2.4':allChars<600?'2.2':allChars<800?'2.0':'1.9';
             
             return <div key={`${g.sn}-${gi}`} className="relative pb-10">
               {/* Ayah App Page Headers */}
