@@ -573,7 +573,6 @@ export default function QuranPage(){
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
       {/* Audio elements - main + preload for smooth transitions */}
       <audio ref={audioRef} onTimeUpdate={handleTimeUpdate}   style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
-      <audio ref={preloadRef} style={{display:'none'}} preload="auto" />
       
                   {/* TOP BAR */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
