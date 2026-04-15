@@ -10,8 +10,8 @@ const RECITERS:Rec[]=[
   {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
-  {id:"shuraim",name:"سعود الشريم",server:"https://server7.mp3quran.net/shur",ev:"Saood_ash-Shuraym_128kbps"},
-  {id:"husary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
+  {id:"shuraim",name:"سعود الشريم",server:"http://live.mp3quran.net:8012/;",ev:"Saood_ash-Shuraym_128kbps"},
+  {id:"hosary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Murattal_128kbps"},
   {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"Abdul_Basit_Murattal_192kbps"},
   {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Ghamadi_40kbps"},
@@ -34,7 +34,7 @@ const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
 // Normalize text - keep ALL marks for display except zero-width spaces
-const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'').replace(/لْءَا/g, 'لْـَٔا').replace(/لْء/g, 'لْـٔ');
+const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'').replace(/لْءَا/g, 'لْـَٔا').replace(/لْء/g, 'لْـٔ').replace(/بالآخرة/g, 'بِالْـَٔاخِرَةِ');
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
 const spaceMuqattaat=(t:string)=>{
   // Preserve spacing for display but don't strip the actual diacritics
@@ -119,7 +119,7 @@ export default function QuranPage(){
     }
   };
 
-  useSeo({title:"القرآن الكريم - سنن",description:"القرآن الكريم",canonicalPath:"/tafseer"});
+  useSeo({title:"محراب رفيقك الاسلامي سنن مواقيت صلاة القران والتفسير صحة الاحاديث والقبلة",description:"محراب رفيقك الاسلامي سنن مواقيت صلاة القران والتفسير صحة الاحاديث والقبلة",canonicalPath:"/tafseer"});
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
   const [recId,setRecId]=useState("maher");
@@ -141,6 +141,8 @@ export default function QuranPage(){
   const [tafseerLoading,setTafseerLoading]=useState(false);
   const [tafseerSource,setTafseerSource]=useState('ar.muyassar');
   const [hifzFeedback,setHifzFeedback]=useState<{type:'ok'|'wrong_verse'|'wrong_pron';msg:string;details?:string[]}|null>(null);
+  const [hifzStatus,setHifzStatus]=useState<'none'|'ok'|'wrong'|'pron'>('none');
+  const [hifzTimer,setHifzTimer]=useState<any>(null);
   const [bookmarks,setBookmarks]=useState<Set<string>>(new Set());
 
   useEffect(()=>{
@@ -386,24 +388,28 @@ export default function QuranPage(){
       }
       if(isWrongVerse){
         setHifzFeedback({type:'wrong_verse',msg:'هذه ليست الآية الصحيحة'});
+        setHifzStatus('wrong');
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
-        hifzTxtRef.current = ''; // Reset accumulation
+        try{const audio=new Audio('https://www.soundjay.com/buttons/beep-05.wav');audio.volume=0.3;audio.play();}catch{}
+        hifzTxtRef.current = ''; 
       } else if(completeRatio>=0.45){
-        // They completed the verse successfully
         setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
+        setHifzStatus('ok');
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'ok');return n;});
         setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
-        hifzTxtRef.current = ''; // Perfect, clear for next verse
+        hifzTxtRef.current = ''; 
+        if(hifzTimer)clearTimeout(hifzTimer);
+        const t=setTimeout(()=>setHifzFeedback(null),500);
+        setHifzTimer(t);
       } else if(sw.length >= 5 && partialRatio < 0.25) {
-        // They spoke at least 5 words, and most were wrong
         setHifzFeedback({type:'wrong_pron',msg:'تحقق من النطق',details:wrongWords.slice(0,3)});
+        setHifzStatus('pron');
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
+        try{const audio=new Audio('https://www.soundjay.com/buttons/beep-05.wav');audio.volume=0.3;audio.play();}catch{}
       } else {
-        // They are doing okay, just haven't finished yet! Do nothing (silent feedback)
-        // Keep accumulating text safely
+        // Silent update for progress
       }
       setRecTxt('');
-      setTimeout(()=>setHifzFeedback(null),4000);
     };
     r.onerror=()=>{};r.onend=()=>{if(recording)try{r.start();}catch{}};
     recRef.current=r;r.start();setRecording(true);
@@ -517,7 +523,7 @@ export default function QuranPage(){
     if(!selVerse)return;const{text,refs}=await getShareRange();
     if(shareMode==='image'){shareAsImage(text,refs);return;}
     let t=text;if(shareMode==='noharakat')t=t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'');
-    const full=`${t}${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs}mihrabapp.com`;
+    const full=`${t}${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs} https://mihrabapp.com/tafseer`;
     if(navigator.share)navigator.share({text:full}).catch(()=>{});
     else{navigator.clipboard.writeText(full);alert("تم النسخ!");}
     setShowSharePage(false);
@@ -572,24 +578,32 @@ export default function QuranPage(){
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
       {/* Audio elements - main + preload for smooth transitions */}
-      <audio ref={audioRef} onTimeUpdate={handleTimeUpdate}   style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
+      <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} style={{display:'none'}} onEnded={handleEnded} onError={handleErr} />
       
-                  {/* TOP BAR */}
-      {showUI&&<div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
+      {/* ═══ TOP BAR (Unified) ═══ */}
+      {showUI&&<div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-4" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
           <div className="flex items-center gap-2">
             <a href="/" className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><ArrowRight className="w-4 h-4"/></a>
-            <span className="text-[14px] font-bold" style={{color:colors.text}}>{surah.n}</span>
+            <span className="text-[10px] md:text-[11px] opacity-80" style={{color:colors.text}}>محراب رفيقك الإسلامي - سنن مواقيت صلاة القران والتفسير صحة الاحاديث والقبلة</span>
           </div>
+          
+          {/* Hifz Indicators HUD */}
+          {hifz && <div className="flex gap-2 items-center bg-black/5 px-3 py-1 rounded-full scale-90">
+            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='ok'?'bg-green-500 scale-125 shadow-[0_0_8px_rgba(34,197,94,0.6)]':'bg-green-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">صحيح</span></div>
+            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='wrong'?'bg-red-500 scale-125 shadow-[0_0_8px_rgba(239,68,68,0.6)]':'bg-red-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">خطأ</span></div>
+            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='pron'?'bg-amber-500 scale-125 shadow-[0_0_8px_rgba(245,158,11,0.6)]':'bg-amber-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">نطق</span></div>
+          </div>}
+
           <div className="flex items-center gap-1">
             <button onClick={()=>setShowSearch(true)} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><Search className="w-4 h-4"/></button>
             <button onClick={()=>setShowSettings(!showSettings)} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><Settings className="w-4 h-4"/></button>
-            <button onClick={()=>{setHifz(!hifz);if(hifz)stopHifz();resetHifz();}} className={`p-1.5 rounded-lg ${hifz?'bg-amber-500 text-white':'opacity-60 hover:opacity-100'}`} style={hifz?{}:{color:colors.text}}>
+            <button onClick={()=>{setHifz(!hifz);if(hifz)stopHifz();resetHifz();}} className={`p-1.5 rounded-lg ${hifz?'bg-amber-500 text-white shadow-md':'opacity-60 hover:opacity-100'}`} style={hifz?{}:{color:colors.text}}>
               <Mic className="w-4 h-4"/></button>
+            <button onClick={()=>setShowUI(false)} className="p-1.5 rounded-lg opacity-50 hover:opacity-100" style={{color:colors.text}}><ChevronLeft className="w-4 h-4" style={{transform:'rotate(90deg)'}}/></button>
           </div>
-          <span className="text-[13px] font-bold" style={{color:colors.text+'90'}}>الجزء {juzForPage(pg)}</span>
-          <button onClick={()=>setShowUI(false)} className="p-1.5 rounded-lg opacity-50 hover:opacity-100" style={{color:colors.text}} title="إخفاء"><ChevronLeft className="w-4 h-4" style={{transform:'rotate(90deg)'}}/></button>
         </div>}
-      {!showUI&&<button onClick={()=>setShowUI(true)} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity" style={{background:colors.bg+'ee',color:colors.text,border:'1px solid '+colors.border+'50',paddingTop:'calc(env(safe-area-inset-top,0px) + 4px)',fontSize:'11px',fontWeight:700}}><ChevronLeft className="w-3 h-3" style={{transform:'rotate(-90deg)'}}/> إظهار</button>}
+      {!showUI&&<button onClick={()=>setShowUI(true)} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity shadow-sm" style={{background:colors.bg+'ee',color:colors.text,border:'1px solid '+colors.border+'50',paddingTop:'calc(env(safe-area-inset-top,0px) + 4px)',fontSize:'11px',fontWeight:700}}><ChevronLeft className="w-3 h-3" style={{transform:'rotate(-90deg)'}}/> إظهار</button>}
+
 
       {/* SETTINGS */}
       {showSettings&&<div className="fixed inset-0 z-[58] flex items-end" onClick={()=>setShowSettings(false)}>
@@ -699,10 +713,7 @@ export default function QuranPage(){
         onTouchStart={onTS} onTouchEnd={onTE}>
                 {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col justify-between px-4 md:px-6" style={{maxWidth:680,margin:'0 auto',width:'100%',minHeight:'100%',paddingTop:8,paddingBottom:4,display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
-
-
-          <div style={{flex:1}}>
+        :<div className="flex flex-col flex-1 px-4 md:px-6 h-full justify-around" style={{maxWidth:680,margin:'0 auto',width:'100%',paddingTop:8,paddingBottom:20}}>
           {groups.map((g,gi)=>{
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
@@ -781,11 +792,10 @@ export default function QuranPage(){
             </div>
 
             {/* Ayah App Page Footer (Page Number) */}
-            <div className="mt-8 flex justify-center items-center opacity-40">
-              <div className="relative w-10 h-10 flex items-center justify-center font-bold text-xs" style={{color:colors.text}}>
+            <div className="mt-16 mb-12 flex justify-center items-center opacity-40">
+              <div className="relative w-12 h-12 flex items-center justify-center font-bold text-sm" style={{color:colors.text}}>
                 <svg className="absolute inset-0 w-full h-full" viewBox="0 0 40 40">
-                  <path d="M20 2 C10 2 2 10 2 20 C2 30 10 38 20 38 C30 38 38 30 38 20 C38 10 30 2 20 2" fill="none" stroke={colors.text} strokeWidth="0.5"/>
-                  <path d="M20 5 L22 18 L35 20 L22 22 L20 35 L18 22 L5 20 L18 18 Z" fill="none" stroke={colors.text} strokeWidth="0.5" opacity="0.3"/>
+                  <path d="M20 2 L25 5 L35 5 L35 15 L38 20 L35 25 L35 35 L25 35 L20 38 L15 35 L5 35 L5 25 L2 20 L5 15 L5 5 L15 5 Z" fill="none" stroke={colors.text} strokeWidth="1"/>
                 </svg>
                 {pg.toLocaleString('ar-EG')}
               </div>

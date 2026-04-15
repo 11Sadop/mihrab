@@ -96,7 +96,7 @@ async function generateHadithImage(text: string, source: string, hadithNumber: n
     
     // Watermark
     ctx.font = `24px sans-serif`; ctx.fillStyle = 'rgba(212,197,160,0.8)';
-    ctx.fillText('تطبيق سنن  ❘  sunan.app', W / 2, H - 100);
+    ctx.fillText('تطبيق محراب  ❘  mihrabapp.com', W / 2, H - 100);
     
     return new Promise(r => canvas.toBlob(b => r(b), 'image/png', 1.0));
 }
@@ -139,7 +139,7 @@ export default function HadithCollections() {
 
   const shareHadithLink = async (hadith: Hadith) => {
     const collectionName = selectedCollection === 'bukhari' ? 'صحيح البخاري' : 'صحيح مسلم';
-    const text = `${hadith.text}\n\n📚 ${collectionName} - حديث رقم ${hadith.hadithNumber}\n\nمن تطبيق سنن 🕌\nhttps://sunan.app/hadith-collections`;
+    const text = `${hadith.text}\n\n📚 ${collectionName} - حديث رقم ${hadith.hadithNumber}\n\nمن تطبيق محراب 🕌\nhttps://mihrabapp.com/hadith-collections`;
     if (navigator.share) {
       try { await navigator.share({ title: `حديث من ${collectionName}`, text }); } catch {}
     } else {
