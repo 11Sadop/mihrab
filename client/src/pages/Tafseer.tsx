@@ -34,7 +34,7 @@ const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
 // Normalize text - keep ALL marks for display except zero-width spaces
-const norm=(t:string)=>t.replace(/\u0671/g,'\u0627').replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED]/g,'');
+const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'');
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
 const spaceMuqattaat=(t:string)=>{
   // Preserve spacing for display but don't strip the actual diacritics
@@ -707,12 +707,13 @@ export default function QuranPage(){
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
             // Advanced Mobile Screen Auto-Fitting (Ensures no vertical scrolling)
-            const dynSize=allChars<300?'clamp(18px, 7.5vw, 42px)':
-                          allChars<500?'clamp(16px, 7vw, 40px)':
-                          allChars<800?'clamp(14px, 6.5vw, 36px)':
-                          'clamp(12px, 5.5vw, 32px)';
+            const dynSize=allChars<300?'clamp(24px, 8.5vw, 48px)':
+                          allChars<400?'clamp(22px, 8vw, 44px)':
+                          allChars<600?'clamp(20px, 7.5vw, 40px)':
+                          allChars<800?'clamp(18px, 6.5vw, 36px)':
+                          'clamp(14px, 5.5vw, 32px)';
                           
-            const dynLine=allChars<300?'2.2':allChars<500?'2.0':allChars<800?'1.8':'1.65';
+            const dynLine=allChars<400?'2.4':allChars<600?'2.2':allChars<800?'2.0':'1.8';
             
             return <div key={`${g.sn}-${gi}`}>
             {/* Surah Header - Match Ayah App Exactly */}
