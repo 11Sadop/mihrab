@@ -149,7 +149,7 @@ export default function QuranPage(){
   const audioRef=useRef<HTMLAudioElement>(null);
   const preloadRef=useRef<HTMLAudioElement>(null);
   const searchRef=useRef<HTMLInputElement>(null);
-  const playQueueRef=useRef<{sn:number;nis:number}[]>([]);
+  const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
   const hifzTxtRef=useRef(''); // Stores cumulative speech text per verse
   const recIdRef=useRef(recId);
   const pgRef=useRef(pg);
