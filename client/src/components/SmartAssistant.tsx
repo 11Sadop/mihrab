@@ -41,7 +41,7 @@ export const SmartAssistant: React.FC = () => {
         <>
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent mb-3">
-              السنن 🕌
+              السنن
             </h2>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
               اكتشف السنن الصحيحة والأدعية المناسبة لكل موقف في حياتك اليومية
@@ -91,7 +91,7 @@ export const SmartAssistant: React.FC = () => {
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-0 sm:p-2">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-6 border-b border-gray-100 dark:border-gray-800 pb-6">
               <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center text-5xl shadow-inner">
-                {result.icon}
+                📖
               </div>
               <div className="text-center sm:text-right flex-1">
                 <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">

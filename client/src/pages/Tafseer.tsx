@@ -97,7 +97,7 @@ const SAJDA_VERSES=new Set(['7:206','13:15','16:50','17:109','19:58','22:18','22
 
 const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'التفسير الميسر'},{id:'ar.jalalayn',name:'تفسير الجلالين'},{id:'ar.ibn-katheer',name:'تفسير ابن كثير'},{id:'ar.qurtubi',name:'تفسير القرطبي'},{id:'ar.baghawi',name:'تفسير البغوي'},{id:'ar.saddi',name:'تفسير السعدي'},{id:'ar.tabari',name:'تفسير الطبري'},];
 
-export default function QuranPage(){
+export default function TafseerPage(){
   const handleTimeUpdate = () => {
     const a = audioRef.current;
     if (!a) return;
@@ -119,7 +119,7 @@ export default function QuranPage(){
     }
   };
 
-  useSeo({title:"محراب رفيقك الاسلامي",description:"محراب رفيقك الاسلامي - القران الكريم والتفسير ومواقيت الصلاة",canonicalPath:"/tafseer"});
+  useSeo({title:"محراب رفيقك الإسلامي",description:"محراب رفيقك الإسلامي - القرآن الكريم والتفسير ومواقيت الصلاة",canonicalPath:"/tafseer"});
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
   const [recId,setRecId]=useState("maher");
@@ -285,24 +285,27 @@ export default function QuranPage(){
     const q=playQueueRef.current;
     if(q&&q.nis<q.maxNis){
       q.nis++;
-      // We rely on the browser cache (primed in handleTimeUpdate or preloadRef) for gapless playback.
-      // We MUST reuse the same DOM audio element so React and iOS keep background playback alive.
+      // Primed cache handled in timeupdate
       const rec=getReciter();
-      const expectedUrl=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
-      
-      const a = audioRef.current;
-      if(a){
-        a.src = expectedUrl;
-        a.play().catch(()=>{});
-        a.dataset.crossed = ''; // reset crossed flag
-      }
-      
+      const url=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
+      const a=audioRef.current;
+      if(a){a.src=url;a.play().catch(()=>{});a.dataset.crossed='';}
       setPlayingKey(`${q.sn}-${q.nis}`);
       ensureVerseVisible(q.sn,q.nis);
     }
     else stopAudio();
   };
-  const handleErr=()=>{const q=playQueueRef.current;if(!q)return;const rec=getReciter();if(rec.ev&&audioRef.current&&!audioRef.current.src.includes('mirrors.quranicaudio.com')){audioRef.current.src=`https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;audioRef.current.play().catch(()=>skipNext());return;}skipNext();};
+
+  const handleErr=()=>{
+    const q=playQueueRef.current;if(!q)return;
+    const rec=getReciter();
+    if(rec.ev&&audioRef.current&&!audioRef.current.src.includes('mirrors.quranicaudio.com')){
+      audioRef.current.src=`https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
+      audioRef.current.play().catch(()=>skipNext());
+      return;
+    }
+    skipNext();
+  };
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
@@ -317,102 +320,53 @@ export default function QuranPage(){
   const startHifz=useCallback(()=>{
     const SR=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
     if(!SR){alert("جرب Chrome");return;}
-    const r=new SR();r.lang="ar-SA";r.continuous=true;r.interimResults=true;r.maxAlternatives=5;
+    const r=new SR();r.lang="ar-SA";r.continuous=true;r.interimResults=true;r.maxAlternatives=1;
+    
     r.onresult=(e:any)=>{
-      // Arabic character normalization for flawless Speech matching
       const normAr = (s:string) => s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF\u06E0\u06E2\u06E3\u06E5\u06E6\u06E8\u06EA\u06EB\u06EC\u06ED]/g,'')
         .replace(/[أإآء]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و');
         
-      let newTxt='';
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        for(let j=0;j<e.results[i].length;j++)
-          newTxt+=' '+e.results[i][j].transcript;
-      }
-      const isFinal = e.results[e.results.length-1].isFinal;
-      const fullTxt = hifzTxtRef.current + ' ' + newTxt;
-      setRecTxt(fullTxt.trim());
-      
-      if(!pq.data)return;
-      const exp=pq.data[hifzIdx];if(!exp)return;
-      
-      // Extremely robust matching based on cumulative speech history
-      const ew=normAr(exp.text).split(' ').filter(w=>w.length>1);
-      const sw=normAr(fullTxt).split(' ').filter(w=>w.length>1);
-      if(!isFinal||sw.length<2)return;
-      
-      hifzTxtRef.current += ' ' + newTxt; // Append permanently
-      
-      // Levenshtein Pronunciation Matcher
-      const levenshtein = (a:string, b:string) => {
-        if (!a || !b) return (a || b || '').length;
-        if (a === b) return 0;
-        const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
-        for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
-        for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
-        for (let j = 1; j <= b.length; j++) {
-          for (let i = 1; i <= a.length; i++) {
-            const ind = a[i - 1] === b[j - 1] ? 0 : 1;
-            matrix[j][i] = Math.min(matrix[j][i - 1] + 1, matrix[j - 1][i] + 1, matrix[j - 1][i - 1] + ind);
-          }
-        }
-        return matrix[b.length][a.length];
-      };
-      
-      let matched=0;const wrongWords:string[]=[];
-      for(let wi=0;wi<ew.length;wi++){
-        const w=ew[wi];
-        let bestScore = 0;
-        for(const s of sw){
-          const dist = levenshtein(w, s);
-          const sim = 1 - (dist / Math.max(w.length, s.length));
-          if(sim > bestScore) bestScore = sim;
-        }
-        // Very tolerant per word checking due to Speech dictation inaccuracies
-        if(bestScore >= 0.5) matched++;
-        else wrongWords.push(w);
-      }
-      // Only check ratio of WHAT WAS SPOKEN so far
-      const partialRatio = sw.length > 0 ? matched / sw.length : 0;
-      const completeRatio = ew.length > 0 ? matched / ew.length : 0;
+      if(!pq.data) return;
+      const exp=pq.data[hifzIdx]; if(!exp) return;
 
-      const k=`${exp.sn}-${exp.nis}`;
-      // Check if they said the WRONG verse entirely
-      let isWrongVerse=false;
-      if(completeRatio<0.3&&sw.length>=3){
-        for(const other of pq.data){
-          if(other.gi===exp.gi)continue;
-          const ow=normAr(other.text).split(' ').filter((w:string)=>w.length>1);
-          let om=0;for(const w of ow)if(sw.some((s:string)=>s.includes(w)||w.includes(s)))om++;
-          if(ow.length>0&&om/ow.length>0.5){isWrongVerse=true;break;}
-        }
-      }
-      if(isWrongVerse){
-        setHifzFeedback({type:'wrong_verse',msg:'هذه ليست الآية الصحيحة'});
-        setHifzStatus('wrong');
-        setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
-        try{const audio=new Audio('https://www.soundjay.com/buttons/beep-05.wav');audio.volume=0.3;audio.play();}catch{}
-        hifzTxtRef.current = ''; 
-      } else if(completeRatio>=0.45){
+      let transcript='';
+      for(let i=e.resultIndex;i<e.results.length;i++) transcript+=e.results[i][0].transcript;
+      
+      const sw=normAr(transcript).split(' ').filter(w=>w.length>1);
+      hifzTxtRef.current = transcript;
+      setRecTxt(transcript);
+
+      const ew=normAr(exp.text).split(' ').filter(w=>w.length>1);
+      let matched=0;
+      for(const w of ew) if(sw.some(s=>s.includes(w)||w.includes(s))) matched++;
+      
+      const completeRatio = ew.length>0?matched/ew.length:0;
+      
+      if(completeRatio >= 0.65){
         setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
         setHifzStatus('ok');
+        const k=`${exp.sn}-${exp.nis}`;
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,'ok');return n;});
-        setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
-        hifzTxtRef.current = ''; 
-        if(hifzTimer)clearTimeout(hifzTimer);
-        const t=setTimeout(()=>setHifzFeedback(null),500);
-        setHifzTimer(t);
-      } else if(sw.length >= 5 && partialRatio < 0.25) {
-        setHifzFeedback({type:'wrong_pron',msg:'تحقق من النطق',details:wrongWords.slice(0,3)});
-        setHifzStatus('pron');
-        setHifzRes(prev=>{const n=new Map(prev);n.set(k,'err');return n;});
-        try{const audio=new Audio('https://www.soundjay.com/buttons/beep-05.wav');audio.volume=0.3;audio.play();}catch{}
-      } else {
-        // Silent update for progress
+        
+        setTimeout(()=>{
+          setHifzIdx(prev=>{
+            const next=Math.min(prev+1,(pq.data?.length||1)-1);
+            const el=document.getElementById(`ayah-${pq.data[next].nis}`);
+            if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+            return next;
+          });
+          setHifzFeedback(null);
+          hifzTxtRef.current = '';
+          setRecTxt('');
+        }, 800);
       }
-      setRecTxt('');
     };
-    r.onerror=()=>{};r.onend=()=>{if(recording)try{r.start();}catch{}};
-    recRef.current=r;r.start();setRecording(true);
+
+    r.onerror=()=>{};
+    r.onend=()=>{if(recording)try{r.start();}catch{}};
+    recRef.current=r;
+    r.start();
+    setRecording(true);
   },[hifzIdx,pq.data,recording]);
 
   const stopHifz=useCallback(()=>{if(recRef.current){recRef.current.onend=null;try{recRef.current.stop();}catch{}recRef.current=null;}setRecording(false);},[]);
@@ -712,16 +666,17 @@ export default function QuranPage(){
         onTouchStart={onTS} onTouchEnd={onTE}>
                 {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col flex-1 px-4 md:px-6 h-full justify-around" style={{maxWidth:680,margin:'0 auto',width:'100%',paddingTop:8,paddingBottom:20}}>
+        :<div className="flex flex-col flex-1 px-4 md:px-6 h-screen justify-between overflow-hidden" style={{maxWidth:680,margin:'0 auto',width:'100%',paddingTop:60,paddingBottom:20}}>
+            <div className="flex-1 overflow-y-auto flex flex-col justify-center scrollbar-hide" id="mushaf-container">
           {groups.map((g,gi)=>{
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
-            // Consistent elegant sizing
-            const dynSize=allChars<300?'clamp(20px, 6.5vw, 32px)':
-                          allChars<400?'clamp(20px, 6.5vw, 31px)':
-                          allChars<600?'clamp(19px, 6.2vw, 30px)':
-                          allChars<850?'clamp(18.5px, 6vw, 28px)':
-                          'clamp(17px, 5.5vw, 25px)';
+            // Dynamic sizing to fill vertical space perfectly
+            const dynSize=allChars<300?'clamp(26px, 8vw, 42px)':
+                          allChars<400?'clamp(24px, 7.5vw, 38px)':
+                          allChars<600?'clamp(22px, 7vw, 34px)':
+                          allChars<850?'clamp(20px, 6.5vw, 30px)':
+                          'clamp(18px, 5.8vw, 26px)';
                           
             const dynLine=allChars<400?'2.5':allChars<600?'2.3':allChars<800?'2.1':'1.9';
             
@@ -791,11 +746,11 @@ export default function QuranPage(){
               })}
             </div>
 
-            {/* Ayah App Page Footer (Page Number) */}
-            <div className="mt-16 mb-12 flex justify-center items-center opacity-40">
-              <div className="relative w-12 h-12 flex items-center justify-center font-bold text-sm" style={{color:colors.text}}>
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 40 40">
-                  <path d="M20 2 L25 5 L35 5 L35 15 L38 20 L35 25 L35 35 L25 35 L20 38 L15 35 L5 35 L5 25 L2 20 L5 15 L5 5 L15 5 Z" fill="none" stroke={colors.text} strokeWidth="1"/>
+            {/* Simple Elegant Page Footer */}
+            <div className="mt-8 mb-10 flex justify-center items-center opacity-40">
+              <div className="relative w-12 h-12 flex items-center justify-center font-sans font-bold text-[14px]" style={{color:colors.text}}>
+                <svg className="absolute inset-0 w-full h-full opacity-60" viewBox="0 0 40 40">
+                   <path d="M20 2L24.5 9H31L31 15.5L38 20L31 24.5V31H24.5L20 38L15.5 31H9V24.5L2 20L9 15.5V9H15.5Z" fill="none" stroke={colors.text} strokeWidth="1.5"/>
                 </svg>
                 {pg.toLocaleString('ar-EG')}
               </div>
@@ -807,8 +762,9 @@ export default function QuranPage(){
             <button onClick={()=>{if(pg>1)setPg(p=>p-1);}} disabled={pg<=1} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold disabled:opacity-30 flex items-center gap-1"><ChevronRight className="w-4 h-4"/>التالية</button>
             <button onClick={()=>{if(pg<604)setPg(p=>p+1);}} disabled={pg>=604} className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold disabled:opacity-30 flex items-center gap-1">السابقة<ChevronLeft className="w-4 h-4"/></button>
           </div>}
-        </div>}
-      </div>
+        </div>
+      </div>}
+    </div>
 
       {/* ═══ BOTTOM PLAYER ═══ */}
       {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.2)]" style={{paddingBottom:'env(safe-area-inset-bottom,4px)'}}>

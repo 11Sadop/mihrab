@@ -103,56 +103,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. Main Grid */}
-      <section className="grid grid-cols-2 gap-4">
-        <Link href="/tafseer">
-          <div className="bg-[#0f172a] hover:bg-[#1e293b] p-6 rounded-[2rem] flex flex-col items-center text-center gap-4 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
-            <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">
-              <Book className="w-8 h-8 font-bold" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base">القرآن الكريم</h3>
-              <p className="text-xs text-slate-500 mt-1">تفسير وتلاوة</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link href="/assistant">
-          <div className="bg-[#0f172a] hover:bg-[#1e293b] p-6 rounded-[2rem] flex flex-col items-center text-center gap-4 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
-            <div className="p-4 bg-amber-500/10 rounded-2xl text-amber-500 group-hover:bg-amber-500/20 transition-colors">
-              <Sun className="w-8 h-8" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base">محراب رفيقك</h3>
-              <p className="text-xs text-slate-500 mt-1">السنن والأذكار</p>
-            </div>
-          </div>
-        </Link>
-      </section>
-
-      {/* 3. Mid Grid */}
+      {/* Minimal Grid - No Quran or Assistant */}
       <section className="grid grid-cols-2 gap-4">
         <Link href="/adhkar">
-          <div className="bg-[#0f172a] hover:bg-[#1e293b] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
-            <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500 group-hover:bg-indigo-500/20 transition-colors">
+          <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
+            <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500">
               <Shield className="w-6 h-6" />
             </div>
-            <div>
-              <h3 className="font-bold text-sm">الأذكار</h3>
-              <p className="text-[10px] text-slate-500 mt-1">حصن المسلم</p>
-            </div>
+            <h3 className="font-bold text-sm text-white">الأذكار</h3>
           </div>
         </Link>
-
         <Link href="/hadith-collections">
-          <div className="bg-[#0f172a] hover:bg-[#1e293b] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-lg">
-            <div className="p-3 bg-slate-500/10 rounded-2xl text-slate-400 group-hover:bg-slate-500/20 transition-colors">
+          <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
+            <div className="p-3 bg-slate-500/10 rounded-2xl text-slate-400">
               <Library className="w-6 h-6" />
             </div>
-            <div>
-              <h3 className="font-bold text-sm">أمهات الكتب</h3>
-              <p className="text-[10px] text-slate-500 mt-1">صحيح البخاري ومسلم</p>
-            </div>
+            <h3 className="font-bold text-sm text-white">الأحاديث</h3>
           </div>
         </Link>
       </section>
