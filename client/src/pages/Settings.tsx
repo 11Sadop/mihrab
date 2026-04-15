@@ -28,6 +28,11 @@ export default function SettingsPage() {
   const [citySearchOpen, setCitySearchOpen] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const { canInstall, isInstalled, promptInstall } = usePWAInstall();
+  const [appTheme, setAppTheme] = useLocalStorage("app_theme", "emerald");
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', appTheme);
+  }, [appTheme]);
 
   const filteredCitiesByCountry = useMemo(() => {
     if (!citySearchQuery.trim()) {
@@ -242,6 +247,40 @@ export default function SettingsPage() {
       <Header title="الإعدادات" />
 
       <main className="container max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
+
+        <section>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 px-2 text-right">مظهر التطبيق</h3>
+          <div className="bg-card rounded-2xl border border-border p-4">
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+              {[
+                {id:'emerald', color:'#10b981', name:'زمردي'},
+                {id:'blue', color:'#3b82f6', name:'أزرق'},
+                {id:'maroon', color:'#be123c', name:'عنابي'},
+                {id:'sand', color:'#d97706', name:'رملي'},
+                {id:'purple', color:'#a855f7', name:'بنفسجي'},
+                {id:'gold', color:'#eab308', name:'ذهبي'},
+                {id:'slate', color:'#475569', name:'رمادي'},
+                {id:'teal', color:'#0d9488', name:'تيل'},
+                {id:'rose', color:'#f43f5e', name:'وردي'},
+                {id:'forest', color:'#14532d', name:'غابة'},
+                {id:'ocean', color:'#0284c7', name:'محيط'},
+                {id:'lavender', color:'#a78bfa', name:'خزامى'},
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setAppTheme(t.id)}
+                  className={`group relative flex flex-col items-center gap-1`}
+                >
+                  <div 
+                    className={`w-10 h-10 rounded-full border-2 transition-all ${appTheme === t.id ? 'border-primary scale-110 shadow-md ring-2 ring-primary/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                    style={{ backgroundColor: t.color }}
+                  />
+                  <span className={`text-[10px] ${appTheme === t.id ? 'font-bold text-primary' : 'text-muted-foreground'}`}>{t.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
 
         <section>
           <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 px-2 text-right">الموقع والوقت</h3>
@@ -520,20 +559,49 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="p-4 flex items-center justify-between border-b border-border/50 flex-row-reverse">
-                    <div className="flex items-center gap-3 flex-row-reverse">
-                      <div className="p-2 bg-green-100 dark:bg-green-900/20 text-green-600 rounded-lg">
-                        {settings.sound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-sm">صوت الإشعارات</p>
-                      </div>
-                    </div>
                     <Switch
                       checked={settings.sound}
                       onCheckedChange={(checked) => updateSettings({ sound: checked })}
                       className="data-[state=checked]:bg-primary"
                       data-testid="switch-sound"
                     />
+                  </div>
+
+                  <div className="p-3 bg-muted/30 border-b border-border/50">
+                    <p className="text-xs font-bold text-muted-foreground text-right">تذكيرات العبادة والسنن</p>
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between border-b border-border/50 flex-row-reverse">
+                    <div className="text-right">
+                      <p className="font-medium text-sm">صلاة الضحى والوتر</p>
+                      <p className="text-xs text-muted-foreground">تنبيهات للمحافظة على السنن الرواتب</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px]">الضحى</span>
+                        <Switch checked={settings.duhaReminder || false} onCheckedChange={c=>updateSettings({duhaReminder:c})} />
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px]">الوتر</span>
+                        <Switch checked={settings.witrReminder || false} onCheckedChange={c=>updateSettings({witrReminder:c})} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between border-b border-border/50 flex-row-reverse">
+                    <div className="text-right">
+                      <p className="font-medium text-sm">صيام النوافل</p>
+                      <p className="text-xs text-muted-foreground">الاثنين والخميس والأيام البيض</p>
+                    </div>
+                    <Switch checked={settings.fastingReminder || false} onCheckedChange={c=>updateSettings({fastingReminder:c})} />
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between border-b border-border/50 flex-row-reverse">
+                    <div className="text-right">
+                      <p className="font-medium text-sm">سنن الجمعة</p>
+                      <p className="text-xs text-muted-foreground">تنبيه بسورة الكهف والسنن المهجورة</p>
+                    </div>
+                    <Switch checked={settings.fridayReminder || false} onCheckedChange={c=>updateSettings({fridayReminder:c})} />
                   </div>
 
                   <div className="p-4 space-y-3">

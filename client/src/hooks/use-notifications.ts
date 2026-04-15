@@ -10,6 +10,10 @@ interface NotificationSettings {
     eveningAdhkar: boolean;
     iqamaReminder: boolean;
     sound: boolean;
+    duhaReminder: boolean;
+    witrReminder: boolean;
+    fastingReminder: boolean;
+    fridayReminder: boolean;
 }
 
 const defaultSettings: NotificationSettings = {
@@ -20,6 +24,10 @@ const defaultSettings: NotificationSettings = {
     eveningAdhkar: true,
     iqamaReminder: true,
     sound: true,
+    duhaReminder: true,
+    witrReminder: true,
+    fastingReminder: true,
+    fridayReminder: true,
 };
 
 const STORAGE_KEY = 'notification_settings';
@@ -464,11 +472,77 @@ export function usePrayerNotifications(prayerTimings: Record<string, string> | n
                 }
             }
         };
+        
+        const checkReminders = (hijriDate?: any) => {
+            const settings = getStoredSettings();
+            if (!settings.enabled || Notification.permission !== 'granted') return;
+            
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const dayOfWeek = now.getDay(); // 0: Sun, 1: Mon, ..., 5: Fri, 6: Sat
+            const todayKey = getTodayKey();
+
+            // Duha Reminder (approx 20 mins after sunrise)
+            if (settings.duhaReminder && prayerTimings['Sunrise']) {
+                const normalized = normalizeTime(prayerTimings['Sunrise']);
+                const [h, m] = normalized.split(':').map(Number);
+                const duhaMinutes = h * 60 + m + 20;
+                const duhaKey = `${todayKey}-duha`;
+                if (currentMinutes === duhaMinutes && !sentNotificationsRef.current.has(duhaKey)) {
+                    sendNotification('صلاة الضحى', 'قال ﷺ: (يُصْبِحُ عَلَى كُلِّ سُلامَى مِنْ أَحَدِكُمْ صَدَقَةٌ... وَيُجْزِئُ مِنْ ذَلِكَ رَكْعَتَانِ يَرْكَعُهُمَا مِنَ الضُّحَى )');
+                    sentNotificationsRef.current.add(duhaKey);
+                }
+            }
+
+            // Witr Reminder (e.g., 10:30 PM)
+            if (settings.witrReminder) {
+                const witrMinutes = 22 * 60 + 30; // 10:30 PM
+                const witrKey = `${todayKey}-witr`;
+                if (currentMinutes === witrMinutes && !sentNotificationsRef.current.has(witrKey)) {
+                    sendNotification('صلاة الوتر', 'تذكير بصلاة الوتر - أوتروا قبل أن تناموا، فإن الله وتر يحب الوتر.');
+                    sentNotificationsRef.current.add(witrKey);
+                }
+            }
+
+            // Friday Sunan
+            if (settings.fridayReminder && dayOfWeek === 5) {
+                const fridayKey = `${todayKey}-friday`;
+                if (currentMinutes === 9 * 60 && !sentNotificationsRef.current.has(fridayKey)) {
+                    sendNotification('سنن يوم الجمعة', 'تذكير بقراءة سورة الكهف، كثرة الصلاة على النبي ﷺ، والاغتسال والتطيب.');
+                    sentNotificationsRef.current.add(fridayKey);
+                }
+            }
+
+            // Fasting Reminder (Mon/Thu + White Days)
+            if (settings.fastingReminder && hijriDate) {
+                const fastKey = `${todayKey}-fasting`;
+                if (currentMinutes === 21 * 60 && !sentNotificationsRef.current.has(fastKey)) {
+                    const hDay = parseInt(hijriDate.day);
+                    const isWhiteDay = hDay === 12 || hDay === 13 || hDay === 14; // Alert the night before 13, 14, 15
+                    const isMonThu = dayOfWeek === 0 || dayOfWeek === 3; // Night before Mon/Thu
+
+                    if (isWhiteDay) {
+                        sendNotification('صيام الأيام البيض', `تذكير بصيام غداً ${hDay + 1} من الشهر الهجري (من أيام البيض).`);
+                        sentNotificationsRef.current.add(fastKey);
+                    } else if (isMonThu) {
+                        const dayName = dayOfWeek === 0 ? 'الاثنين' : 'الخميس';
+                        sendNotification('سنة الصيام', `تذكير بصيام يوم ${dayName} غداً (سنة مؤكدة).`);
+                        sentNotificationsRef.current.add(fastKey);
+                    }
+                }
+            }
+        };
 
         checkPrayerTimes();
         const interval = setInterval(checkPrayerTimes, 15000);
+        
+        // Check extra reminders every minute
+        const reminderInterval = setInterval(checkReminders, 60000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            clearInterval(reminderInterval);
+        };
     }, [prayerTimings, sendNotification]);
 
     useEffect(() => {

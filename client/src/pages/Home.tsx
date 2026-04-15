@@ -9,14 +9,14 @@ import {
   Calculator,
   Compass,
   Shield,
-  Heart,
-  Quote,
+  BookText,
   Search,
   Library,
   ChevronLeft,
   RotateCcw,
   Share2
 } from "lucide-react";
+import { useNotifications, usePrayerNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -40,6 +40,8 @@ export default function Home() {
     await manualRefresh();
     setIsRefreshing(false);
   };
+
+  usePrayerNotifications(prayerData?.timings || null, prayerData?.date?.hijri);
 
   const handleShareHadith = async () => {
     if (!dailyHadith) return;
@@ -103,13 +105,21 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4">
+      <section className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <Link href="/adhkar">
           <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
             <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500">
               <Shield className="w-6 h-6" />
             </div>
             <h3 className="font-bold text-sm text-white">الأذكار</h3>
+          </div>
+        </Link>
+        <Link href="/hadith-collections">
+          <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
+            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-400">
+              <BookText className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-sm text-white">مكتبة الأحاديث</h3>
           </div>
         </Link>
         <Link href="/hadith-verify">

@@ -59,6 +59,19 @@
       --popover-foreground: 150 20% 94%;
 }
 
+:root[data-theme='emerald'] { --primary: 165 65% 35%; --ring: 165 65% 35%; }
+:root[data-theme='blue'] { --primary: 215 75% 45%; --ring: 215 75% 45%; }
+:root[data-theme='maroon'] { --primary: 345 65% 35%; --ring: 345 65% 35%; }
+:root[data-theme='sand'] { --primary: 35 60% 45%; --ring: 35 60% 45%; }
+:root[data-theme='purple'] { --primary: 270 60% 45%; --ring: 270 60% 45%; }
+:root[data-theme='gold'] { --primary: 45 75% 45%; --ring: 45 75% 45%; }
+:root[data-theme='slate'] { --primary: 215 25% 40%; --ring: 215 25% 40%; }
+:root[data-theme='teal'] { --primary: 175 75% 35%; --ring: 175 75% 35%; }
+:root[data-theme='rose'] { --primary: 340 70% 55%; --ring: 340 70% 55%; }
+:root[data-theme='forest'] { --primary: 145 65% 25%; --ring: 145 65% 25%; }
+:root[data-theme='ocean'] { --primary: 200 80% 40%; --ring: 200 80% 40%; }
+:root[data-theme='lavender'] { --primary: 260 50% 60%; --ring: 260 50% 60%; }
+
 @layer base {
       * {
               @apply border-border;

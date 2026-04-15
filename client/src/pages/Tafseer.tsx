@@ -98,6 +98,8 @@ const SAJDA_VERSES=new Set(['7:206','13:15','16:50','17:109','19:58','22:18','22
 const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'التفسير الميسر'},{id:'ar.jalalayn',name:'تفسير الجلالين'},{id:'ar.ibn-katheer',name:'تفسير ابن كثير'},{id:'ar.qurtubi',name:'تفسير القرطبي'},{id:'ar.baghawi',name:'تفسير البغوي'},{id:'ar.saddi',name:'تفسير السعدي'},{id:'ar.tabari',name:'تفسير الطبري'},];
 
 export default function TafseerPage(){
+  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
+
   const handleTimeUpdate = () => {
     const a = audioRef.current;
     if (!a) return;
@@ -105,16 +107,15 @@ export default function TafseerPage(){
     if (bar && a.duration) { bar.value = String((a.currentTime / a.duration) * 100); }
     
     const q = playQueueRef.current;
-    // On iOS Safari, playing a new Audio() object outside a user interaction fails.
-    // So if smooth crossfade fails, we must rely on standard onended.
-    // Instead of instantiating new Audio, we use a single audio player and preload the next verse over network.
-    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 0.1) {
-      if (!a.dataset.crossed) {
-        a.dataset.crossed = '1';
-        // Let handleEnded trigger naturally, but we fetch the next file into browser cache right now
+    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 0.3) {
+      if (!a.dataset.preloaded) {
+        a.dataset.preloaded = '1';
         const rec = getReciter();
         const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(q.nis+1)}.mp3`;
-        fetch(url, {mode: 'no-cors'}).catch(()=>{}); 
+        // Pre-buffer next verse in a hidden element
+        if(!nextAudioRef.current) nextAudioRef.current = new Audio();
+        nextAudioRef.current.src = url;
+        nextAudioRef.current.load();
       }
     }
   };
@@ -282,13 +283,6 @@ export default function TafseerPage(){
   const skipNext=()=>{const q=playQueueRef.current;if(q&&q.nis<q.maxNis){q.nis++;playVerse(q.sn,q.nis);}};
   const skipPrev=()=>{const q=playQueueRef.current;if(q&&q.nis>1){q.nis--;playVerse(q.sn,q.nis);}};
 
-  const handleEnded=()=>{
-    const q=playQueueRef.current;
-    if(q&&q.nis<q.maxNis){
-      q.nis++;
-      // Primed cache handled in timeupdate
-      const rec=getReciter();
-      const url=rec.ev?`https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`:`${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
       const a=audioRef.current;
       if(a){a.src=url;a.play().catch(()=>{});a.dataset.crossed='';}
       setPlayingKey(`${q.sn}-${q.nis}`);
@@ -435,8 +429,7 @@ export default function TafseerPage(){
       const boxY=100;
       ctx.strokeStyle=c.border;ctx.lineWidth=2.5;
       ctx.strokeRect(290,boxY,500,80);
-      ctx.font=`36px serif`;ctx.fillStyle=c.text;
-      ctx.fillText('۞',245,boxY+40);ctx.fillText('۞',835,boxY+40);
+      ctx.font=`۞`; ctx.fillText('۞',245,boxY+40);ctx.fillText('۞',835,boxY+40);
       ctx.font=`bold 42px ${fontQ}`;ctx.fillStyle=c.text;
       ctx.fillText(`سُورَةُ ${sname}`,540,boxY+42);
       // Verse text - word wrap
@@ -453,11 +446,11 @@ export default function TafseerPage(){
       ctx.strokeStyle=c.border;ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(340,y+10);ctx.lineTo(740,y+10);ctx.stroke();
       ctx.font='bold 20px sans-serif';ctx.fillStyle=c.text;
-      ctx.fillText(`${selVerse.sn}:${refs}`,540,y+10);
+      ctx.fillText(`${selVerse.sn}:${refs}${pg ? `  |  صفحة ${pg}` : ''}`, 540, y + 10);
       // Watermark
       const wmY=Math.max(y+80,cv.height-40);
       ctx.font='16px sans-serif';ctx.fillStyle=c.border;
-      ctx.fillText('تطبيق محراب - mihrabapp.com',540,wmY);
+      ctx.fillText('تشرفت بالمشاركة عبر تطبيق محراب - mihrabapp.com',540,wmY);
       // Resize canvas to actual content
       if(y+120<cv.height){
         const finalH=y+120;
@@ -703,9 +696,9 @@ export default function TafseerPage(){
             {/* Bismillah Header */}
             {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-1 mb-4" dir="rtl">
               <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
-                className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.2]" 
+                className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.2] block" 
                 style={{
-                  fontSize:'clamp(16px, 4.5vw, 24px)',
+                  fontSize: dynSize,
                   color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#fff' : colors.text,
                   background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
                   padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '2px 6px' : '0'
