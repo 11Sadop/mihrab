@@ -163,7 +163,8 @@ export default function TafseerPage(){
   const audioRef=useRef<HTMLAudioElement>(null);
   const searchRef=useRef<HTMLInputElement>(null);
   const playQueueRef=useRef<{sn:number;nis:number;maxNis:number}|null>(null);
-  const hifzTxtRef=useRef(''); // Stores cumulative speech text per verse
+  const hifzTxtRef=useRef(''); 
+  const isAdvancingRef=useRef(false);
   const recIdRef=useRef(recId);
   const pgRef=useRef(pg);
 
@@ -342,7 +343,8 @@ export default function TafseerPage(){
       
       const completeRatio = ew.length>0?matched/ew.length:0;
       
-      if(completeRatio >= 0.65){
+      if(completeRatio >= 0.7 && !isAdvancingRef.current){
+        isAdvancingRef.current = true;
         setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
         setHifzStatus('ok');
         const k=`${exp.sn}-${exp.nis}`;
@@ -353,6 +355,7 @@ export default function TafseerPage(){
             const next=Math.min(prev+1,(pq.data?.length||1)-1);
             const el=document.getElementById(`ayah-${pq.data[next].nis}`);
             if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+            isAdvancingRef.current = false;
             return next;
           });
           setHifzFeedback(null);
@@ -666,19 +669,18 @@ export default function TafseerPage(){
         onTouchStart={onTS} onTouchEnd={onTE}>
                 {pq.isLoading?<div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="h-full flex items-center justify-center flex-col gap-2"><p>فشل</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة</Button></div>
-        :<div className="flex flex-col flex-1 px-4 md:px-6 h-screen justify-between overflow-hidden" style={{maxWidth:680,margin:'0 auto',width:'100%',paddingTop:60,paddingBottom:20}}>
-            <div className="flex-1 overflow-y-auto flex flex-col justify-center scrollbar-hide" id="mushaf-container">
+        :<div className="flex flex-col flex-1 px-4 md:px-6 min-h-screen justify-center overflow-hidden" style={{maxWidth:680,margin:'0 auto',width:'100%',paddingTop:40,paddingBottom:20}}>
+            <div className="flex-1 flex flex-col justify-center scrollbar-hide" id="mushaf-container">
           {groups.map((g,gi)=>{
             const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
             
-            // Dynamic sizing to fill vertical space perfectly
-            const dynSize=allChars<300?'clamp(26px, 8vw, 42px)':
-                          allChars<400?'clamp(24px, 7.5vw, 38px)':
-                          allChars<600?'clamp(22px, 7vw, 34px)':
-                          allChars<850?'clamp(20px, 6.5vw, 30px)':
-                          'clamp(18px, 5.8vw, 26px)';
-                          
-            const dynLine=allChars<400?'2.5':allChars<600?'2.3':allChars<800?'2.1':'1.9';
+            // Dynamic sizing for high density and vertical fit
+            const dynSize=allChars<300?'clamp(24px, 7vw, 38px)':
+                          allChars<450?'clamp(22px, 6.5vw, 34px)':
+                          allChars<700?'clamp(20px, 6vw, 30px)':
+                          'clamp(18px, 5.5vw, 26px)';
+            
+            const dynLine=allChars<400?'2.3':allChars<600?'2.1':allChars<800?'1.9':'1.8';
             
             return <div key={`${g.sn}-${gi}`} className="relative pb-10">
               {/* Ayah App Page Headers */}
@@ -688,27 +690,25 @@ export default function TafseerPage(){
               </div>
 
             {/* Surah Header - Ornate SVG Frame */}
-            {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center">
-              <div className="relative px-12 py-4 min-w-[220px]">
+            {g.ayahs[0].nis===1&&<div className="text-center my-4 flex justify-center scale-90">
+              <div className="relative px-10 py-3 min-w-[180px]">
                 <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 60" preserveAspectRatio="none">
                   <path d="M10 5 L190 5 L195 10 L195 50 L190 55 L10 55 L5 50 L5 10 Z" fill={colors.border+'10'} stroke={colors.border} strokeWidth="1"/>
                   <path d="M20 10 L180 10 L185 15 L185 45 L180 50 L20 50 L15 45 L15 15 Z" fill="none" stroke={colors.border} strokeWidth="0.5" opacity="0.5"/>
-                  <circle cx="10" cy="30" r="3" fill={colors.border}/>
-                  <circle cx="190" cy="30" r="3" fill={colors.border}/>
                 </svg>
-                <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(24px, 5vw, 32px)',color:colors.text, paddingTop:'2px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
+                <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(18px, 4vw, 24px)',color:colors.text, paddingTop:'1px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
               </div>
             </div>}
             
             {/* Bismillah Header */}
-            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-6" dir="rtl">
+            {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-1 mb-4" dir="rtl">
               <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
-                className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5]" 
+                className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.2]" 
                 style={{
-                  fontSize:'clamp(22px, 5.5vw, 36px)',
+                  fontSize:'clamp(16px, 4.5vw, 24px)',
                   color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#fff' : colors.text,
                   background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
-                  padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 8px' : '0'
+                  padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '2px 6px' : '0'
                 }}>
                 بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
                 {g.sn===1 && <span className="inline-flex items-center justify-center rounded-full mx-2 font-sans font-bold" style={{width:'2.2em',height:'2.2em',fontSize:'0.45em',verticalAlign:'middle',border:`1px solid ${(playingKey===`${g.sn}-1`)?'#22c55e':colors.border}`,color:(playingKey===`${g.sn}-1`)?'#22c55e':colors.border,background:(playingKey===`${g.sn}-1`)?'rgba(34,197,94,0.1)':'transparent',opacity:0.8}}>1</span>}

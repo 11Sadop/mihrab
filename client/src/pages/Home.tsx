@@ -103,7 +103,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Minimal Grid - No Quran or Assistant */}
       <section className="grid grid-cols-2 gap-4">
         <Link href="/adhkar">
           <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
@@ -113,12 +112,12 @@ export default function Home() {
             <h3 className="font-bold text-sm text-white">الأذكار</h3>
           </div>
         </Link>
-        <Link href="/hadith-collections">
+        <Link href="/hadith-verify">
           <div className="bg-[#0f172a] p-5 rounded-[2rem] flex flex-col items-center text-center gap-3 border border-white/5 transition-all hover:scale-[1.02] cursor-pointer group shadow-lg">
-            <div className="p-3 bg-slate-500/10 rounded-2xl text-slate-400">
-              <Library className="w-6 h-6" />
+            <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400">
+              <Search className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-sm text-white">الأحاديث</h3>
+            <h3 className="font-bold text-sm text-white">تحقق من الحديث</h3>
           </div>
         </Link>
       </section>
@@ -168,12 +167,12 @@ export default function Home() {
             </div>
           ) : dailyHadith ? (
             <div className="space-y-4">
-              {/* Increased Font Size */}
-              <p className="text-white/95 text-lg sm:text-xl leading-loose font-arabic text-center px-2">
+              {/* Increased Font Size and Weight for clarity */}
+              <p className="text-white text-lg sm:text-xl leading-loose font-bold font-arabic text-center px-2">
                 {dailyHadith.arabicText || dailyHadith.text}
               </p>
               {dailyHadith.translation && (
-                <p className="text-sm text-slate-400 text-center italic border-t border-white/5 pt-3">
+                <p className="text-sm text-slate-300 text-center italic border-t border-white/5 pt-3">
                   "{dailyHadith.translation}"
                 </p>
               )}
