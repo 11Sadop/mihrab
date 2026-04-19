@@ -7,13 +7,13 @@ import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
 const RECITERS:Rec[]=[
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"},
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_128kbps"},
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
   {id:"hosary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Mujawwad_128kbps"},
   {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"AbdulBasit_Mujawwad_128kbps"},
-  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Ghamadi_40kbps"},
+  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Sa_ood_ash-Shuraym_128kbps"},
   {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
   {id:"luhaidan",name:"محمد اللحيدان",server:"https://server15.mp3quran.net/lhdan",ev:"Muhammad_Al-Luhaidan_128kbps"},
   {id:"dosari",name:"ياسر الدوسري",server:"https://server10.mp3quran.net/ibrahim_dosri",ev:"Yasser_Ad-Dussary_128kbps"},
@@ -27,13 +27,13 @@ const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
 // Normalize text - keep ALL marks for display except zero-width spaces
-const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'').replace(/لْءَا/g, 'لْـَٔا').replace(/لْء/g, 'لْـٔ').replace(/بالآخرة/g, 'بِالْـَٔاخِرَةِ');
+const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06E9۩]/g,'');
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
 const spaceMuqattaat=(t:string)=>{
-  // Preserve spacing for display but don't strip the actual diacritics
-  const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'');
+  // Only add spacing for muqatta'at letters (الم, حم, etc.) - preserve all tashkeel
+  const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'').trim();
   if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنصل]+$/.test(base)){
-    return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670\u06D6-\u06ED]*)/g,'$1 ').trim();
+    return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670\u06D6-\u06ED]*)/g,'$1\u200A').trim();
   }
   return t;
 };
@@ -88,7 +88,16 @@ const QBG:Record<string,{bg:string;text:string;border:string;hi:string}>={
 
 const SAJDA_VERSES=new Set(['7:206','13:15','16:50','17:109','19:58','22:18','22:77','25:60','27:26','32:15','38:24','41:38','53:62','84:21','96:19']);
 
-const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'التفسير الميسر'},{id:'ar.jalalayn',name:'تفسير الجلالين'},{id:'ar.ibn-katheer',name:'تفسير ابن كثير'},{id:'ar.qurtubi',name:'تفسير القرطبي'},{id:'ar.baghawi',name:'تفسير البغوي'},{id:'ar.saddi',name:'تفسير السعدي'},{id:'ar.tabari',name:'تفسير الطبري'},];
+const TAFSEER_SOURCES=[
+  {id:'ar.muyassar',name:'التفسير الميسر',api:'alquran'},
+  {id:'ar.jalalayn',name:'تفسير الجلالين',api:'alquran'},
+  {id:'1',name:'تفسير ابن كثير',api:'tafseer'},
+  {id:'2',name:'تفسير الطبري',api:'tafseer'},
+  {id:'3',name:'تفسير القرطبي',api:'tafseer'},
+  {id:'4',name:'تفسير السعدي',api:'tafseer'},
+  {id:'5',name:'تفسير البغوي',api:'tafseer'},
+  {id:'8',name:'تفسير الوسيط',api:'tafseer'},
+];
 
 export default function TafseerPage(){
   const audio1Ref = useRef<HTMLAudioElement | null>(null);
@@ -131,30 +140,34 @@ export default function TafseerPage(){
       const nextNis = q.nis + 1;
       const nextKey = `${q.sn}-${nextNis}`;
       
-      // Swap to buffer if it's ready
-      if (nextPreloadedKey.current === nextKey) {
-        activeAudioRef.current = activeAudioRef.current === '1' ? '2' : '1';
-        const a = currentAudio();
-        if (a) {
-          a.play().catch(() => setPlayingKey(""));
-          setPlayingKey(nextKey);
-          ensureVerseVisible(q.sn, nextNis);
-          playQueueRef.current = { ...q, nis: nextNis };
-          nextPreloadedKey.current = "";
+      // Small pause between verses for natural reading flow
+      setTimeout(() => {
+        // Swap to buffer if it's ready
+        if (nextPreloadedKey.current === nextKey) {
+          activeAudioRef.current = activeAudioRef.current === '1' ? '2' : '1';
+          const a = currentAudio();
+          if (a) {
+            a.currentTime = 0;
+            a.play().catch(() => setPlayingKey(""));
+            setPlayingKey(nextKey);
+            ensureVerseVisible(q.sn, nextNis);
+            playQueueRef.current = { ...q, nis: nextNis };
+            nextPreloadedKey.current = "";
+          }
+        } else {
+          // Fallback if not preloaded
+          const rec = getReciter();
+          const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
+          const a = currentAudio();
+          if (a) {
+            a.src = url;
+            a.play().catch(() => setPlayingKey(""));
+            setPlayingKey(nextKey);
+            ensureVerseVisible(q.sn, nextNis);
+            playQueueRef.current = { ...q, nis: nextNis };
+          }
         }
-      } else {
-        // Fallback if not preloaded
-        const rec = getReciter();
-        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
-        const a = currentAudio();
-        if (a) {
-          a.src = url;
-          a.play().catch(() => setPlayingKey(""));
-          setPlayingKey(nextKey);
-          ensureVerseVisible(q.sn, nextNis);
-          playQueueRef.current = { ...q, nis: nextNis };
-        }
-      }
+      }, 300);
     } else {
       setPlayingKey("");
     }
@@ -170,7 +183,7 @@ export default function TafseerPage(){
     
     // Preload Logic
     const q = playQueueRef.current;
-    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 1.5) {
+    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 2.5) {
       const nextNis = q.nis + 1;
       const nextKey = `${q.sn}-${nextNis}`;
       if (nextPreloadedKey.current !== nextKey) {
@@ -273,7 +286,7 @@ export default function TafseerPage(){
       searchTimeout.current=setTimeout(async()=>{
         setIsSearchingAyahs(true);
         try{const r=await fetch(`https://api.alquran.cloud/v1/search/${val.trim()}/all/ar`);const d=await r.json();
-          if(d.code===200){const u:any[]=[],seen=new Set();for(const m of d.data.matches){const k=`${m.surah.number}-${m.numberInSurah}`;if(!seen.has(k)){seen.add(k);u.push(m);if(u.length>=20)break;}}setAyahSearchResults(u);}
+          if(d.code===200){const u:any[]=[],seen=new Set();for(const m of d.data.matches){const k=`m.surah.number-m.numberInSurah`;if(!seen.has(k)){seen.add(k);u.push(m);if(u.length>=20)break;}}setAyahSearchResults(u);}
           else setAyahSearchResults([]);
         }catch{setAyahSearchResults([]);}setIsSearchingAyahs(false);
       },400);
@@ -356,9 +369,16 @@ export default function TafseerPage(){
     const q=playQueueRef.current;if(!q)return;
     const rec=getReciter();
     const a = currentAudio();
+    // Try mirror first, then mp3quran server, then skip
     if(rec.ev && a && !a.src.includes('mirrors.quranicaudio.com')){
       a.src=`https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
-      a.play().catch(()=>skipNext());
+      a.play().catch(()=>{
+        // Try mp3quran server as final fallback
+        if(rec.server){
+          a.src=`${rec.server}/${pad3(q.sn)}.mp3`;
+          a.play().catch(()=>skipNext());
+        } else skipNext();
+      });
       return;
     }
     skipNext();
@@ -376,63 +396,186 @@ export default function TafseerPage(){
   // Hifz
   const startHifz=useCallback(()=>{
     const SR=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
-    if(!SR){alert("جرب Chrome");return;}
-    const r=new SR();r.lang="ar-SA";r.continuous=true;r.interimResults=true;r.maxAlternatives=1;
+    if(!SR){alert("المتصفح لا يدعم التعرف على الصوت. استخدم Chrome");return;}
+    const r=new SR();
+    r.lang="ar-SA";
+    r.continuous=true;
+    r.interimResults=true;
+    r.maxAlternatives=3; // More alternatives = better accuracy
+    
+    // Normalize Arabic text for comparison (strip diacritics, unify letters)
+    const normAr = (s:string) => s
+      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF\u06E0\u06E2\u06E3\u06E5\u06E6\u06E8\u06EA\u06EB\u06EC\u06ED\u0640]/g,'')
+      .replace(/[أإآءٱ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/ى/g, 'ي')
+      .replace(/ؤ/g, 'و')
+      .replace(/ئ/g, 'ي')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Calculate word-level similarity (Levenshtein-like)
+    const wordSimilarity = (a:string, b:string):number => {
+      if(a === b) return 1;
+      if(a.includes(b) || b.includes(a)) return 0.9;
+      // Check if first 3 chars match (common root)
+      if(a.length >= 3 && b.length >= 3 && a.substring(0,3) === b.substring(0,3)) return 0.7;
+      // Check if 70%+ of chars match
+      let matches = 0;
+      const shorter = a.length < b.length ? a : b;
+      const longer = a.length >= b.length ? a : b;
+      for(const c of shorter) { if(longer.includes(c)) matches++; }
+      return matches / longer.length;
+    };
+    
+    let allTranscripts:string[] = []; // Accumulate all heard words
+    let lastResultCount = 0;
     
     r.onresult=(e:any)=>{
-      const normAr = (s:string) => s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF\u06E0\u06E2\u06E3\u06E5\u06E6\u06E8\u06EA\u06EB\u06EC\u06ED]/g,'')
-        .replace(/[أإآء]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و');
-        
       if(!pq.data) return;
       const exp=pq.data[hifzIdx]; if(!exp) return;
+      if(isAdvancingRef.current) return;
 
-      let transcript='';
-      // Use only the latest results to avoid "carrying over" previous verse matches
-      const latestIdx = e.results.length - 1;
-      transcript = e.results[latestIdx][0].transcript;
+      // Collect ALL results (not just latest) for better coverage
+      let fullTranscript = '';
+      let newWords:string[] = [];
       
-      const sw=normAr(transcript).split(' ').filter(w=>w.length>1);
-      hifzTxtRef.current = transcript;
-      setRecTxt(transcript);
+      for(let i = 0; i < e.results.length; i++) {
+        const result = e.results[i];
+        // Check all alternatives for best match
+        let bestText = result[0].transcript;
+        if(result.length > 1) {
+          // Use the alternative that best matches expected verse
+          const expNorm = normAr(exp.text);
+          let bestScore = 0;
+          for(let j = 0; j < result.length; j++) {
+            const altNorm = normAr(result[j].transcript);
+            const words = altNorm.split(' ').filter((w:string) => w.length > 1);
+            const expWords = expNorm.split(' ').filter((w:string) => w.length > 1);
+            let score = 0;
+            for(const w of words) {
+              if(expWords.some((ew:string) => wordSimilarity(w, ew) > 0.6)) score++;
+            }
+            if(score > bestScore) { bestScore = score; bestText = result[j].transcript; }
+          }
+        }
+        
+        if(result.isFinal || i >= lastResultCount) {
+          const words = normAr(bestText).split(' ').filter((w:string) => w.length > 1);
+          newWords.push(...words);
+        }
+        fullTranscript += bestText + ' ';
+      }
+      
+      // Add new words to accumulated list
+      if(newWords.length > 0) {
+        allTranscripts.push(...newWords);
+      }
+      
+      lastResultCount = e.results.length;
+      hifzTxtRef.current = fullTranscript;
+      setRecTxt(fullTranscript.split(' ').slice(-6).join(' '));
 
-      const ew=normAr(exp.text).split(' ').filter(w=>w.length>1);
-      // More robust matching: check if many words from current verse are present in the recent transcript
-      let matchedCount=0;
-      const recentWindow = sw.slice(-Math.min(sw.length, ew.length + 5));
-      for(const targetWord of ew) {
-        if(recentWindow.some(saidWord => saidWord.includes(targetWord) || targetWord.includes(saidWord))) {
+      // Compare accumulated words against expected verse
+      const ew = normAr(exp.text).split(' ').filter((w:string) => w.length > 1);
+      const spokenWords = allTranscripts.slice(-Math.max(ew.length * 2, 20)); // Use recent window
+      
+      // Word-by-word matching with similarity scoring
+      let matchedWords:string[] = [];
+      let wrongWords:string[] = [];
+      let matchedCount = 0;
+      
+      for(let wi = 0; wi < ew.length; wi++) {
+        const target = ew[wi];
+        let bestMatch = 0;
+        let bestWord = '';
+        
+        for(const said of spokenWords) {
+          const sim = wordSimilarity(said, target);
+          if(sim > bestMatch) { bestMatch = sim; bestWord = said; }
+        }
+        
+        if(bestMatch >= 0.7) {
           matchedCount++;
+          matchedWords.push(target);
+          if(bestMatch < 0.95) {
+            // Pronunciation issue - close but not exact
+            wrongWords.push(`"${target}" ← نطقت "${bestWord}"`);
+          }
+        } else {
+          wrongWords.push(`❌ "${target}"`);
         }
       }
       
-      const completeRatio = ew.length>0 ? matchedCount/ew.length : 0;
+      const completeRatio = ew.length > 0 ? matchedCount / ew.length : 0;
       
-      // Higher threshold (0.75) for better accuracy, must be currently memorizing
-      if(completeRatio >= 0.75 && !isAdvancingRef.current){
+      // Show real-time feedback on progress
+      if(completeRatio > 0.3 && completeRatio < 0.7) {
+        setHifzFeedback({type:'ok', msg:`⏳ ${Math.round(completeRatio*100)}% من الآية...`});
+      }
+      
+      // Pronunciation errors detected (matched words but with differences)
+      if(wrongWords.length > 0 && completeRatio >= 0.5 && completeRatio < 0.7) {
+        setHifzFeedback({type:'wrong_pron', msg:'⚠️ تحقق من النطق', details:wrongWords.slice(0,3)});
+        setHifzStatus('pron');
+      }
+      
+      // ✅ Verse completed successfully
+      if(completeRatio >= 0.70 && !isAdvancingRef.current) {
         isAdvancingRef.current = true;
-        setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
-        setHifzStatus('ok');
+        
+        const hasErrors = wrongWords.length > 0;
+        const isPerfect = completeRatio >= 0.95 && wrongWords.filter(w=>w.startsWith('❌')).length === 0;
+        
+        if(isPerfect) {
+          setHifzFeedback({type:'ok', msg:'ممتاز! أحسنت ✅'});
+          setHifzStatus('ok');
+        } else if(hasErrors && wrongWords.some(w=>w.startsWith('❌'))) {
+          setHifzFeedback({type:'wrong_verse', msg:'⚠️ صحيح مع ملاحظات', details:wrongWords.filter(w=>w.startsWith('❌')).slice(0,3)});
+          setHifzStatus('pron');
+        } else {
+          setHifzFeedback({type:'ok', msg:'أحسنت ✅'});
+          setHifzStatus('ok');
+        }
+        
         playLocalSound('ok');
         const k=`${exp.sn}-${exp.nis}`;
-        setHifzRes(prev=>{const n=new Map(prev);n.set(k,'ok');return n;});
+        setHifzRes(prev=>{const n=new Map(prev);n.set(k, isPerfect ? 'ok' : 'ok');return n;});
         
+        // Auto-advance to next verse
         setTimeout(()=>{
+          allTranscripts = []; // Reset accumulated words for next verse
+          lastResultCount = 0;
+          
           setHifzIdx(prev=>{
             const next=Math.min(prev+1,(pq.data?.length||1)-1);
-            const el=document.getElementById(`ayah-${pq.data[next].nis}`);
-            if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+            setTimeout(()=>{
+              const el=document.getElementById(`verse-${pq.data![next].sn}-${pq.data![next].nis}`);
+              if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+            }, 200);
             isAdvancingRef.current = false;
             return next;
           });
           setHifzFeedback(null);
+          setHifzStatus('none');
           hifzTxtRef.current = '';
           setRecTxt('');
-        }, 1200);
+          
+          // Restart recognition fresh for new verse
+          try { r.stop(); } catch {}
+          setTimeout(() => { try { r.start(); } catch {} }, 300);
+        }, 1500);
       }
     };
 
-    r.onerror=()=>{};
-    r.onend=()=>{if(recording)try{r.start();}catch{}};
+    r.onerror=(e:any)=>{
+      console.log('Speech error:', e.error);
+      // Auto-restart on non-fatal errors
+      if(e.error === 'no-speech' || e.error === 'audio-capture') {
+        setTimeout(() => { try { r.start(); } catch {} }, 500);
+      }
+    };
+    r.onend=()=>{if(recording && !isAdvancingRef.current) try{r.start();}catch{}};
     recRef.current=r;
     r.start();
     setRecording(true);
@@ -668,7 +811,14 @@ export default function TafseerPage(){
                 <button onClick={()=>{playQueueRef.current=null;playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>الآية</button>
                 <button onClick={()=>{toggleBookmark(`${selVerse.sn}-${selVerse.nis}`);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4"/>{bookmarks.has(`${selVerse.sn}-${selVerse.nis}`)?"إزالة الحفظ":"حفظ العلامة"}</button>
               </div></div>
-            <button onClick={()=>{setShowOptions(false);setShowTafseer(true);setTafseerText('');setTafseerLoading(true);fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${tafseerSource}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل في تحميل التفسير');setTafseerLoading(false);});}} className="w-full py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>التفسير</button>
+            <button onClick={()=>{setShowOptions(false);setShowTafseer(true);setTafseerText('');setTafseerLoading(true);(() => {
+              const src = TAFSEER_SOURCES.find(s=>s.id===tafseerSource);
+              if(src?.api==='tafseer'){
+                fetch(`https://api.quran-tafseer.com/tafseer/${src.id}/${selVerse.sn}/${selVerse.nis}`).then(r=>r.json()).then(d=>{setTafseerText(d.text||'لا يوجد تفسير');setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل في تحميل التفسير');setTafseerLoading(false);});
+              } else {
+                fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${tafseerSource}`).then(r=>r.json()).then(d=>{setTafseerText(d.data?.text||'لا يوجد تفسير');setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل في تحميل التفسير');setTafseerLoading(false);});
+              }
+            })();}} className="w-full py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>التفسير</button>
             <button onClick={()=>{setShowOptions(false);setShowSharePage(true);}} className="w-full py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"><Share2 className="w-4 h-4"/>مشاركة / حفظ كصورة</button>
           </div>
         </div>
@@ -682,7 +832,14 @@ export default function TafseerPage(){
           <span className="w-9"/>
         </div>
         <div className="px-4 py-3 border-b" style={{borderColor:colors.border+'40'}} dir="rtl">
-          <select value={tafseerSource} onChange={e=>{setTafseerSource(e.target.value);setTafseerLoading(true);setTafseerText('');            fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${e.target.value}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل');setTafseerLoading(false);});          }} className="w-full h-10 rounded-xl border px-3 text-sm outline-none" style={{borderColor:colors.border,background:colors.bg,color:colors.text}}>
+          <select value={tafseerSource} onChange={e=>{setTafseerSource(e.target.value);setTafseerLoading(true);setTafseerText('');            (() => {
+              const src = TAFSEER_SOURCES.find(s=>s.id===e.target.value);
+              if(src?.api==='tafseer'){
+                fetch(`https://api.quran-tafseer.com/tafseer/${src.id}/${selVerse.sn}/${selVerse.nis}`).then(r=>r.json()).then(d=>{setTafseerText(d.text||'لا يوجد تفسير');setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل');setTafseerLoading(false);});
+              } else {
+                fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${e.target.value}`).then(r=>r.json()).then(d=>{setTafseerText(d.data?.text||'لا يوجد تفسير');setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل');setTafseerLoading(false);});
+              }
+            })();          }} className="w-full h-10 rounded-xl border px-3 text-sm outline-none" style={{borderColor:colors.border,background:colors.bg,color:colors.text}}>
             {TAFSEER_SOURCES.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
@@ -726,11 +883,11 @@ export default function TafseerPage(){
             <div className={`flex flex-col pt-32 pb-32 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
               {groups.map((g,gi)=>{
                 const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
-                const dynSize=allChars<350?'clamp(24px, 7vw, 36px)':
-                               allChars<550?'clamp(22px, 6.5vw, 32px)':
-                               allChars<800?'clamp(19px, 5.5vw, 28px)':
-                               'clamp(17px, 4.5vw, 24px)';
-                const dynLine=allChars<350?'2.8':allChars<600?'2.4':allChars<800?'2.2':'2.1';
+                const dynSize=allChars<350?'clamp(22px, 6vw, 32px)':
+                               allChars<550?'clamp(20px, 5.5vw, 28px)':
+                               allChars<800?'clamp(18px, 5vw, 26px)':
+                               'clamp(16px, 4.5vw, 24px)';
+                const dynLine=allChars<350?'3.0':allChars<600?'2.6':allChars<800?'2.4':'2.2';
                 
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
                   {/* Surah/Juz Header */}
@@ -762,20 +919,17 @@ export default function TafseerPage(){
                       }}>
                       بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
                       {g.sn===1 && (
-                        <span className="inline-flex items-center justify-center align-middle mx-3" 
-                          style={{width:'1.7em',height:'1.7em',fontSize:'0.52em',verticalAlign:'middle',position:'relative'}}>
-                          <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
-                            <circle cx="25" cy="25" r="23" fill="none" stroke={(playingKey===`${g.sn}-1`)?'#22c55e':'#c8a96e'} strokeWidth="1.5"/>
-                            <circle cx="25" cy="25" r="19" fill="none" stroke={(playingKey===`${g.sn}-1`)?'#22c55e':'#c8a96e'} strokeWidth="0.8" opacity="0.6"/>
-                          </svg>
-                          <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:800,color:(playingKey===`${g.sn}-1`)?'#22c55e':'#8b7355',lineHeight:1}}>1</span>
+                        <span className="inline-flex items-center justify-center align-middle"
+                          style={{width:'1.6em',height:'1.6em',fontSize:'0.5em',verticalAlign:'middle',position:'relative',margin:'0 0.15em'}}>
+                          <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.4em',color:(playingKey===`${g.sn}-1`)?'#22c55e':'#c8a96e',opacity:0.9,lineHeight:1}}></span>
+                          <span style={{position:'relative',zIndex:1,fontSize:'0.8em',fontFamily:'sans-serif',fontWeight:700,color:(playingKey===`${g.sn}-1`)?'#22c55e':'#8b7355',lineHeight:1}}>1</span>
                         </span>
                       )}
                     </span>
                   </div>}
                   
                   {/* Ayahs Grid */}
-                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em', textAlignLast: 'center'}}>
+                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.02em',color:colors.text, wordSpacing:'0.08em', textAlignLast:'center'}}>
                     {g.ayahs.map(a=>{
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
@@ -790,14 +944,10 @@ export default function TafseerPage(){
                           }}>
                           {a.text}
                         </span>
-                        <span className="inline-flex items-center justify-center align-middle mx-1.5" data-v="1"
-                          style={{width:'1.7em',height:'1.7em',fontSize:'0.52em',verticalAlign:'middle',position:'relative',display:'inline-flex'}}>
-                          <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
-                            <circle cx="25" cy="25" r="23" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="1.5"/>
-                            <circle cx="25" cy="25" r="19" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="0.8" opacity="0.6"/>
-                            {[0,45,90,135,180,225,270,315].map(deg=><circle key={deg} cx={25+21*Math.cos(deg*Math.PI/180)} cy={25+21*Math.sin(deg*Math.PI/180)} r="2" fill={isP?'#22c55e':'#c8a96e'}/>)}
-                          </svg>
-                          <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:800,color:isP?'#22c55e':bookmarks.has(k)?'#ec4899':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
+                        <span className="inline-flex items-center justify-center align-middle" data-v="1"
+                          style={{width:'1.6em',height:'1.6em',fontSize:'0.5em',verticalAlign:'middle',position:'relative',display:'inline-flex',margin:'0 0.15em'}}>
+                          <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.4em',color:isP?'#22c55e':'#c8a96e',opacity:0.9,lineHeight:1}}></span>
+                          <span style={{position:'relative',zIndex:1,fontSize:'0.8em',fontFamily:'sans-serif',fontWeight:700,color:isP?'#22c55e':bookmarks.has(k)?'#ec4899':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
                         </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#22c55e':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
                       </span>;
                     })}
@@ -819,7 +969,7 @@ export default function TafseerPage(){
       </div>
 
       {/* ═══ BOTTOM PLAYER ═══ */}
-      {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card/90 backdrop-blur-md border-t border-border shadow-[0_-4px_25px_rgba(0,0,0,0.15)]" style={{paddingBottom:'env(safe-area-inset-bottom,6px)'}}>
+      {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card/90 backdrop-blur-md border-t border-border shadow-[0_-4px_25px_rgba(0,0,0,0.15)]" style={{paddingBottom:'env(safe-area-bottom,6px)'}}>
         <div className="w-full px-6 mb-1 mt-1">
           <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" className="w-full h-1 bg-emerald-500/10 accent-emerald-500 rounded-full appearance-none cursor-pointer"/>
         </div>
