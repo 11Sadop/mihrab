@@ -838,9 +838,7 @@ export default function TafseerPage(){
           </div>
         </div>
       </div>}
-    </div>
-  );
-}
-Getting DOM...Pressing key...Stopping...
+    );
+      };
 
-Stop Agent
+      export default Tafseer;
