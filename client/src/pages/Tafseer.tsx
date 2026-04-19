@@ -255,6 +255,7 @@ export default function TafseerPage(){
   const [hifzIdx,setHifzIdx]=useState(0);
   const [hifzRes,setHifzRes]=useState<Map<string,"ok"|"err">>(new Map());
   const [recTxt,setRecTxt]=useState("");
+  const [wordMatchLevels,setWordMatchLevels]=useState<number[]>([]);
   const recRef=useRef<any>(null);
   const txRef=useRef(0);
   
@@ -291,7 +292,7 @@ export default function TafseerPage(){
     window.addEventListener('keydown',handleKey);
     return ()=>window.removeEventListener('keydown',handleKey);
   },[pg,showSearch,showOptions,showTafseer,showSettings,showSharePage]);
-  const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");};
+  const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");setWordMatchLevels([]);};
 
   const searchTimeout=useRef<any>(null);
   const handleSearch=(val:string)=>{
@@ -492,16 +493,19 @@ export default function TafseerPage(){
       setRecTxt(fullTranscript.split(' ').slice(-6).join(' '));
 
       // Compare accumulated words against expected verse
-      const ew = normAr(exp.text).split(' ').filter((w:string) => w.length > 1);
+      const originalWords = exp.text.split(' ');
+      const ew = originalWords.map((w:string) => normAr(w));
       const spokenWords = allTranscripts.slice(-Math.max(ew.length * 2, 20)); // Use recent window
       
       // Word-by-word matching with similarity scoring
       let matchedWords:string[] = [];
       let wrongWords:string[] = [];
       let matchedCount = 0;
+      let newMatchLevels:number[] = [];
       
       for(let wi = 0; wi < ew.length; wi++) {
         const target = ew[wi];
+        if(target.length < 1) { newMatchLevels.push(1); continue; }
         let bestMatch = 0;
         let bestWord = '';
         
@@ -514,15 +518,20 @@ export default function TafseerPage(){
           matchedCount++;
           matchedWords.push(target);
           if(bestMatch < 0.95) {
-            // Pronunciation issue - close but not exact
+            newMatchLevels.push(2);
             wrongWords.push(`"${target}" ← نطقت "${bestWord}"`);
+          } else {
+            newMatchLevels.push(1);
           }
         } else {
+          newMatchLevels.push(0);
           wrongWords.push(`❌ "${target}"`);
         }
       }
+      setWordMatchLevels(newMatchLevels);
       
-      const completeRatio = ew.length > 0 ? matchedCount / ew.length : 0;
+      const validEwCount = ew.filter((w:string)=>w.length>=1).length;
+      const completeRatio = validEwCount > 0 ? matchedCount / validEwCount : 0;
       
       // Show real-time feedback on progress
       if(completeRatio > 0.2 && completeRatio < 0.6) {
@@ -575,6 +584,7 @@ export default function TafseerPage(){
           setHifzStatus('none');
           hifzTxtRef.current = '';
           setRecTxt('');
+          setWordMatchLevels([]);
           
           // Restart recognition fresh for new verse
           try { r.stop(); } catch {}
@@ -602,7 +612,7 @@ export default function TafseerPage(){
     const a=pq.data[i];
     playLocalSound('error');
     setHifzRes(prev=>{const m=new Map(prev);m.set(`${a.sn}-${a.nis}`,"err");return m;});
-    if(i===hifzIdx)setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
+    if(i===hifzIdx){setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));setWordMatchLevels([]);}
   };
 
   useEffect(()=>{return()=>{stopHifz();stopAudio();};},[]);
@@ -952,6 +962,36 @@ export default function TafseerPage(){
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                       const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
+
+                      if(cur){
+                         const words = a.text.split(" ");
+                         return <span key={k} className="inline" data-v="1" id={`verse-${g.sn}-${a.nis}`} 
+                            style={{background:'rgba(245,158,11,0.12)',padding:'4px 10px',borderRadius:'10px'}}>
+                            {words.map((w:string, wi:number)=>{
+                               const ml = wi < wordMatchLevels.length ? wordMatchLevels[wi] : 0;
+                               const nextIdx = wordMatchLevels.findIndex(x => x === 0);
+                               const isNext = ml === 0 && (nextIdx === -1 ? wi === 0 : wi === nextIdx);
+                               let clr = 'transparent';
+                               if (ml === 1) clr = colors.text;
+                               else if (ml === 2) clr = '#eab308';
+                               return <span key={wi} style={{
+                                 color: ml > 0 ? clr : 'transparent',
+                                 borderBottom: ml === 0 && isNext ? '2px solid #22c55e' : 'none',
+                                 transition: 'all 0.3s',
+                                 marginRight: '2px',
+                                 opacity: ml > 0 ? 1 : (isNext ? 0.5 : 0)
+                               }}>{w} </span>
+                            })}
+                            <span className="inline-flex items-center justify-center align-middle" data-v="1"
+                                style={{width:'2em',height:'2em',fontSize:'0.45em',verticalAlign:'middle',position:'relative',display:'inline-flex',margin:'0 0.2em',opacity:0.5}}>
+                                <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
+                                  <circle cx="25" cy="25" r="22" fill='rgba(200,169,110,0.08)' stroke='#c8a96e' strokeWidth="1.2"/>
+                                </svg>
+                                <span style={{position:'relative',zIndex:1,fontSize:'0.9em',fontFamily:'"Scheherazade New","Amiri",serif',fontWeight:700,color:'#8b7355',lineHeight:1}}>؟</span>
+                            </span>
+                         </span>;
+                      }
+
                       return<span key={k} className="inline" data-v="1" id={`verse-${g.sn}-${a.nis}`}>
                         <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
                           className="transition-all duration-200 rounded cursor-pointer"
