@@ -945,9 +945,9 @@ export default function TafseerPage(){
                       }}>
                       بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
                       {g.sn===1 && (
-                        <span className="inline-flex items-center justify-center align-middle mx-1"
-                          style={{fontSize:'0.8em',color:(playingKey===`${g.sn}-1`)?'#16a34a':'#c8a96e',fontFamily:'"Scheherazade New","Amiri",serif'}}>
-                          ﴿١﴾
+                        <span className="inline-flex items-center justify-center mx-1 font-sans"
+                          style={{width:'1.8em',height:'1.8em',borderRadius:'50%',border:`1px solid ${(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}`,fontSize:'0.65em',color:(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}}>
+                          ١
                         </span>
                       )}
                     </span>
@@ -979,26 +979,27 @@ export default function TafseerPage(){
                                  opacity: ml > 0 ? 1 : (isNext ? 0.5 : 0)
                                }}>{w} </span>
                             })}
-                            <span className="inline-flex items-center justify-center align-middle mx-1 opacity-50" data-v="1"
-                                style={{fontSize:'0.8em',color:'#c8a96e',fontFamily:'"Scheherazade New","Amiri",serif'}}>
-                                ﴿؟﴾
+                            <span className="inline-flex items-center justify-center mx-1 font-sans opacity-50" data-v="1"
+                                style={{width:'1.8em',height:'1.8em',borderRadius:'50%',border:'1px solid #c8a96e',fontSize:'0.65em',color:'#c8a96e'}}>
+                                ؟
                             </span>
                          </span>;
                       }
 
                       return<span key={k} className="inline" data-v="1" id={`verse-${g.sn}-${a.nis}`}>
                         <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
-                          className="transition-all duration-200 rounded cursor-pointer"
+                          className="transition-all duration-300 rounded cursor-pointer"
                           style={{
                             color:hidden?'transparent':isP?'#16a34a':hr==='err'?'#f87171':colors.text,
                             background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                             padding:(isP||isSel)?'4px 10px':'0',borderRadius:(isP||isSel)?'10px':'0',
+                            WebkitBoxDecorationBreak:'clone',boxDecorationBreak:'clone'
                           }}>
                           {a.text}
                         </span>
-                        <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
-                          style={{fontSize:'0.8em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e',fontFamily:'"Scheherazade New","Amiri",serif'}}>
-                          ﴿{hidden?'؟':a.nis.toLocaleString('ar-EG')}﴾
+                        <span className="inline-flex items-center justify-center mx-1 font-sans" data-v="1"
+                          style={{width:'1.8em',height:'1.8em',borderRadius:'50%',border:`1px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.65em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e'}}>
+                          {hidden?'؟':a.nis.toLocaleString('ar-EG')}
                         </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#16a34a':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
                       </span>;
                     })}
