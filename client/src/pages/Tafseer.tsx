@@ -838,7 +838,6 @@ export default function TafseerPage(){
           </div>
         </div>
       </div>}
-    );
-      };
-
-      export default Tafseer;
+    </div>
+  );
+}
