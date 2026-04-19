@@ -908,12 +908,12 @@ export default function TafseerPage(){
             <div className={`flex flex-col pt-32 pb-32 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
               {groups.map((g,gi)=>{
                 const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
-                const dynSize=allChars<300?'clamp(26px, 7vw, 38px)':
-                               allChars<500?'clamp(23px, 6.5vw, 34px)':
-                               allChars<800?'clamp(20px, 5.5vw, 30px)':
-                               allChars<1200?'clamp(18px, 5vw, 27px)':
-                               'clamp(16px, 4.5vw, 24px)';
-                const dynLine=allChars<300?'3.2':allChars<500?'2.8':allChars<800?'2.5':allChars<1200?'2.3':'2.1';
+                const dynSize=allChars<300?'clamp(32px, 8vw, 50px)':
+                               allChars<500?'clamp(28px, 7.5vw, 44px)':
+                               allChars<800?'clamp(24px, 6vw, 38px)':
+                               allChars<1200?'clamp(22px, 5.5vw, 32px)':
+                               'clamp(20px, 5vw, 28px)';
+                const dynLine=allChars<300?'2.5':allChars<500?'2.3':allChars<800?'2.1':allChars<1200?'2.0':'1.9';
                 
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
                   {/* Surah/Juz Header */}
@@ -935,22 +935,19 @@ export default function TafseerPage(){
                   
                   {/* Basmala */}
                   {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-8" dir="rtl">
-                    <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
+                      <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
                       className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5] block" 
                       style={{
                         fontSize: dynSize,
-                        color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#fff' : colors.text,
+                        color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#16a34a' : colors.text,
                         background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
                         padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 12px' : '0'
                       }}>
                       بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
                       {g.sn===1 && (
-                        <span className="inline-flex items-center justify-center align-middle"
-                          style={{width:'2em',height:'2em',fontSize:'0.45em',verticalAlign:'middle',position:'relative',margin:'0 0.2em'}}>
-                          <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
-                            <circle cx="25" cy="25" r="22" fill={(playingKey===`${g.sn}-1`)?'rgba(34,197,94,0.12)':'rgba(200,169,110,0.08)'} stroke={(playingKey===`${g.sn}-1`)?'#22c55e':'#c8a96e'} strokeWidth="1.2"/>
-                          </svg>
-                          <span style={{position:'relative',zIndex:1,fontSize:'0.9em',fontFamily:'"Scheherazade New","Amiri",serif',fontWeight:700,color:(playingKey===`${g.sn}-1`)?'#22c55e':'#8b7355',lineHeight:1}}>١</span>
+                        <span className="inline-flex items-center justify-center align-middle mx-1"
+                          style={{fontSize:'0.8em',color:(playingKey===`${g.sn}-1`)?'#16a34a':'#c8a96e',fontFamily:'"Scheherazade New","Amiri",serif'}}>
+                          ﴿١﴾
                         </span>
                       )}
                     </span>
@@ -982,12 +979,9 @@ export default function TafseerPage(){
                                  opacity: ml > 0 ? 1 : (isNext ? 0.5 : 0)
                                }}>{w} </span>
                             })}
-                            <span className="inline-flex items-center justify-center align-middle" data-v="1"
-                                style={{width:'2em',height:'2em',fontSize:'0.45em',verticalAlign:'middle',position:'relative',display:'inline-flex',margin:'0 0.2em',opacity:0.5}}>
-                                <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
-                                  <circle cx="25" cy="25" r="22" fill='rgba(200,169,110,0.08)' stroke='#c8a96e' strokeWidth="1.2"/>
-                                </svg>
-                                <span style={{position:'relative',zIndex:1,fontSize:'0.9em',fontFamily:'"Scheherazade New","Amiri",serif',fontWeight:700,color:'#8b7355',lineHeight:1}}>؟</span>
+                            <span className="inline-flex items-center justify-center align-middle mx-1 opacity-50" data-v="1"
+                                style={{fontSize:'0.8em',color:'#c8a96e',fontFamily:'"Scheherazade New","Amiri",serif'}}>
+                                ﴿؟﴾
                             </span>
                          </span>;
                       }
@@ -996,19 +990,16 @@ export default function TafseerPage(){
                         <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
                           className="transition-all duration-200 rounded cursor-pointer"
                           style={{
-                            color:hidden?'transparent':isP?'#fff':hr==='err'?'#f87171':colors.text,
+                            color:hidden?'transparent':isP?'#16a34a':hr==='err'?'#f87171':colors.text,
                             background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                             padding:(isP||isSel)?'4px 10px':'0',borderRadius:(isP||isSel)?'10px':'0',
                           }}>
                           {a.text}
                         </span>
-                        <span className="inline-flex items-center justify-center align-middle" data-v="1"
-                          style={{width:'2em',height:'2em',fontSize:'0.45em',verticalAlign:'middle',position:'relative',display:'inline-flex',margin:'0 0.2em'}}>
-                          <svg viewBox="0 0 50 50" width="100%" height="100%" style={{position:'absolute',inset:0}}>
-                            <circle cx="25" cy="25" r="22" fill={isP?'rgba(34,197,94,0.12)':'rgba(200,169,110,0.08)'} stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="1.2"/>
-                          </svg>
-                          <span style={{position:'relative',zIndex:1,fontSize:'0.9em',fontFamily:'"Scheherazade New","Amiri",serif',fontWeight:700,color:isP?'#22c55e':bookmarks.has(k)?'#ec4899':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis.toLocaleString('ar-EG')}</span>
-                        </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#22c55e':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
+                        <span className="inline-flex items-center justify-center align-middle mx-1" data-v="1"
+                          style={{fontSize:'0.8em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e',fontFamily:'"Scheherazade New","Amiri",serif'}}>
+                          ﴿{hidden?'؟':a.nis.toLocaleString('ar-EG')}﴾
+                        </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#16a34a':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
                       </span>;
                     })}
                   </div>
