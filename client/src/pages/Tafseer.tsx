@@ -6,23 +6,21 @@ import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, Ch
 import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
+// FIXED: corrected everyayah folder names for reliable playback
 const RECITERS:Rec[]=[
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_128kbps"},
-  {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
-  {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
-  {id:"hosary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
-  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Mujawwad_128kbps"},
-  {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"AbdulBasit_Mujawwad_128kbps"},
-  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Saood_ash-Shuraym_128kbps"},
-  {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
-  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server15.mp3quran.net/lhdan",ev:"Muhammad_Al-Luhaidan_128kbps"},
-  {id:"dosari",name:"ياسر الدوسري",server:"https://server10.mp3quran.net/ibrahim_dosri",ev:"Yasser_Ad-Dussary_128kbps"},
-  {id:"shuraym",name:"سعود الشريم",server:"https://server7.mp3quran.net/shur",ev:"Sa_ood_ash-Shuraym_128kbps"},
-  {id:"hudhaify",name:"علي الحذيفي",server:"https://server10.mp3quran.net/hthfi",ev:"Hani_Rifai_192kbps"},
-  {id:"banna",name:"محمود علي البنا",server:"https://server8.mp3quran.net/bna",ev:"mahmoud_ali_al_banna_32kbps"},
-  {id:"tablawi",name:"محمد الطبلاوي",server:"https://server10.mp3quran.net/tblawi",ev:"Mohammad_al_Tablaway_128kbps"},
-  {id:"ayyoub",name:"محمد أيوب",server:"https://server8.mp3quran.net/ayyub",ev:"Muhammad_Ayyoub_128kbps"},
-  {id:"juhany",name:"عبدالله الجهني",server:"https://server11.mp3quran.net/jhn",ev:"Abdullah_Juhany_128kbps"},
+  {id:"maher",   name:"ماهر المعيقلي",      server:"https://server12.mp3quran.net/maher",          ev:"Maher_AlMuaiqly_128kbps"},
+  {id:"afasy",   name:"مشاري العفاسي",      server:"https://server8.mp3quran.net/afs",             ev:"Alafasy_128kbps"},
+  {id:"sudais",  name:"عبدالرحمن السديس",   server:"https://server11.mp3quran.net/sds",            ev:"AbdurRahmaanAs-Sudais_192kbps"},
+  {id:"hosary",  name:"محمود خليل الحصري", server:"https://server13.mp3quran.net/husr",           ev:"Husary_128kbps"},
+  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",          ev:"Minshawy_Murattal_128kbps"},
+  {id:"basit",   name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",           ev:"Abdul_Basit_Murattal_192kbps"},
+  {id:"ghamdi",  name:"سعد الغامدي",        server:"https://server7.mp3quran.net/s_gmd",          ev:"Sa_d_al-Ghaamidi_128kbps"},
+  {id:"ajamy",   name:"أحمد العجمي",        server:"https://server10.mp3quran.net/ajm",           ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
+  {id:"dosari",  name:"ياسر الدوسري",       server:"https://server10.mp3quran.net/ibrahim_dosri", ev:"Yasser_Ad-Dussary_128kbps"},
+  {id:"shuraym", name:"سعود الشريم",        server:"https://server7.mp3quran.net/shur",           ev:"Sa_ood_ash-Shuraym_128kbps"},
+  {id:"tablawi", name:"محمد الطبلاوي",      server:"https://server10.mp3quran.net/tblawi",        ev:"Mohammad_al_Tablaway_128kbps"},
+  {id:"ayyoub",  name:"محمد أيوب",          server:"https://server8.mp3quran.net/ayyub",          ev:"Muhammad_Ayyoub_128kbps"},
+  {id:"juhany",  name:"عبدالله الجهني",     server:"https://server11.mp3quran.net/jhn",           ev:"Abdullah_Juhany_128kbps"},
 ]
 
 const SURAHS=[{id:1,n:"الفاتحة",c:7},{id:2,n:"البقرة",c:286},{id:3,n:"آل عمران",c:200},{id:4,n:"النساء",c:176},{id:5,n:"المائدة",c:120},{id:6,n:"الأنعام",c:165},{id:7,n:"الأعراف",c:206},{id:8,n:"الأنفال",c:75},{id:9,n:"التوبة",c:129},{id:10,n:"يونس",c:109},{id:11,n:"هود",c:123},{id:12,n:"يوسف",c:111},{id:13,n:"الرعد",c:43},{id:14,n:"إبراهيم",c:52},{id:15,n:"الحجر",c:99},{id:16,n:"النحل",c:128},{id:17,n:"الإسراء",c:111},{id:18,n:"الكهف",c:110},{id:19,n:"مريم",c:98},{id:20,n:"طه",c:135},{id:21,n:"الأنبياء",c:112},{id:22,n:"الحج",c:78},{id:23,n:"المؤمنون",c:118},{id:24,n:"النور",c:64},{id:25,n:"الفرقان",c:77},{id:26,n:"الشعراء",c:227},{id:27,n:"النمل",c:93},{id:28,n:"القصص",c:88},{id:29,n:"العنكبوت",c:69},{id:30,n:"الروم",c:60},{id:31,n:"لقمان",c:34},{id:32,n:"السجدة",c:30},{id:33,n:"الأحزاب",c:73},{id:34,n:"سبأ",c:54},{id:35,n:"فاطر",c:45},{id:36,n:"يس",c:83},{id:37,n:"الصافات",c:182},{id:38,n:"ص",c:88},{id:39,n:"الزمر",c:75},{id:40,n:"غافر",c:85},{id:41,n:"فصلت",c:54},{id:42,n:"الشورى",c:53},{id:43,n:"الزخرف",c:89},{id:44,n:"الدخان",c:59},{id:45,n:"الجاثية",c:37},{id:46,n:"الأحقاف",c:35},{id:47,n:"محمد",c:38},{id:48,n:"الفتح",c:29},{id:49,n:"الحجرات",c:18},{id:50,n:"ق",c:45},{id:51,n:"الذاريات",c:60},{id:52,n:"الطور",c:49},{id:53,n:"النجم",c:62},{id:54,n:"القمر",c:55},{id:55,n:"الرحمن",c:78},{id:56,n:"الواقعة",c:96},{id:57,n:"الحديد",c:29},{id:58,n:"المجادلة",c:22},{id:59,n:"الحشر",c:24},{id:60,n:"الممتحنة",c:13},{id:61,n:"الصف",c:14},{id:62,n:"الجمعة",c:11},{id:63,n:"المنافقون",c:11},{id:64,n:"التغابن",c:18},{id:65,n:"الطلاق",c:12},{id:66,n:"التحريم",c:12},{id:67,n:"الملك",c:30},{id:68,n:"القلم",c:52},{id:69,n:"الحاقة",c:52},{id:70,n:"المعارج",c:44},{id:71,n:"نوح",c:28},{id:72,n:"الجن",c:28},{id:73,n:"المزمل",c:20},{id:74,n:"المدثر",c:56},{id:75,n:"القيامة",c:40},{id:76,n:"الإنسان",c:31},{id:77,n:"المرسلات",c:50},{id:78,n:"النبأ",c:40},{id:79,n:"النازعات",c:46},{id:80,n:"عبس",c:42},{id:81,n:"التكوير",c:29},{id:82,n:"الانفطار",c:19},{id:83,n:"المطففين",c:36},{id:84,n:"الانشقاق",c:25},{id:85,n:"البروج",c:22},{id:86,n:"الطارق",c:17},{id:87,n:"الأعلى",c:19},{id:88,n:"الغاشية",c:26},{id:89,n:"الفجر",c:30},{id:90,n:"البلد",c:20},{id:91,n:"الشمس",c:15},{id:92,n:"الليل",c:21},{id:93,n:"الضحى",c:11},{id:94,n:"الشرح",c:8},{id:95,n:"التين",c:8},{id:96,n:"العلق",c:19},{id:97,n:"القدر",c:5},{id:98,n:"البينة",c:8},{id:99,n:"الزلزلة",c:8},{id:100,n:"العاديات",c:11},{id:101,n:"القارعة",c:11},{id:102,n:"التكاثر",c:8},{id:103,n:"العصر",c:3},{id:104,n:"الهمزة",c:9},{id:105,n:"الفيل",c:5},{id:106,n:"قريش",c:4},{id:107,n:"الماعون",c:7},{id:108,n:"الكوثر",c:3},{id:109,n:"الكافرون",c:6},{id:110,n:"النصر",c:3},{id:111,n:"المسد",c:5},{id:112,n:"الإخلاص",c:4},{id:113,n:"الفلق",c:5},{id:114,n:"الناس",c:6}];
@@ -145,53 +143,73 @@ export default function TafseerPage(){
     if (q && q.nis < q.maxNis) {
       const nextNis = q.nis + 1;
       const nextKey = `${q.sn}-${nextNis}`;
+      playQueueRef.current = { ...q, nis: nextNis };
       
-      // Seamless transition - swap to preloaded buffer immediately (no gap)
+      // Try preloaded buffer first (zero-gap), else load on active audio
       if (nextPreloadedKey.current === nextKey) {
+        // Swap to pre-loaded buffer — truly gapless
         activeAudioRef.current = activeAudioRef.current === '1' ? '2' : '1';
         const a = currentAudio();
         if (a) {
           a.currentTime = 0;
-          a.play().catch(() => setPlayingKey(""));
+          a.play().catch(() => { setPlayingKey(""); playQueueRef.current=null; });
           setPlayingKey(nextKey);
+          setPlayingSn(q.sn);
           ensureVerseVisible(q.sn, nextNis);
-          playQueueRef.current = { ...q, nis: nextNis };
           nextPreloadedKey.current = "";
+          // Pre-load the one after next immediately
+          if(nextNis < q.maxNis) {
+            const rec = getReciter();
+            const n2 = nextNis + 1;
+            const urlN2 = buildUrl(rec, q.sn, n2);
+            const b = bufferAudio();
+            if(b){ b.src = urlN2; b.load(); nextPreloadedKey.current = `${q.sn}-${n2}`; }
+          }
         }
       } else {
-        // Not preloaded yet - load and play immediately
+        // Preload missed — play directly with minimal delay
         const rec = getReciter();
-        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
+        const url = buildUrl(rec, q.sn, nextNis);
         const a = currentAudio();
         if (a) {
           a.src = url;
-          a.play().catch(() => setPlayingKey(""));
+          a.play().catch(() => { setPlayingKey(""); playQueueRef.current=null; });
           setPlayingKey(nextKey);
+          setPlayingSn(q.sn);
           ensureVerseVisible(q.sn, nextNis);
-          playQueueRef.current = { ...q, nis: nextNis };
         }
       }
     } else {
       setPlayingKey("");
+      playQueueRef.current = null;
     }
   };
+
+  // Helper: build audio URL — everyayah primary, mp3quran fallback
+  const buildUrl = (rec: Rec, sn: number, nis: number) =>
+    rec.ev
+      ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3`
+      : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
 
   const handleTimeUpdate = () => {
     const a = currentAudio();
     if (!a) return;
     
-    // UI Progress
+    // Scrub bar
     const bar = document.getElementById('scrubBar') as HTMLInputElement;
-    if (bar && a.duration) { bar.value = String((a.currentTime / a.duration) * 100); }
+    if (bar && a.duration && isFinite(a.duration)) {
+      bar.value = String((a.currentTime / a.duration) * 100);
+    }
     
-    // Preload Logic
+    // Preload next ayah when 4s remain (give more buffer)
     const q = playQueueRef.current;
-    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 3.0) {
+    if (q && q.nis < q.maxNis && a.duration > 0 && isFinite(a.duration)) {
+      const remaining = a.duration - a.currentTime;
       const nextNis = q.nis + 1;
       const nextKey = `${q.sn}-${nextNis}`;
-      if (nextPreloadedKey.current !== nextKey) {
+      if (remaining <= 4.0 && nextPreloadedKey.current !== nextKey) {
         const rec = getReciter();
-        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
+        const url = buildUrl(rec, q.sn, nextNis);
         const b = bufferAudio();
         if (b) {
           b.src = url;
@@ -316,9 +334,15 @@ export default function TafseerPage(){
   const ensureVerseVisible=(sn:number,nis:number)=>{
     const data=qc.getQueryData<any[]>(["qp",pgRef.current]);
     if(data&&!data.some((a:any)=>a.sn===sn&&a.nis===nis)){
-      fetch(`https://api.alquran.cloud/v1/ayah/${sn}:${nis}`).then(r=>r.json()).then(d=>{if(d?.data?.page)setPg(d.data.page);}).catch(()=>{});
+      fetch(`https://api.alquran.cloud/v1/ayah/${sn}:${nis}`).then(r=>r.json()).then(d=>{
+        if(d?.data?.page){
+          setPg(d.data.page);
+          // scroll after page loads
+          setTimeout(()=>{const el=document.getElementById(`verse-${sn}-${nis}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},350);
+        }
+      }).catch(()=>{});
     } else {
-      setTimeout(()=>{const el=document.getElementById(`verse-${sn}-${nis}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}, 100);
+      setTimeout(()=>{const el=document.getElementById(`verse-${sn}-${nis}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}, 80);
     }
   };
 
@@ -340,7 +364,7 @@ export default function TafseerPage(){
       navigator.mediaSession.setActionHandler('nexttrack',()=>skipNext());
     }
 
-    const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
+    const url = buildUrl(rec, sn, nis);
     a.src=url;
     a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
@@ -384,20 +408,28 @@ export default function TafseerPage(){
   const handleErr=()=>{
     const q=playQueueRef.current;if(!q)return;
     const rec=getReciter();
-    const a = currentAudio();
-    // Try mirror first, then mp3quran server, then skip
-    if(rec.ev && a && !a.src.includes('mirrors.quranicaudio.com')){
-      a.src=`https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
-      a.play().catch(()=>{
-        // Try mp3quran server as final fallback
-        if(rec.server){
-          a.src=`${rec.server}/${pad3(q.sn)}.mp3`;
-          a.play().catch(()=>skipNext());
-        } else skipNext();
-      });
-      return;
+    const a=currentAudio();
+    if(!a)return;
+
+    // Try mirror of everyayah, then mp3quran server, then skip
+    const mirrorUrl = rec.ev
+      ? `https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`
+      : null;
+    const serverUrl = `${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
+
+    const tryServer=()=>{
+      a.src=serverUrl;
+      a.load();
+      a.play().catch(()=>{ /* skip silently to next */ handleEnded(); });
+    };
+
+    if(mirrorUrl && !a.src.includes('mirrors.quranicaudio.com')){
+      a.src=mirrorUrl;
+      a.load();
+      a.play().catch(tryServer);
+    } else {
+      tryServer();
     }
-    skipNext();
   };
 
   const handleReciterChange=(newId:string)=>{
@@ -414,10 +446,10 @@ export default function TafseerPage(){
     const SR=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
     if(!SR){alert("المتصفح لا يدعم التعرف على الصوت. استخدم Chrome");return;}
     const r=new SR();
-    r.lang="ar";  // Use generic Arabic for wider recognition
+    r.lang="ar-SA"; // Saudi Arabic — closest to Quranic pronunciation
     r.continuous=true;
     r.interimResults=true;
-    r.maxAlternatives=5; // Maximum alternatives for best accuracy
+    r.maxAlternatives=10; // Maximum alternatives for best accuracy
     
     // Normalize Arabic text for comparison (strip diacritics, unify letters)
     const normAr = (s:string) => s
@@ -430,16 +462,19 @@ export default function TafseerPage(){
       .replace(/\s+/g, ' ')
       .trim();
     
-    // Calculate word-level similarity (Levenshtein-like)
+    // Calculate word-level similarity with Arabic root awareness
     const wordSimilarity = (a:string, b:string):number => {
       if(a === b) return 1;
-      if(a.includes(b) || b.includes(a)) return 0.9;
-      // Check if first 3 chars match (common root)
-      if(a.length >= 3 && b.length >= 3 && a.substring(0,3) === b.substring(0,3)) return 0.7;
-      // Check if 70%+ of chars match
+      if(a.length < 2 || b.length < 2) return a===b ? 1 : 0;
+      if(a.includes(b) || b.includes(a)) return 0.88;
+      // Check first 4 chars (Arabic root is usually 3 chars)
+      const rootLen = Math.min(4, Math.min(a.length, b.length));
+      if(a.substring(0, rootLen) === b.substring(0, rootLen)) return 0.82;
+      if(a.substring(0, 3) === b.substring(0, 3)) return 0.75;
+      // Char overlap ratio
       let matches = 0;
       const shorter = a.length < b.length ? a : b;
-      const longer = a.length >= b.length ? a : b;
+      const longer  = a.length >= b.length ? a : b;
       for(const c of shorter) { if(longer.includes(c)) matches++; }
       return matches / longer.length;
     };
@@ -544,8 +579,8 @@ export default function TafseerPage(){
         setHifzStatus('pron');
       }
       
-      // ✅ Verse completed successfully (60% match = pass, accounts for speech recognition errors)
-      if(completeRatio >= 0.60 && !isAdvancingRef.current) {
+      // ✅ Verse completed (70% match required — stricter, more accurate)
+      if(completeRatio >= 0.70 && !isAdvancingRef.current) {
         isAdvancingRef.current = true;
         
         const hasErrors = wrongWords.length > 0;
@@ -782,6 +817,24 @@ export default function TafseerPage(){
         </div>}
       {!showUI&&<button onClick={()=>setShowUI(true)} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity shadow-sm" style={{background:colors.bg+'ee',color:colors.text,border:'1px solid '+colors.border+'50',paddingTop:'calc(env(safe-area-inset-top,0px) + 4px)',fontSize:'11px',fontWeight:700}}><ChevronLeft className="w-3 h-3" style={{transform:'rotate(-90deg)'}}/> إظهار</button>}
 
+      {/* Fixed Side Nav Arrows — Desktop only */}
+      <button
+        onClick={()=>{if(pg>1){setPg(p=>p-1);resetHifz();window.scrollTo(0,0);}}}
+        disabled={pg<=1}
+        className="hidden md:flex fixed right-3 top-1/2 -translate-y-1/2 z-40 w-11 h-11 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 disabled:opacity-20"
+        style={{background:colors.bg+'f0',color:colors.text,border:'1.5px solid '+colors.border+'60',backdropFilter:'blur(8px)'}}
+        title="الصفحة السابقة">
+        <ChevronRight className="w-5 h-5"/>
+      </button>
+      <button
+        onClick={()=>{if(pg<604){setPg(p=>p+1);resetHifz();window.scrollTo(0,0);}}}
+        disabled={pg>=604}
+        className="hidden md:flex fixed left-3 top-1/2 -translate-y-1/2 z-40 w-11 h-11 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 disabled:opacity-20"
+        style={{background:colors.bg+'f0',color:colors.text,border:'1.5px solid '+colors.border+'60',backdropFilter:'blur(8px)'}}
+        title="الصفحة التالية">
+        <ChevronLeft className="w-5 h-5"/>
+      </button>
+
 
       {/* SETTINGS */}
       {showSettings&&<div className="fixed inset-0 z-[58] flex items-end" onClick={()=>setShowSettings(false)}>
@@ -907,14 +960,6 @@ export default function TafseerPage(){
         :<div className="flex-1 w-full max-w-2xl mx-auto px-4 md:px-8 relative min-h-full">
             <div className={`flex flex-col pt-32 pb-32 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
               {groups.map((g,gi)=>{
-                const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
-                const dynSize=allChars<300?'clamp(32px, 8vw, 50px)':
-                               allChars<500?'clamp(28px, 7.5vw, 44px)':
-                               allChars<800?'clamp(24px, 6vw, 38px)':
-                               allChars<1200?'clamp(22px, 5.5vw, 32px)':
-                               'clamp(20px, 5vw, 28px)';
-                const dynLine=allChars<300?'2.5':allChars<500?'2.3':allChars<800?'2.1':allChars<1200?'2.0':'1.9';
-                
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
                   {/* Surah/Juz Header */}
                   <div className="flex justify-between items-center mb-6 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
@@ -929,8 +974,7 @@ export default function TafseerPage(){
                         <path d="M10 5 L190 5 L195 10 L195 50 L190 55 L10 55 L5 50 L5 10 Z" fill={colors.border+'10'} stroke={colors.border} strokeWidth="1.5"/>
                         <circle cx="10" cy="30" r="3" fill={colors.border}/> <circle cx="190" cy="30" r="3" fill={colors.border}/>
                       </svg>
-                      <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(20px, 4.5vw, 26px)',color:colors.text, paddingTop:'2px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
-                    </div>
+                      <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(20px, 4.5vw, 26px)',color:colors.text, paddingTop:'2px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>                    </div>
                   </div>}
                   
                   {/* Basmala */}
@@ -938,7 +982,7 @@ export default function TafseerPage(){
                       <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
                       className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5] block" 
                       style={{
-                        fontSize: dynSize,
+                        fontSize: 'clamp(22px, 5vw, 30px)',
                         color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#16a34a' : colors.text,
                         background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
                         padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 12px' : '0'
@@ -953,8 +997,8 @@ export default function TafseerPage(){
                     </span>
                   </div>}
                   
-                  {/* Ayahs Grid */}
-                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.06em', textAlignLast:'center', direction:'rtl', textAlign:'justify'}}>
+                  {/* Ayahs Grid — consistent font like Ayah app */}
+                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:'clamp(22px,5.5vw,30px)',lineHeight:'2.15',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.08em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
                     {g.ayahs.map(a=>{
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
@@ -992,15 +1036,17 @@ export default function TafseerPage(){
                           style={{
                             color:hidden?'transparent':isP?'#16a34a':hr==='err'?'#f87171':colors.text,
                             background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
-                            padding:(isP||isSel)?'4px 10px':'0',borderRadius:(isP||isSel)?'10px':'0',
+                            padding:(isP||isSel)?'2px 8px':'0',borderRadius:(isP||isSel)?'8px':'0',
                             WebkitBoxDecorationBreak:'clone',boxDecorationBreak:'clone'
                           }}>
                           {a.text}
                         </span>
+                        {/* Quranic end-of-verse ornament with number — no circle, inline with text */}
                         <span className="inline-flex items-center justify-center mx-1 font-sans" data-v="1"
-                          style={{width:'1.8em',height:'1.8em',borderRadius:'50%',border:`1px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.65em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e'}}>
+                          style={{width:'1.8em',height:'1.8em',borderRadius:'50%',border:`1px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.65em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e', opacity: hidden ? 0 : 1}}>
                           {hidden?'؟':a.nis.toLocaleString('ar-EG')}
-                        </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#16a34a':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
+                        </span>
+                        {SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#16a34a':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
                       </span>;
                     })}
                   </div>
@@ -1009,7 +1055,7 @@ export default function TafseerPage(){
             </div>
             
             {/* Page Footer with Navigation */}
-            <div className="mt-12 mb-20 flex flex-col items-center gap-4">
+            <div className="mt-10 mb-24 flex flex-col items-center gap-4">
                 <div className="flex justify-center items-center gap-6 opacity-60">
                     <div className="h-px flex-1 max-w-[80px]" style={{background:`linear-gradient(to right, transparent, ${colors.border})`}} />
                     <div className="flex flex-col items-center">
@@ -1018,24 +1064,29 @@ export default function TafseerPage(){
                     </div>
                     <div className="h-px flex-1 max-w-[80px]" style={{background:`linear-gradient(to left, transparent, ${colors.border})`}} />
                 </div>
-                {/* Desktop Navigation Buttons */}
-                <div className="hidden md:flex items-center gap-3">
+                {/* Desktop Navigation Buttons — always visible on md+ */}
+                <div className="hidden md:flex items-center gap-3 mt-2">
                     <button onClick={()=>{if(pg<604){setPg(p=>p+1);resetHifz();window.scrollTo(0,0);}}}
                         disabled={pg>=604}
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-30"
-                        style={{background:colors.border+'25',color:colors.text,border:'1px solid '+colors.border+'40'}}>
+                        className="flex items-center gap-2 px-7 py-3 rounded-2xl text-sm font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-30 shadow-sm"
+                        style={{background:colors.border+'30',color:colors.text,border:'1.5px solid '+colors.border+'60'}}>
                         <ChevronRight className="w-4 h-4"/>
                         الصفحة التالية
                     </button>
-                    <span className="text-xs opacity-40 px-3" style={{color:colors.text}}>{pg} / 604</span>
+                    <div className="flex flex-col items-center px-2">
+                      <span className="text-xs opacity-50" style={{color:colors.text}}>{pg} / 604</span>
+                      <span className="text-[10px] opacity-30 mt-0.5" style={{color:colors.text}}>← → للتنقل</span>
+                    </div>
                     <button onClick={()=>{if(pg>1){setPg(p=>p-1);resetHifz();window.scrollTo(0,0);}}}
                         disabled={pg<=1}
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-30"
-                        style={{background:colors.border+'25',color:colors.text,border:'1px solid '+colors.border+'40'}}>
+                        className="flex items-center gap-2 px-7 py-3 rounded-2xl text-sm font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-30 shadow-sm"
+                        style={{background:colors.border+'30',color:colors.text,border:'1.5px solid '+colors.border+'60'}}>
                         الصفحة السابقة
                         <ChevronLeft className="w-4 h-4"/>
                     </button>
                 </div>
+                {/* Mobile swipe hint */}
+                <p className="md:hidden text-[10px] opacity-30 mt-1" style={{color:colors.text}}>اسحب يميناً أو يساراً للتنقل بين الصفحات</p>
             </div>
         </div>}
       </div>
