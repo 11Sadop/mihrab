@@ -33,36 +33,24 @@ function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Numbe
 // Normalize text - keep ALL marks for display except zero-width spaces
 const norm=(t:string)=>t.replace(/\uFEFF/g,'');
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
-const spaceMuqattaat=(t:string)=>{
-  // Only add spacing for muqatta'at letters (الم, حم, etc.) - preserve all tashkeel
-  const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'').trim();
-  if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنصل]+$/.test(base)){
-    return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670\u06D6-\u06ED]*)/g,'$1\u200A').trim();
-  }
-  return t;
-};
 const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
-function pageForVerse(sn:number,nis:number){ return 1; }
 
 // Robust bismillah removal
 const BISM_PLAIN='بسم الله الرحمن الرحيم';
 function removeBismillah(t:string):string{
   const s=strip(t);
   if(s.startsWith(BISM_PLAIN)){
-    // Find where bismillah ends in original text by matching char count
     let plainIdx=0,origIdx=0;
     const plainTarget=BISM_PLAIN.replace(/\s/g,'');
     while(origIdx<t.length&&plainIdx<plainTarget.length){
       const c=t[origIdx];
-      // Skip diacritics and special chars
       if(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653\u0654\u0655]/.test(c)){origIdx++;continue;}
       const nc=c.replace(/[ٱإأآا]/g,'ا');
       if(nc===plainTarget[plainIdx]||c===' '){if(c!==' ')plainIdx++;origIdx++;}
       else{origIdx++;plainIdx++;}
     }
-    // Skip trailing whitespace
     while(origIdx<t.length&&t[origIdx]===' ')origIdx++;
     return t.slice(origIdx);
   }
@@ -73,13 +61,11 @@ const fetchPage=async(p:number)=>{
   const r=await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
   if(!r.ok)throw new Error("Fail");const d=await r.json();
   return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
-    let t=a.text; // Use ORIGINAL text for display (fix Bil-Akhirah)
-    // Strip bismillah from verse 1 of ALL surahs (so we can manually inject it gracefully at the top)
-    // EXCEPT Tawbah which has no Bismillah.
+    let t=a.text;
     if(a.numberInSurah===1&&a.surah.number!==9){
       t=removeBismillah(t);
     }
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:spaceMuqattaat(t.trim()),orig:norm(a.text),juz:a.juz};
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t.trim(),orig:norm(a.text),juz:a.juz};
   });
 };
 
@@ -145,29 +131,25 @@ export default function TafseerPage(){
       const nextKey = `${q.sn}-${nextNis}`;
       playQueueRef.current = { ...q, nis: nextNis };
       
-      // Try preloaded buffer first (zero-gap), else load on active audio
       if (nextPreloadedKey.current === nextKey) {
-        // Swap to pre-loaded buffer — truly gapless
         activeAudioRef.current = activeAudioRef.current === '1' ? '2' : '1';
         const a = currentAudio();
         if (a) {
-          a.currentTime = 0;
-          a.play().catch(() => { setPlayingKey(""); playQueueRef.current=null; });
-          setPlayingKey(nextKey);
-          setPlayingSn(q.sn);
-          ensureVerseVisible(q.sn, nextNis);
-          nextPreloadedKey.current = "";
-          // Pre-load the one after next immediately
-          if(nextNis < q.maxNis) {
-            const rec = getReciter();
-            const n2 = nextNis + 1;
-            const urlN2 = buildUrl(rec, q.sn, n2);
-            const b = bufferAudio();
-            if(b){ b.src = urlN2; b.load(); nextPreloadedKey.current = `${q.sn}-${n2}`; }
-          }
+          a.play().then(() => {
+            setPlayingKey(nextKey);
+            setPlayingSn(q.sn);
+            ensureVerseVisible(q.sn, nextNis);
+            nextPreloadedKey.current = "";
+            if(nextNis < q.maxNis) {
+              const rec = getReciter();
+              const n2 = nextNis + 1;
+              const urlN2 = buildUrl(rec, q.sn, n2);
+              const b = bufferAudio();
+              if(b){ b.src = urlN2; b.load(); nextPreloadedKey.current = `${q.sn}-${n2}`; }
+            }
+          }).catch(() => { setPlayingKey(""); playQueueRef.current=null; });
         }
       } else {
-        // Preload missed — play directly with minimal delay
         const rec = getReciter();
         const url = buildUrl(rec, q.sn, nextNis);
         const a = currentAudio();
@@ -182,6 +164,7 @@ export default function TafseerPage(){
     } else {
       setPlayingKey("");
       playQueueRef.current = null;
+      setIsPlaying(false);
     }
   };
 
@@ -957,7 +940,7 @@ export default function TafseerPage(){
         onTouchStart={onTS} onTouchEnd={onTE}>
         {pq.isLoading?<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p>فشل تحميل الصفحة</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة المحاولة</Button></div>
-        :<div className="flex-1 w-full max-w-2xl mx-auto px-4 md:px-8 relative min-h-full">
+        :<div className="flex-1 w-full max-w-4xl mx-auto px-4 md:px-12 relative min-h-full">
             <div className={`flex flex-col pt-32 pb-32 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
               {groups.map((g,gi)=>{
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
@@ -982,15 +965,15 @@ export default function TafseerPage(){
                       <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
                       className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5] block" 
                       style={{
-                        fontSize: 'clamp(22px, 5vw, 30px)',
+                        fontSize: 'clamp(28px, 6vw, 42px)',
                         color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#16a34a' : colors.text,
                         background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
                         padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 12px' : '0'
                       }}>
                       بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
                       {g.sn===1 && (
-                        <span className="inline-flex items-center justify-center mx-1 font-sans"
-                          style={{width:'1.8em',height:'1.8em',borderRadius:'50%',border:`1px solid ${(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}`,fontSize:'0.65em',color:(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}}>
+                        <span className="inline-flex items-center justify-center mx-2 font-sans"
+                          style={{width:'1.5em',height:'1.5em',borderRadius:'50%',border:`0.5px solid ${(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}`,fontSize:'0.55em',color:(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e', verticalAlign:'middle', marginBottom:'4px'}}>
                           ١
                         </span>
                       )}
@@ -998,7 +981,7 @@ export default function TafseerPage(){
                   </div>}
                   
                   {/* Ayahs Grid — consistent font like Ayah app */}
-                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:'clamp(22px,5.5vw,30px)',lineHeight:'2.15',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.08em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
+                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:'clamp(28px,6.5vw,42px)',lineHeight:'2.4',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.12em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
                     {g.ayahs.map(a=>{
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
@@ -1023,8 +1006,8 @@ export default function TafseerPage(){
                                  opacity: ml > 0 ? 1 : (isNext ? 0.5 : 0)
                                }}>{w} </span>
                             })}
-                            <span className="inline-flex items-center justify-center mx-1 font-sans opacity-50" data-v="1"
-                                style={{width:'1.8em',height:'1.8em',borderRadius:'50%',border:'1px solid #c8a96e',fontSize:'0.65em',color:'#c8a96e'}}>
+                            <span className="inline-flex items-center justify-center mx-2 font-sans opacity-50" data-v="1"
+                                style={{width:'1.5em',height:'1.5em',borderRadius:'50%',border:'0.5px solid #c8a96e',fontSize:'0.55em',color:'#c8a96e', verticalAlign:'middle', marginBottom:'4px'}}>
                                 ؟
                             </span>
                          </span>;
@@ -1042,8 +1025,8 @@ export default function TafseerPage(){
                           {a.text}
                         </span>
                         {/* Quranic end-of-verse ornament with number — no circle, inline with text */}
-                        <span className="inline-flex items-center justify-center mx-1 font-sans" data-v="1"
-                          style={{width:'1.8em',height:'1.8em',borderRadius:'50%',border:`1px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.65em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e', opacity: hidden ? 0 : 1}}>
+                        <span className="inline-flex items-center justify-center mx-2 font-sans" data-v="1"
+                          style={{width:'1.5em',height:'1.5em',borderRadius:'50%',border:`0.5px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.55em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e', opacity: hidden ? 0 : 1, verticalAlign:'middle', marginBottom:'4px'}}>
                           {hidden?'؟':a.nis.toLocaleString('ar-EG')}
                         </span>
                         {SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#16a34a':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
@@ -1055,38 +1038,35 @@ export default function TafseerPage(){
             </div>
             
             {/* Page Footer with Navigation */}
-            <div className="mt-10 mb-24 flex flex-col items-center gap-4">
-                <div className="flex justify-center items-center gap-6 opacity-60">
-                    <div className="h-px flex-1 max-w-[80px]" style={{background:`linear-gradient(to right, transparent, ${colors.border})`}} />
+            <div className="mt-16 mb-32 flex flex-col items-center gap-8">
+                <div className="flex justify-center items-center gap-10 opacity-80">
+                    <div className="h-px flex-1 w-24" style={{background:`linear-gradient(to right, transparent, ${colors.border})`}} />
                     <div className="flex flex-col items-center">
-                        <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 mb-1" style={{color:colors.text}}>صفحة</span>
-                        <span className="text-sm font-bold tracking-widest" style={{color:colors.text}}>{pg.toLocaleString('ar-EG')}</span>
+                        <span className="text-xs uppercase tracking-[0.2em] font-black opacity-30 mb-2" style={{color:colors.text}}>صفحة</span>
+                        <span className="text-4xl font-quran font-bold" style={{color:colors.text}}>{pg.toLocaleString('ar-EG')}</span>
                     </div>
-                    <div className="h-px flex-1 max-w-[80px]" style={{background:`linear-gradient(to left, transparent, ${colors.border})`}} />
+                    <div className="h-px flex-1 w-24" style={{background:`linear-gradient(to left, transparent, ${colors.border})`}} />
                 </div>
-                {/* Desktop Navigation Buttons — always visible on md+ */}
-                <div className="hidden md:flex items-center gap-3 mt-2">
+                {/* Desktop Navigation Buttons — highly visible */}
+                <div className="hidden md:flex items-center gap-6 mt-4">
                     <button onClick={()=>{if(pg<604){setPg(p=>p+1);resetHifz();window.scrollTo(0,0);}}}
                         disabled={pg>=604}
-                        className="flex items-center gap-2 px-7 py-3 rounded-2xl text-sm font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-30 shadow-sm"
-                        style={{background:colors.border+'30',color:colors.text,border:'1.5px solid '+colors.border+'60'}}>
-                        <ChevronRight className="w-4 h-4"/>
+                        className="flex items-center gap-3 px-10 py-4 rounded-2xl text-base font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-30 shadow-md bg-primary text-primary-foreground">
+                        <ChevronRight className="w-5 h-5"/>
                         الصفحة التالية
                     </button>
-                    <div className="flex flex-col items-center px-2">
-                      <span className="text-xs opacity-50" style={{color:colors.text}}>{pg} / 604</span>
-                      <span className="text-[10px] opacity-30 mt-0.5" style={{color:colors.text}}>← → للتنقل</span>
+                    <div className="flex flex-col items-center px-4">
+                      <span className="text-lg font-bold" style={{color:colors.text}}>{pg} / 604</span>
+                      <span className="text-xs opacity-40 mt-1" style={{color:colors.text}}>تصفح عبر الأسهم</span>
                     </div>
                     <button onClick={()=>{if(pg>1){setPg(p=>p-1);resetHifz();window.scrollTo(0,0);}}}
                         disabled={pg<=1}
-                        className="flex items-center gap-2 px-7 py-3 rounded-2xl text-sm font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-30 shadow-sm"
-                        style={{background:colors.border+'30',color:colors.text,border:'1.5px solid '+colors.border+'60'}}>
+                        className="flex items-center gap-3 px-10 py-4 rounded-2xl text-base font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-30 shadow-md bg-primary text-primary-foreground">
                         الصفحة السابقة
-                        <ChevronLeft className="w-4 h-4"/>
+                        <ChevronLeft className="w-5 h-5"/>
                     </button>
                 </div>
-                {/* Mobile swipe hint */}
-                <p className="md:hidden text-[10px] opacity-30 mt-1" style={{color:colors.text}}>اسحب يميناً أو يساراً للتنقل بين الصفحات</p>
+                <p className="md:hidden text-xs opacity-40 font-bold" style={{color:colors.text}}>اسحب للتنقل بين الصفحات</p>
             </div>
         </div>}
       </div>
