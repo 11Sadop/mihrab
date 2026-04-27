@@ -972,8 +972,8 @@ export default function TafseerPage(){
                       }}>
                       بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
                       {g.sn===1 && (
-                        <span className="inline-flex items-center justify-center mx-2 font-sans"
-                          style={{width:'1.5em',height:'1.5em',borderRadius:'50%',border:`0.5px solid ${(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}`,fontSize:'0.55em',color:(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e', verticalAlign:'middle', marginBottom:'4px'}}>
+                        <span className="inline-flex items-center justify-center mx-2"
+                          style={{width:'1.4em',height:'1.4em',borderRadius:'50%',border:`0.5px solid ${(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}`,fontSize:'0.55em',color:(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e', verticalAlign:'middle', marginBottom:'4px', fontFamily:'Arial, sans-serif'}}>
                           ١
                         </span>
                       )}
@@ -1006,8 +1006,8 @@ export default function TafseerPage(){
                                  opacity: ml > 0 ? 1 : (isNext ? 0.5 : 0)
                                }}>{w} </span>
                             })}
-                            <span className="inline-flex items-center justify-center mx-2 font-sans opacity-50" data-v="1"
-                                style={{width:'1.5em',height:'1.5em',borderRadius:'50%',border:'0.5px solid #c8a96e',fontSize:'0.55em',color:'#c8a96e', verticalAlign:'middle', marginBottom:'4px'}}>
+                            <span className="inline-flex items-center justify-center mx-2 opacity-50" data-v="1"
+                                style={{width:'1.4em',height:'1.4em',borderRadius:'50%',border:'0.5px solid #c8a96e',fontSize:'0.55em',color:'#c8a96e', verticalAlign:'middle', marginBottom:'4px', fontFamily:'Arial, sans-serif'}}>
                                 ؟
                             </span>
                          </span>;
@@ -1025,8 +1025,8 @@ export default function TafseerPage(){
                           {a.text}
                         </span>
                         {/* Quranic end-of-verse ornament with number — no circle, inline with text */}
-                        <span className="inline-flex items-center justify-center mx-2 font-sans" data-v="1"
-                          style={{width:'1.5em',height:'1.5em',borderRadius:'50%',border:`0.5px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.55em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e', opacity: hidden ? 0 : 1, verticalAlign:'middle', marginBottom:'4px'}}>
+                        <span className="inline-flex items-center justify-center mx-2" data-v="1"
+                          style={{width:'1.4em',height:'1.4em',borderRadius:'50%',border:`0.5px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.55em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e', opacity: hidden ? 0 : 1, verticalAlign:'middle', marginBottom:'4px', fontFamily:'Arial, sans-serif'}}>
                           {hidden?'؟':a.nis.toLocaleString('ar-EG')}
                         </span>
                         {SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#16a34a':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
@@ -1042,8 +1042,8 @@ export default function TafseerPage(){
                 <div className="flex justify-center items-center gap-10 opacity-80">
                     <div className="h-px flex-1 w-24" style={{background:`linear-gradient(to right, transparent, ${colors.border})`}} />
                     <div className="flex flex-col items-center">
-                        <span className="text-xs uppercase tracking-[0.2em] font-black opacity-30 mb-2" style={{color:colors.text}}>صفحة</span>
-                        <span className="text-4xl font-quran font-bold" style={{color:colors.text}}>{pg.toLocaleString('ar-EG')}</span>
+                        <span className="text-xs font-bold opacity-30 mb-2" style={{color:colors.text}}>صفحة</span>
+                        <span className="text-5xl font-bold" style={{color:colors.text, fontFamily:'Arial, sans-serif'}}>{pg.toLocaleString('ar-EG')}</span>
                     </div>
                     <div className="h-px flex-1 w-24" style={{background:`linear-gradient(to left, transparent, ${colors.border})`}} />
                 </div>
