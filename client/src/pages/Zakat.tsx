@@ -193,7 +193,7 @@ export default function Zakat() {
 
   const handleShare = () => {
     if (!zakatResult) return;
-    const text = `حسبت زكاة مالي عبر حاسبة موقع "محراب" الدقيقة ⚖️\nالمبلغ المستحق كزكاة هو: ${zakatResult.amount.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ريال\n\nاحسب زكاة مالك ومعادن الطيبة الآن:\nhttps://mihrab.app/zakat`;
+    const text = `حسبت زكاة مالي عبر حاسبة موقع "محراب" الدقيقة ⚖️\nالمبلغ المستحق كزكاة هو: ${zakatResult.amount.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ريال\n\nاحسب زكاة مالك ومعادن الطيبة الآن:\nhttps://mihrabapp.com/zakat`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank");
   };

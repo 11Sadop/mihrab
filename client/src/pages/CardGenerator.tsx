@@ -111,7 +111,7 @@ export default function CardGenerator() {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        ctx.fillText("صُنع عبر موقع محراب | mihrab.app", canvas.width / 2, canvas.height - 60);
+        ctx.fillText("صُنع عبر موقع محراب | mihrabapp.com", canvas.width / 2, canvas.height - 60);
 
         return canvas.toDataURL("image/jpeg", 0.9);
     };
@@ -161,7 +161,7 @@ export default function CardGenerator() {
                 await navigator.share({
                     files: [file],
                     title: 'بطاقتي من محراب',
-                    text: 'تصميم بطاقة دعوية عبر موقع محراب 🕋\nhttps://mihrab.app',
+                    text: 'تصميم بطاقة دعوية عبر موقع محراب 🕋\nhttps://mihrabapp.com',
                 });
             } else {
                 // Fallback for browsers that don't support file sharing
@@ -201,7 +201,7 @@ export default function CardGenerator() {
                         )}
 
                         <div className="relative z-10 w-full pt-4 border-t border-white/20 mt-auto text-white/60 text-xs font-medium">
-                            صُنع عبر موقع محراب | mihrab.app
+                            صُنع عبر موقع محراب | mihrabapp.com
                         </div>
                     </div>
                 </div>

@@ -57,7 +57,7 @@ async function generateVerifyImage(text: string, grade: string, source: string):
     ctx.font = '22px Tajawal, Arial, sans-serif'; ctx.fillStyle = '#10b981';
     if (source) ctx.fillText(source, W/2, H-130);
     ctx.font = 'bold 26px Tajawal, Arial, sans-serif'; ctx.fillStyle = 'rgba(16,185,129,0.5)';
-    ctx.fillText('محراب  ❘  mihrab.app', W/2, H-70);
+    ctx.fillText('محراب  ❘  mihrabapp.com', W/2, H-70);
     return new Promise(r => canvas.toBlob(b => r(b), 'image/png', 1.0));
 }
 
@@ -86,7 +86,7 @@ export default function HadithVerifyPage() {
     const [generatingIdx, setGeneratingIdx] = useState<number|null>(null);
 
     const shareHadithText = async (hadith: HadithResult) => {
-        const text = `${hadith.text}\n\n📚 ${hadith.source || ''}\n⚖️ الدرجة: ${hadith.grade}\n\nمن تطبيق محراب 🕌\nhttps://mihrab.app/hadith-verify`;
+        const text = `${hadith.text}\n\n📚 ${hadith.source || ''}\n⚖️ الدرجة: ${hadith.grade}\n\nمن تطبيق محراب 🕌\nhttps://mihrabapp.com/hadith-verify`;
         if (navigator.share) {
             try { await navigator.share({ title: 'حديث من محراب', text }); } catch {}
         } else {
@@ -120,54 +120,100 @@ export default function HadithVerifyPage() {
         setResults([]);
         setHasSearched(true);
 
-        try {
-            let url = `/api/hadith/verify?skey=${encodeURIComponent(query)}`;
-            if (filterSahih) {
-                url += "&grade=sahih";
+        // Helper to parse Dorar HTML response
+        const parseDorarHtml = (html: string): HadithResult[] => {
+            const results: HadithResult[] = [];
+            // Try multiple patterns to extract hadith data
+            const blocks = html.split(/class="hadith[^"]*"/gi);
+            for (let i = 1; i < blocks.length && results.length < 15; i++) {
+                const block = blocks[i];
+                const textM = block.match(/>([^<]{20,})</);
+                const narratorM = block.match(/الراوي\s*:\s*([^<\n]+)/);
+                const scholarM = block.match(/المحدث\s*:\s*([^<\n]+)/);
+                const sourceM = block.match(/المصدر\s*:\s*([^<\n]+)/);
+                const gradeM = block.match(/الدرجة?\s*:\s*([^<\n]+)/);
+                if (textM) {
+                    results.push({
+                        text: textM[1].replace(/<[^>]+>/g, '').trim(),
+                        narrator: narratorM ? narratorM[1].trim() : '',
+                        scholar: scholarM ? scholarM[1].trim() : '',
+                        source: sourceM ? sourceM[1].trim() : '',
+                        grade: gradeM ? gradeM[1].trim() : 'غير محدد'
+                    });
+                }
             }
+            return results;
+        };
+
+        try {
+            // Try server API first
+            let url = `/api/hadith/verify?skey=${encodeURIComponent(query)}`;
+            if (filterSahih) url += "&grade=sahih";
 
             const response = await fetch(url);
             const data = await response.json();
 
-            if (data.error) {
-                // Use client-side fallback if server returns error or empty
-                const FALLBACK_DB: any = {
-                    'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري" }],
-                    'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده", grade: "صحيح", source: "مسلم" }],
-                    'نية': [{ text: "إنما الأعمال بالنيات", grade: "صحيح", source: "البخاري" }],
-                    'وتر': [{ text: "اجعلوا آخر صلاتكم بالليل وتراً", grade: "متفق عليه" }]
-                };
-
-                let found = false;
-                for (const k in FALLBACK_DB) {
-                    if (query.includes(k)) {
-                        setResults(FALLBACK_DB[k]);
-                        setError("");
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) setError(data.error);
-            } else {
-                const resultsList = data.results || [];
-                setResults(resultsList);
-                if (resultsList.length === 0) {
-                    // Second layer fallback if data is empty array
-                    const FALLBACK_DB: any = {
-                        'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري", narrator: "", scholar: "" }],
-                        'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده", grade: "صحيح", source: "مسلم", narrator: "", scholar: "" }]
-                    };
-                    for (const k in FALLBACK_DB) {
-                        if (query.includes(k)) {
-                            setResults(FALLBACK_DB[k]);
-                            return;
-                        }
-                    }
-                    setError("لم يتم العثور على نتائج. جرب كلمات أخرى.");
-                }
+            if (data.error || !response.ok) {
+                throw new Error(data.error || 'Server error');
             }
-        } catch (err) {
-            setError("حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.");
+
+            const resultsList = data.results || [];
+            if (resultsList.length > 0) {
+                setResults(resultsList);
+            } else {
+                setError("لم يتم العثور على نتائج. جرب كلمات أخرى.");
+            }
+        } catch (serverErr) {
+            // Fallback: call Dorar API directly from client
+            try {
+                const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(query)}`;
+                const dorarRes = await fetch(dorarUrl);
+                if (dorarRes.ok) {
+                    const dorarData = await dorarRes.json();
+                    let parsed: HadithResult[] = [];
+
+                    if (dorarData?.ahadith?.result) {
+                        parsed = parseDorarHtml(dorarData.ahadith.result);
+                    }
+                    if (parsed.length === 0 && dorarData?.ahadith?.data) {
+                        parsed = (dorarData.ahadith.data || []).map((h: any) => ({
+                            text: h.hadith || h.text || '',
+                            narrator: h.rawi || h.narrator || '',
+                            scholar: h.mohadith || h.scholar || '',
+                            source: h.book || h.source || '',
+                            grade: h.grade || h.hukm || 'غير محدد'
+                        }));
+                    }
+
+                    if (filterSahih) {
+                        parsed = parsed.filter(h => {
+                            const g = h.grade.toLowerCase();
+                            return g.includes('صحيح') || g.includes('حسن') || g.includes('جيد');
+                        });
+                    }
+
+                    if (parsed.length > 0) {
+                        setResults(parsed);
+                    } else {
+                        // Last resort fallback
+                        const FALLBACK_DB: Record<string, HadithResult[]> = {
+                            'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري", narrator: "مالك بن الحويرث", scholar: "البخاري" }],
+                            'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده حتى تخرج من تحت أظفاره", grade: "صحيح", source: "مسلم", narrator: "عثمان بن عفان", scholar: "مسلم" }],
+                            'نية': [{ text: "إنما الأعمال بالنيات وإنما لكل امرئ ما نوى", grade: "صحيح", source: "البخاري", narrator: "عمر بن الخطاب", scholar: "البخاري" }],
+                            'طهور': [{ text: "الطهور شطر الإيمان والحمد لله تملأ الميزان", grade: "صحيح", source: "مسلم", narrator: "أبو مالك الأشعري", scholar: "مسلم" }],
+                        };
+                        let found = false;
+                        for (const k in FALLBACK_DB) {
+                            if (query.includes(k)) { setResults(FALLBACK_DB[k]); found = true; break; }
+                        }
+                        if (!found) setError("لم يتم العثور على نتائج. جرب كلمات أخرى.");
+                    }
+                } else {
+                    setError("حدث خطأ في الاتصال بقاعدة البيانات. حاول مرة أخرى.");
+                }
+            } catch {
+                setError("حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.");
+            }
         } finally {
             setLoading(false);
         }

@@ -7,7 +7,7 @@ interface SeoOptions {
   canonicalPath?: string;
 }
 
-const BASE_URL = "https://mihrab.app";
+const BASE_URL = "https://mihrabapp.com";
 const SITE_NAME = "محراب";
 
 export function useSeo({ title, description, keywords, canonicalPath }: SeoOptions) {
@@ -61,7 +61,7 @@ export function useSeo({ title, description, keywords, canonicalPath }: SeoOptio
 
     // Cleanup: restore defaults when component unmounts
     return () => {
-      document.title = "محراب - مواقيت الصلاة، الأحاديث، أسعار الذهب، والأذكار | mihrab.app";
+      document.title = "محراب - مواقيت الصلاة، الأحاديث، أسعار الذهب، والأذكار | mihrabapp.com";
     };
   }, [title, description, keywords, canonicalPath]);
 }

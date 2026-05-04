@@ -104,7 +104,7 @@ async function generateDhikrImage(arabic: string, reference?: string | null): Pr
     // العلامة المائية
     ctx.font = `bold 28px 'Tajawal', 'Arial', sans-serif`;
     ctx.fillStyle = 'rgba(16,185,129,0.5)';
-    ctx.fillText('محراب  ❘  mihrab.app', W / 2, H - 70);
+    ctx.fillText('محراب  ❘  mihrabapp.com', W / 2, H - 70);
 
     return new Promise((resolve) => {
         canvas.toBlob((blob) => resolve(blob), 'image/png', 1.0);
@@ -145,7 +145,7 @@ export function ContentCard({ arabic, translation, transliteration, reference, v
     };
 
     const handleShareLink = async () => {
-        const textToShare = `${arabic}\n\n${reference ? `📚 ${reference}` : ''}\n\nمن تطبيق محراب 🕌\nhttps://mihrab.app/adhkar`;
+        const textToShare = `${arabic}\n\n${reference ? `📚 ${reference}` : ''}\n\nمن تطبيق محراب 🕌\nhttps://mihrabapp.com/adhkar`;
 
         if (navigator.share) {
             try {
