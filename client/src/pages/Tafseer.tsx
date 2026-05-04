@@ -30,8 +30,10 @@ const PS:Record<number,number>={1:1,2:2,3:50,4:77,5:106,6:128,7:151,8:177,9:187,
 const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9,182:10,201:11,222:12,242:13,262:14,282:15,302:16,322:17,342:18,362:19,382:20,402:21,422:22,442:23,462:24,482:25,502:26,522:27,542:28,562:29,582:30};
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
-// Normalize text - keep ALL marks for display except zero-width spaces
+// Normalize text - strip invisible/problematic marks (black dots U+06DF, U+06E1)
 const norm=(t:string)=>t.replace(/\uFEFF/g,'');
+// Strip the small-high marks that render as ugly black dots in the Uthmanic font
+const cleanDisplay=(t:string)=>t.replace(/[\u06DF\u06E1]/g,'');
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
 const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
@@ -65,7 +67,7 @@ const fetchPage=async(p:number)=>{
     if(a.numberInSurah===1&&a.surah.number!==9){
       t=removeBismillah(t);
     }
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:t.trim(),orig:norm(a.text),juz:a.juz};
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:cleanDisplay(t.trim()),orig:norm(a.text),juz:a.juz};
   });
 };
 
@@ -935,8 +937,9 @@ export default function TafseerPage(){
                       }}>
                       بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
                       {g.sn===1 && (
-                        <span style={{color:(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e',fontSize:'0.7em',margin:'0 0.2em',fontFamily:'Arial, sans-serif'}}>
-                          ﴿١﴾
+                        <span className="inline-flex items-center justify-center mx-1"
+                          style={{width:'1.6em',height:'1.6em',borderRadius:'50%',border:`1.5px solid ${(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}`,fontSize:'0.5em',color:(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e', verticalAlign:'middle', fontFamily:'Arial, sans-serif'}}>
+                          ١
                         </span>
                       )}
                     </span>
@@ -968,8 +971,9 @@ export default function TafseerPage(){
                                  opacity: ml > 0 ? 1 : (isNext ? 0.5 : 0)
                                }}>{w} </span>
                             })}
-                            <span data-v="1" style={{color:'#c8a96e',fontSize:'0.7em',margin:'0 0.2em',opacity:0.5,fontFamily:'Arial, sans-serif'}}>
-                                ﴿؟﴾
+                            <span className="inline-flex items-center justify-center mx-1 opacity-50" data-v="1"
+                                style={{width:'1.6em',height:'1.6em',borderRadius:'50%',border:'1.5px solid #c8a96e',fontSize:'0.5em',color:'#c8a96e', verticalAlign:'middle', fontFamily:'Arial, sans-serif'}}>
+                                ؟
                             </span>
                          </span>;
                       }
@@ -986,9 +990,9 @@ export default function TafseerPage(){
                           {a.text}
                         </span>
                         {/* Quranic end-of-verse ornament with number — no circle, inline with text */}
-                        <span data-v="1"
-                          style={{color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e', opacity: hidden ? 0 : 1, fontSize:'0.7em', margin:'0 0.2em', fontFamily:'Arial, sans-serif'}}>
-                          {hidden?'':'﴿'+a.nis.toLocaleString('ar-EG')+'﴾'}
+                        <span className="inline-flex items-center justify-center mx-1" data-v="1"
+                          style={{width:'1.6em',height:'1.6em',borderRadius:'50%',border:`1.5px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.5em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e', opacity: hidden ? 0 : 1, verticalAlign:'middle', fontFamily:'Arial, sans-serif'}}>
+                          {hidden?'':a.nis.toLocaleString('ar-EG')}
                         </span>
                         {SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#16a34a':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
                       </span>;

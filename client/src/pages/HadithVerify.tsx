@@ -121,7 +121,7 @@ export default function HadithVerifyPage() {
         setHasSearched(true);
 
         try {
-            let url = `/api/hadith-search?skey=${encodeURIComponent(query)}`;
+            let url = `/api/hadith/verify?skey=${encodeURIComponent(query)}`;
             if (filterSahih) {
                 url += "&grade=sahih";
             }
