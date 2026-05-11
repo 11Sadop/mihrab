@@ -213,75 +213,106 @@ export async function registerRoutes(
                 return res.status(400).json({ error: "معامل البحث مطلوب" });
             }
 
-            // Call Dorar Al-Sunniya API
-            const dorarUrl = `https://www.dorar.net/dorar_api.json?skey=${encodeURIComponent(searchKey)}`;
-            const response = await fetch(dorarUrl);
+            // Call Dorar Al-Sunniya API with timeout
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
 
-            if (!response.ok) {
-                throw new Error("Failed to fetch from Dorar API");
-            }
-
-            const data = await response.json();
-
-            // Parse Dorar response - it returns HTML in ahadith.result
             let results: any[] = [];
 
-            if (data.ahadith && data.ahadith.result) {
-                // Parse the HTML result from Dorar
-                const htmlContent = data.ahadith.result;
+            try {
+                const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(searchKey)}`;
+                const response = await fetch(dorarUrl, { signal: controller.signal });
+                clearTimeout(timeout);
 
-                // Simple regex parsing for hadith data
-                const hadithRegex = /<div class="hadith"[^>]*>([\s\S]*?)<\/div>/gi;
-                const matches = htmlContent.matchAll(hadithRegex);
+                if (!response.ok) {
+                    throw new Error("Dorar API returned " + response.status);
+                }
 
-                for (const match of matches) {
-                    const hadithHtml = match[1];
+                const data = await response.json();
 
-                    // Extract text
-                    const textMatch = hadithHtml.match(/<span class="text"[^>]*>(.*?)<\/span>/is);
-                    const narratorMatch = hadithHtml.match(/الراوي\s*:\s*([^<]+)/i);
-                    const scholarMatch = hadithHtml.match(/المحدث\s*:\s*([^<]+)/i);
-                    const sourceMatch = hadithHtml.match(/المصدر\s*:\s*([^<]+)/i);
-                    const gradeMatch = hadithHtml.match(/الدرجة?\s*:\s*([^<]+)/i);
+                if (data.ahadith && data.ahadith.result) {
+                    const htmlContent = data.ahadith.result;
 
-                    if (textMatch) {
-                        const result = {
-                            text: textMatch[1].replace(/<[^>]+>/g, '').trim(),
-                            narrator: narratorMatch ? narratorMatch[1].trim() : '',
-                            scholar: scholarMatch ? scholarMatch[1].trim() : '',
-                            source: sourceMatch ? sourceMatch[1].trim() : '',
-                            grade: gradeMatch ? gradeMatch[1].trim() : 'غير محدد'
-                        };
+                    // Try multiple parsing strategies
+                    // Strategy 1: Look for hadith divs
+                    const hadithRegex = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+                    let match;
+                    while ((match = hadithRegex.exec(htmlContent)) !== null && results.length < 20) {
+                        const block = match[1];
+                        const textMatch = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
+                        const narratorMatch = block.match(/الراوي\s*:\s*([^<\n]+)/i);
+                        const scholarMatch = block.match(/المحدث\s*:\s*([^<\n]+)/i);
+                        const sourceMatch = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                        const gradeMatch = block.match(/الدرجة?\s*:\s*([^<\n]+)/i);
 
-                        // Filter by grade if requested
-                        if (gradeFilter === 'sahih') {
-                            const g = result.grade.toLowerCase();
-                            if (g.includes('صحيح') || g.includes('حسن') || g.includes('جيد')) {
-                                results.push(result);
+                        if (textMatch) {
+                            results.push({
+                                text: textMatch[1].replace(/<[^>]+>/g, '').trim(),
+                                narrator: narratorMatch ? narratorMatch[1].trim() : '',
+                                scholar: scholarMatch ? scholarMatch[1].trim() : '',
+                                source: sourceMatch ? sourceMatch[1].trim() : '',
+                                grade: gradeMatch ? gradeMatch[1].trim() : 'غير محدد'
+                            });
+                        }
+                    }
+
+                    // Strategy 2: Split by الراوي pattern
+                    if (results.length === 0) {
+                        const sections = htmlContent.split(/الراوي\s*:/gi);
+                        for (let i = 1; i < sections.length && results.length < 20; i++) {
+                            const section = sections[i];
+                            const prevSection = sections[i-1];
+                            // Get hadith text from end of previous section
+                            const textParts = prevSection.split('>');
+                            const rawText = textParts[textParts.length - 1]?.replace(/<[^>]+>/g, '').trim();
+                            
+                            const narratorM = section.match(/^([^<\n]+)/);
+                            const scholarM = section.match(/المحدث\s*:\s*([^<\n]+)/i);
+                            const sourceM = section.match(/المصدر\s*:\s*([^<\n]+)/i);
+                            const gradeM = section.match(/الدرجة?\s*:\s*([^<\n]+)/i);
+
+                            if (rawText && rawText.length > 10) {
+                                results.push({
+                                    text: rawText,
+                                    narrator: narratorM ? narratorM[1].trim() : '',
+                                    scholar: scholarM ? scholarM[1].trim() : '',
+                                    source: sourceM ? sourceM[1].trim() : '',
+                                    grade: gradeM ? gradeM[1].trim() : 'غير محدد'
+                                });
                             }
-                        } else {
-                            results.push(result);
                         }
                     }
                 }
 
-                // If regex didn't work, try simpler approach with the raw data
-                if (results.length === 0 && data.ahadith.data) {
-                    // Some versions return data array directly
+                // Strategy 3: Try structured data
+                if (results.length === 0 && data.ahadith?.data) {
                     results = (data.ahadith.data || []).map((h: any) => ({
                         text: h.hadith || h.text || '',
                         narrator: h.rawi || h.narrator || '',
                         scholar: h.mohadith || h.scholar || '',
                         source: h.book || h.source || '',
                         grade: h.grade || h.hukm || 'غير محدد'
-                    }));
+                    })).filter((h: any) => h.text.length > 5);
                 }
+
+                // Apply grade filter
+                if (gradeFilter === 'sahih') {
+                    results = results.filter((r: any) => {
+                        const g = (r.grade || '').toLowerCase();
+                        return g.includes('صحيح') || g.includes('حسن') || g.includes('جيد') || g.includes('ثابت');
+                    });
+                }
+            } catch (fetchErr: any) {
+                clearTimeout(timeout);
+                console.error("Dorar fetch error:", fetchErr.message);
+                // Return empty results instead of error so client can try fallback
             }
 
             res.json({ results, total: results.length });
         } catch (e: any) {
-            console.error("Dorar API error:", e.message);
-            res.status(500).json({ error: "حدث خطأ أثناء البحث في الدرر السنية" });
+            console.error("Hadith verify error:", e.message);
+            // Return empty results so client fallback can work
+            res.json({ results: [], total: 0 });
         }
     });
 

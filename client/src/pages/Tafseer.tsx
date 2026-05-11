@@ -618,70 +618,108 @@ export default function TafseerPage(){
     if(!selVerse)return;
     const c=QBG[qTheme]||QBG.cream;
     const sname=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';
-    const wrap=document.createElement('div');
-    wrap.style.cssText=`position:fixed;left:-9999px;top:0;width:1080px;padding:80px 60px;background:${c.bg};direction:rtl;text-align:center;font-family:'KFGQPC HAFS Uthmanic Script','Amiri Quran','Amiri',serif;`;
-    const hdr=document.createElement('div');
-    hdr.style.cssText=`display:inline-block;border:2px solid ${c.border};padding:16px 60px;margin-bottom:40px;position:relative;`;
-    hdr.innerHTML=`<span style="font-size:40px;color:${c.text};font-weight:bold;">سُورَةُ ${sname}</span>`;
-    wrap.appendChild(hdr);
-    const txt=document.createElement('p');
-    txt.style.cssText=`font-size:42px;line-height:2.2;color:${c.text};margin:20px 0 40px;padding:0 20px;`;
-    txt.textContent=text;
-    wrap.appendChild(txt);
-    const divider=document.createElement('div');
-    divider.style.cssText=`display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px;`;
-    divider.innerHTML=`<div style="width:80px;height:1px;background:${c.border}"></div><span style="font-size:20px;color:${c.border};font-family:sans-serif;font-weight:bold;">${selVerse.sn}:${refs}</span><div style="width:80px;height:1px;background:${c.border}"></div>`;
-    wrap.appendChild(divider);
-    const wm=document.createElement('div');
-    wm.style.cssText=`margin-top:40px;font-size:16px;color:${c.border};font-family:sans-serif;direction:ltr;`;
-    wm.textContent='تطبيق محراب - mihrabapp.com';
-    wrap.appendChild(wm);
-    document.body.appendChild(wrap);
-    try{
-      const cv=document.createElement('canvas');
-      const rect=wrap.getBoundingClientRect();
-      cv.width=1080;cv.height=Math.max(1080,rect.height+40);
-      const ctx=cv.getContext('2d');if(!ctx){document.body.removeChild(wrap);return;}
-      ctx.fillStyle=c.bg;ctx.fillRect(0,0,cv.width,cv.height);
-      const fontQ="'KFGQPC HAFS Uthmanic Script','Amiri Quran','Amiri',serif";
-      ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';
-      const boxY=100;
-      ctx.strokeStyle=c.border;ctx.lineWidth=2.5;
-      ctx.strokeRect(290,boxY,500,80);
-      ctx.font=`۞`; ctx.fillText('۞',245,boxY+40);ctx.fillText('۞',835,boxY+40);
-      ctx.font=`bold 42px ${fontQ}`;ctx.fillStyle=c.text;
-      ctx.fillText(`سُورَةُ ${sname}`,540,boxY+42);
-      ctx.font=`42px ${fontQ}`;ctx.fillStyle=c.text;
-      const maxW=920;const words=text.split(' ');
-      let line='',y=280;
-      for(const w of words){
-        const test=line+w+' ';
-        if(ctx.measureText(test).width>maxW&&line){ctx.fillText(line.trim(),540,y);y+=88;line=w+' ';}
-        else line=test;
-      }
-      if(line){ctx.fillText(line.trim(),540,y);y+=88;}
-      ctx.strokeStyle=c.border;ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(340,y+10);ctx.lineTo(740,y+10);ctx.stroke();
-      ctx.font='bold 20px sans-serif';ctx.fillStyle=c.text;
-      ctx.fillText(`${selVerse.sn}:${refs}${pg ? `  |  صفحة ${pg}` : ''}`, 540, y + 10);
-      const wmY=Math.max(y+80,cv.height-40);
-      ctx.font='16px sans-serif';ctx.fillStyle=c.border;
-      ctx.fillText('تشرفت بالمشاركة عبر تطبيق محراب - mihrabapp.com',540,wmY);
-      if(y+120<cv.height){
-        const finalH=y+120;
-        const imgData=ctx.getImageData(0,0,cv.width,finalH);
-        cv.height=finalH;
-        ctx.putImageData(imgData,0,0);
-      }
-      document.body.removeChild(wrap);
-      cv.toBlob(blob=>{
-        if(!blob)return;
-        const dl=document.createElement('a');dl.href=URL.createObjectURL(blob);dl.download=`Quran_${selVerse.sn}_${refs}.png`;
-        const file=new File([blob],'ayah.png',{type:'image/png'});
-        if(navigator.share&&navigator.canShare?.({files:[file]}))navigator.share({files:[file]}).catch(()=>dl.click());
-        else dl.click();
-      },'image/png');
-    }catch{document.body.removeChild(wrap);}
+    const cv=document.createElement('canvas');
+    cv.width=1080;
+    const ctx=cv.getContext('2d');if(!ctx)return;
+    const fontQ="'Amiri Quran','Amiri','Scheherazade New',serif";
+    const fontUI="'Amiri','Scheherazade New',serif";
+
+    // Measure text height first
+    ctx.font=`44px ${fontQ}`;
+    const maxW=900;
+    const words=cleanDisplay(text).split(' ');
+    let lines:string[]=[]; let curLine='';
+    for(const w of words){
+      const test=curLine+w+' ';
+      if(ctx.measureText(test).width>maxW&&curLine){lines.push(curLine.trim());curLine=w+' ';}
+      else curLine=test;
+    }
+    if(curLine)lines.push(curLine.trim());
+    const lineH=90;
+    const headerH=180;
+    const textStartY=headerH+60;
+    const totalTextH=lines.length*lineH;
+    const footerH=80;
+    const totalH=textStartY+totalTextH+footerH+40;
+    cv.height=Math.max(800,totalH);
+
+    // Background
+    ctx.fillStyle=c.bg;ctx.fillRect(0,0,cv.width,cv.height);
+
+    // Decorative border
+    ctx.strokeStyle=c.border;ctx.lineWidth=2;
+    ctx.strokeRect(30,30,cv.width-60,cv.height-60);
+    ctx.strokeStyle=c.border+'60';ctx.lineWidth=1;
+    ctx.strokeRect(40,40,cv.width-80,cv.height-80);
+
+    // Corner ornaments
+    const drawCorner=(x:number,y:number)=>{
+      ctx.fillStyle=c.border;ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();
+    };
+    drawCorner(30,30);drawCorner(cv.width-30,30);drawCorner(30,cv.height-30);drawCorner(cv.width-30,cv.height-30);
+
+    // Surah name header with ornamental frame
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';
+    const hdrY=100;
+    // Decorative lines around surah name
+    const nameW=ctx.measureText(sname).width+160;
+    const boxX=(cv.width-Math.min(nameW,500))/2;
+    const boxW=Math.min(nameW,500);
+    ctx.strokeStyle=c.border;ctx.lineWidth=2;
+    // Draw ornamental surah name box
+    ctx.beginPath();
+    ctx.moveTo(boxX+15,hdrY-30);ctx.lineTo(boxX+boxW-15,hdrY-30);
+    ctx.quadraticCurveTo(boxX+boxW,hdrY-30,boxX+boxW,hdrY-15);
+    ctx.lineTo(boxX+boxW,hdrY+15);
+    ctx.quadraticCurveTo(boxX+boxW,hdrY+30,boxX+boxW-15,hdrY+30);
+    ctx.lineTo(boxX+15,hdrY+30);
+    ctx.quadraticCurveTo(boxX,hdrY+30,boxX,hdrY+15);
+    ctx.lineTo(boxX,hdrY-15);
+    ctx.quadraticCurveTo(boxX,hdrY-30,boxX+15,hdrY-30);
+    ctx.stroke();
+    // Small diamonds at corners of box
+    const drawDiamond=(x:number,y:number,s:number)=>{
+      ctx.fillStyle=c.border;ctx.beginPath();
+      ctx.moveTo(x,y-s);ctx.lineTo(x+s,y);ctx.lineTo(x,y+s);ctx.lineTo(x-s,y);ctx.closePath();ctx.fill();
+    };
+    drawDiamond(boxX,hdrY,5);drawDiamond(boxX+boxW,hdrY,5);
+    // Decorative lines extending from box
+    ctx.strokeStyle=c.border+'80';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(80,hdrY);ctx.lineTo(boxX-10,hdrY);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(boxX+boxW+10,hdrY);ctx.lineTo(cv.width-80,hdrY);ctx.stroke();
+
+    // Surah name text (just the name, no "سورة")
+    ctx.font=`bold 38px ${fontUI}`;ctx.fillStyle=c.text;
+    ctx.fillText(sname,cv.width/2,hdrY+2);
+
+    // Verse text with Uthmanic font
+    ctx.font=`44px ${fontQ}`;ctx.fillStyle=c.text;
+    let y=textStartY;
+    for(const line of lines){
+      ctx.fillText(line,cv.width/2,y);
+      y+=lineH;
+    }
+
+    // Subtle watermark at bottom
+    const wmY=cv.height-50;
+    ctx.font=`18px ${fontUI}`;ctx.fillStyle=c.border+'90';
+    ctx.fillText('mihrabapp.com',cv.width/2,wmY);
+
+    // Trim canvas to content
+    if(y+80<cv.height){
+      const finalH=Math.max(y+80,500);
+      const imgData=ctx.getImageData(0,0,cv.width,finalH);
+      cv.height=finalH;
+      ctx.putImageData(imgData,0,0);
+    }
+
+    cv.toBlob(blob=>{
+      if(!blob)return;
+      const dl=document.createElement('a');dl.href=URL.createObjectURL(blob);dl.download=`Quran_${sname}_${refs}.png`;
+      const file=new File([blob],'ayah.png',{type:'image/png'});
+      if(navigator.share&&navigator.canShare?.({files:[file]}))navigator.share({files:[file]}).catch(()=>dl.click());
+      else dl.click();
+    },'image/png');
   };
 
   const doShare=async()=>{
