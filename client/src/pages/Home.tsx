@@ -21,7 +21,7 @@ import {
 import { useNotifications, usePrayerNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSeo } from "@/hooks/use-seo";
 
 export default function Home() {
@@ -44,6 +44,30 @@ export default function Home() {
   };
 
   usePrayerNotifications(prayerData?.timings || null, prayerData?.date?.hijri);
+
+  // Live countdown to next prayer
+  const [countdown, setCountdown] = useState('');
+  useEffect(() => {
+    if (!nextPrayer) return;
+    const update = () => {
+      const now = new Date();
+      const [h, m] = nextPrayer.time.split(':').map(Number);
+      let target = new Date(now);
+      target.setHours(h, m, 0, 0);
+      if (target <= now) target.setDate(target.getDate() + 1);
+      const diff = target.getTime() - now.getTime();
+      if (diff <= 0) { setCountdown(''); return; }
+      const hrs = Math.floor(diff / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      if (hrs > 0) setCountdown(`${hrs} ساعة و ${mins} دقيقة`);
+      else if (mins > 0) setCountdown(`${mins} دقيقة و ${secs} ثانية`);
+      else setCountdown(`${secs} ثانية`);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [nextPrayer?.time]);
 
   const handleShareHadith = async () => {
     if (!dailyHadith) return;
@@ -89,6 +113,11 @@ export default function Home() {
               </div>
               <h2 className="text-5xl sm:text-6xl font-black font-display tracking-tight text-white mb-2">{nextPrayer.name}</h2>
               <div className="text-4xl sm:text-5xl font-mono font-bold text-emerald-50" dir="ltr">{nextPrayer.time}</div>
+              {countdown && (
+                <div className="mt-3 bg-white/10 backdrop-blur-sm rounded-full px-5 py-2 inline-flex items-center gap-2 border border-white/10">
+                  <span className="text-emerald-200 text-sm font-bold">⏱ متبقي {countdown}</span>
+                </div>
+              )}
 
               {prayerData?.date?.hijri && (
                 <div className="mt-6 pt-4 border-t border-white/5 text-xs text-white/50 font-bold flex items-center justify-center gap-2">

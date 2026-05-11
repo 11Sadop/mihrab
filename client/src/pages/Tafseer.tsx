@@ -437,9 +437,10 @@ export default function TafseerPage(){
     r.maxAlternatives=5;
     
     const normAr = (s:string) => s
-      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF\u06E0\u06E2\u06E3\u06E5\u06E6\u06E8\u06EA-\u06ED\u0640]/g,'')
+      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'')
       .replace(/[أإآءٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
-      .replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/\s+/g, ' ').trim();
+      .replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/لله/g,'لله')
+      .replace(/ال/g,'ال').replace(/\s+/g, ' ').trim();
 
     // Levenshtein distance for precise similarity
     const levenshtein = (a:string, b:string):number => {
@@ -507,14 +508,14 @@ export default function TafseerPage(){
         if(target.length<1){newLevels.push(1);seqMatched++;continue;}
         
         let found=false;
-        // Search forward in spoken words (allow skipping up to 3 filler words)
-        for(let si=spIdx;si<Math.min(spIdx+5,spokenWords.length);si++){
+        // Search forward in spoken words (allow skipping up to 8 filler words)
+        for(let si=spIdx;si<Math.min(spIdx+8,spokenWords.length);si++){
           const sim=wordSim(spokenWords[si],target);
-          if(sim>=0.65){
+          if(sim>=0.55){
             found=true;
             spIdx=si+1;
             seqMatched++;
-            if(sim>=0.90){
+            if(sim>=0.85){
               newLevels.push(1); // perfect
             } else {
               newLevels.push(2); // close but pronunciation issue
@@ -538,8 +539,8 @@ export default function TafseerPage(){
         setHifzStatus('pron');
       }
       
-      // ✅ Verse completed — require 80% sequential match
-      if(ratio>=0.80 && !isAdvancingRef.current){
+      // ✅ Verse completed — require 70% sequential match
+      if(ratio>=0.70 && !isAdvancingRef.current){
         isAdvancingRef.current=true;
         const missedCount=newLevels.filter(l=>l===0).length;
         const pronCount=newLevels.filter(l=>l===2).length;
