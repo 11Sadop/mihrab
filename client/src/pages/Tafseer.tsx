@@ -8,19 +8,19 @@ import { useSeo } from "@/hooks/use-seo";
 interface Rec{id:string;name:string;server:string;ev?:string;}
 // FIXED: corrected everyayah folder names for reliable playback
 const RECITERS:Rec[]=[
-  {id:"maher",   name:"ماهر المعيقلي",      server:"https://server12.mp3quran.net/maher",          ev:"Maher_AlMuaiqly_128kbps"},
   {id:"afasy",   name:"مشاري العفاسي",      server:"https://server8.mp3quran.net/afs",             ev:"Alafasy_128kbps"},
+  {id:"maher",   name:"ماهر المعيقلي",      server:"https://server12.mp3quran.net/maher",          ev:"Maher_AlMuaiqly_128kbps"},
   {id:"sudais",  name:"عبدالرحمن السديس",   server:"https://server11.mp3quran.net/sds",            ev:"AbdurRahmaanAs-Sudais_192kbps"},
   {id:"hosary",  name:"محمود خليل الحصري", server:"https://server13.mp3quran.net/husr",           ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",          ev:"Minshawy_Murattal_128kbps"},
   {id:"basit",   name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",           ev:"Abdul_Basit_Murattal_192kbps"},
+  {id:"dosari",  name:"ياسر الدوسري",       server:"https://server11.mp3quran.net/yasser",         ev:"Yasser_Ad-Dussary_128kbps"},
   {id:"ghamdi",  name:"سعد الغامدي",        server:"https://server7.mp3quran.net/s_gmd",          ev:"Sa_d_al-Ghaamidi_128kbps"},
-  {id:"ajamy",   name:"أحمد العجمي",        server:"https://server10.mp3quran.net/ajm",           ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
-  {id:"dosari",  name:"ياسر الدوسري",       server:"https://server10.mp3quran.net/ibrahim_dosri", ev:"Yasser_Ad-Dussary_128kbps"},
   {id:"shuraym", name:"سعود الشريم",        server:"https://server7.mp3quran.net/shur",           ev:"Sa_ood_ash-Shuraym_128kbps"},
-  {id:"tablawi", name:"محمد الطبلاوي",      server:"https://server10.mp3quran.net/tblawi",        ev:"Mohammad_al_Tablaway_128kbps"},
+  {id:"ajamy",   name:"أحمد العجمي",        server:"https://server10.mp3quran.net/ajm",           ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
   {id:"ayyoub",  name:"محمد أيوب",          server:"https://server8.mp3quran.net/ayyub",          ev:"Muhammad_Ayyoub_128kbps"},
   {id:"juhany",  name:"عبدالله الجهني",     server:"https://server11.mp3quran.net/jhn",           ev:"Abdullah_Juhany_128kbps"},
+  {id:"tablawi", name:"محمد الطبلاوي",      server:"https://server6.mp3quran.net/tablawi",        ev:"Mohammad_al_Tablaway_128kbps"},
 ]
 
 const SURAHS=[{id:1,n:"الفاتحة",c:7},{id:2,n:"البقرة",c:286},{id:3,n:"آل عمران",c:200},{id:4,n:"النساء",c:176},{id:5,n:"المائدة",c:120},{id:6,n:"الأنعام",c:165},{id:7,n:"الأعراف",c:206},{id:8,n:"الأنفال",c:75},{id:9,n:"التوبة",c:129},{id:10,n:"يونس",c:109},{id:11,n:"هود",c:123},{id:12,n:"يوسف",c:111},{id:13,n:"الرعد",c:43},{id:14,n:"إبراهيم",c:52},{id:15,n:"الحجر",c:99},{id:16,n:"النحل",c:128},{id:17,n:"الإسراء",c:111},{id:18,n:"الكهف",c:110},{id:19,n:"مريم",c:98},{id:20,n:"طه",c:135},{id:21,n:"الأنبياء",c:112},{id:22,n:"الحج",c:78},{id:23,n:"المؤمنون",c:118},{id:24,n:"النور",c:64},{id:25,n:"الفرقان",c:77},{id:26,n:"الشعراء",c:227},{id:27,n:"النمل",c:93},{id:28,n:"القصص",c:88},{id:29,n:"العنكبوت",c:69},{id:30,n:"الروم",c:60},{id:31,n:"لقمان",c:34},{id:32,n:"السجدة",c:30},{id:33,n:"الأحزاب",c:73},{id:34,n:"سبأ",c:54},{id:35,n:"فاطر",c:45},{id:36,n:"يس",c:83},{id:37,n:"الصافات",c:182},{id:38,n:"ص",c:88},{id:39,n:"الزمر",c:75},{id:40,n:"غافر",c:85},{id:41,n:"فصلت",c:54},{id:42,n:"الشورى",c:53},{id:43,n:"الزخرف",c:89},{id:44,n:"الدخان",c:59},{id:45,n:"الجاثية",c:37},{id:46,n:"الأحقاف",c:35},{id:47,n:"محمد",c:38},{id:48,n:"الفتح",c:29},{id:49,n:"الحجرات",c:18},{id:50,n:"ق",c:45},{id:51,n:"الذاريات",c:60},{id:52,n:"الطور",c:49},{id:53,n:"النجم",c:62},{id:54,n:"القمر",c:55},{id:55,n:"الرحمن",c:78},{id:56,n:"الواقعة",c:96},{id:57,n:"الحديد",c:29},{id:58,n:"المجادلة",c:22},{id:59,n:"الحشر",c:24},{id:60,n:"الممتحنة",c:13},{id:61,n:"الصف",c:14},{id:62,n:"الجمعة",c:11},{id:63,n:"المنافقون",c:11},{id:64,n:"التغابن",c:18},{id:65,n:"الطلاق",c:12},{id:66,n:"التحريم",c:12},{id:67,n:"الملك",c:30},{id:68,n:"القلم",c:52},{id:69,n:"الحاقة",c:52},{id:70,n:"المعارج",c:44},{id:71,n:"نوح",c:28},{id:72,n:"الجن",c:28},{id:73,n:"المزمل",c:20},{id:74,n:"المدثر",c:56},{id:75,n:"القيامة",c:40},{id:76,n:"الإنسان",c:31},{id:77,n:"المرسلات",c:50},{id:78,n:"النبأ",c:40},{id:79,n:"النازعات",c:46},{id:80,n:"عبس",c:42},{id:81,n:"التكوير",c:29},{id:82,n:"الانفطار",c:19},{id:83,n:"المطففين",c:36},{id:84,n:"الانشقاق",c:25},{id:85,n:"البروج",c:22},{id:86,n:"الطارق",c:17},{id:87,n:"الأعلى",c:19},{id:88,n:"الغاشية",c:26},{id:89,n:"الفجر",c:30},{id:90,n:"البلد",c:20},{id:91,n:"الشمس",c:15},{id:92,n:"الليل",c:21},{id:93,n:"الضحى",c:11},{id:94,n:"الشرح",c:8},{id:95,n:"التين",c:8},{id:96,n:"العلق",c:19},{id:97,n:"القدر",c:5},{id:98,n:"البينة",c:8},{id:99,n:"الزلزلة",c:8},{id:100,n:"العاديات",c:11},{id:101,n:"القارعة",c:11},{id:102,n:"التكاثر",c:8},{id:103,n:"العصر",c:3},{id:104,n:"الهمزة",c:9},{id:105,n:"الفيل",c:5},{id:106,n:"قريش",c:4},{id:107,n:"الماعون",c:7},{id:108,n:"الكوثر",c:3},{id:109,n:"الكافرون",c:6},{id:110,n:"النصر",c:3},{id:111,n:"المسد",c:5},{id:112,n:"الإخلاص",c:4},{id:113,n:"الفلق",c:5},{id:114,n:"الناس",c:6}];
@@ -96,15 +96,25 @@ export default function TafseerPage(){
   const audio2Ref = useRef<HTMLAudioElement | null>(null);
   const activeAudioRef = useRef<'1'|'2'>('1');
   const nextPreloadedKey = useRef<string>("");
+  // Refs for event handlers to avoid stale closures
+  const handleEndedRef = useRef<()=>void>(()=>{});
+  const handleErrRef = useRef<()=>void>(()=>{});
+  const handleTimeUpdateRef = useRef<()=>void>(()=>{});
 
   useEffect(() => {
     audio1Ref.current = new Audio();
     audio2Ref.current = new Audio();
     
+    // Use wrapper functions that call refs - so handlers always use latest version
+    const onEnded = () => handleEndedRef.current();
+    const onTimeUpdate = () => handleTimeUpdateRef.current();
+    const onError = () => handleErrRef.current();
+    
     const setup = (a: HTMLAudioElement) => {
-      a.addEventListener('ended', handleEnded);
-      a.addEventListener('timeupdate', handleTimeUpdate);
-      a.addEventListener('error', handleErr);
+      a.addEventListener('ended', onEnded);
+      a.addEventListener('timeupdate', onTimeUpdate);
+      a.addEventListener('error', onError);
+      a.preload = 'auto';
     };
     if(audio1Ref.current) setup(audio1Ref.current);
     if(audio2Ref.current) setup(audio2Ref.current);
@@ -117,8 +127,8 @@ export default function TafseerPage(){
 
   const playLocalSound = (type: 'ok'|'error') => {
     const urls = {
-      ok: 'https://cdn.pixabay.com/audio/2022/03/15/audio_7833324f4e.mp3', // Short ding
-      error: 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb6430386c.mp3' // Subtle error
+      ok: 'https://cdn.pixabay.com/audio/2022/03/15/audio_7833324f4e.mp3',
+      error: 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb6430386c.mp3'
     };
     new Audio(urls[type]).play().catch(()=>{});
   };
@@ -149,26 +159,20 @@ export default function TafseerPage(){
               const b = bufferAudio();
               if(b){ b.src = urlN2; b.load(); nextPreloadedKey.current = `${q.sn}-${n2}`; }
             }
-          }).catch(() => { setPlayingKey(""); playQueueRef.current=null; });
+          }).catch(() => { playVerse(q.sn, nextNis); }); // retry on fail
         }
       } else {
-        const rec = getReciter();
-        const url = buildUrl(rec, q.sn, nextNis);
-        const a = currentAudio();
-        if (a) {
-          a.src = url;
-          a.play().catch(() => { setPlayingKey(""); playQueueRef.current=null; });
-          setPlayingKey(nextKey);
-          setPlayingSn(q.sn);
-          ensureVerseVisible(q.sn, nextNis);
-        }
+        playVerse(q.sn, nextNis);
       }
     } else {
       setPlayingKey("");
       playQueueRef.current = null;
       setIsPlaying(false);
+      if('mediaSession' in navigator) navigator.mediaSession.playbackState='none';
     }
   };
+  // Keep ref updated so event listener always calls latest version
+  handleEndedRef.current = handleEnded;
 
   // Helper: build audio URL — mp3quran primary (more reliable), everyayah fallback
   const buildUrl = (rec: Rec, sn: number, nis: number) =>
@@ -202,11 +206,12 @@ export default function TafseerPage(){
       }
     }
   };
+  handleTimeUpdateRef.current = handleTimeUpdate;
 
   useSeo({title:"محراب - رفيقك الإسلامي",description:"محراب رفيقك الإسلامي - القرآن الكريم والتفسير ومواقيت الصلاة",canonicalPath:"/tafseer"});
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
-  const [recId,setRecId]=useState("maher");
+  const [recId,setRecId]=useState("afasy");
   const [showSearch,setShowSearch]=useState(false);
   const [search,setSearch]=useState("");
   const [showUI,setShowUI]=useState(true);
@@ -366,10 +371,10 @@ export default function TafseerPage(){
 
   const stopAudio=()=>{
     audio1Ref.current?.pause();
-    if(audio1Ref.current) audio1Ref.current.src = "";
+    if(audio1Ref.current){audio1Ref.current.currentTime=0;}
     audio2Ref.current?.pause();
-    if(audio2Ref.current) audio2Ref.current.src = "";
-    
+    if(audio2Ref.current){audio2Ref.current.currentTime=0;}
+    nextPreloadedKey.current='';
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
     if('mediaSession' in navigator)navigator.mediaSession.playbackState='none';
   };
@@ -381,8 +386,11 @@ export default function TafseerPage(){
       setIsPlaying(false);
       if('mediaSession' in navigator)navigator.mediaSession.playbackState='paused';
     }
-    else if(a&&a.src){
-      a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+    else if(a&&a.src&&a.src!==''){
+      a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{
+        // If play fails (e.g. after stop), restart from surah
+        playSurahFrom(surah.id,1);
+      });
       setIsPlaying(true);
     }
     else playSurahFrom(surah.id,1);
@@ -424,6 +432,7 @@ export default function TafseerPage(){
       tryMirror();
     }
   };
+  handleErrRef.current = handleErr;
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
