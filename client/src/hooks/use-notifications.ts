@@ -233,7 +233,7 @@ export function useNotifications() {
                 body,
                 icon: '/icon-192x192.png',
                 badge: '/icon-192x192.png',
-                tag: `mihrab-${Date.now()}`,
+                tag: `mihrab-${title.replace(/\s/g,'-')}`,
                 requireInteraction: true,
                 silent: !currentSettings.sound || !playSound,
             });
@@ -360,7 +360,7 @@ export function usePrayerNotifications(prayerTimings: Record<string, string> | n
                 body,
                 icon: '/icon-192x192.png',
                 badge: '/icon-192x192.png',
-                tag: `mihrab-${Date.now()}`,
+                tag: `mihrab-prayer-${title.replace(/\s/g,'-')}`,
                 requireInteraction: true,
                 silent: !settings.sound,
             });
