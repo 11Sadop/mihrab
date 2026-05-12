@@ -120,99 +120,113 @@ export default function HadithVerifyPage() {
         setResults([]);
         setHasSearched(true);
 
-        // Helper to parse Dorar HTML response
-        const parseDorarHtml = (html: string): HadithResult[] => {
-            const results: HadithResult[] = [];
-            // Try multiple patterns to extract hadith data
-            const blocks = html.split(/class="hadith[^"]*"/gi);
-            for (let i = 1; i < blocks.length && results.length < 15; i++) {
-                const block = blocks[i];
-                const textM = block.match(/>([^<]{20,})</);
-                const narratorM = block.match(/الراوي\s*:\s*([^<\n]+)/);
-                const scholarM = block.match(/المحدث\s*:\s*([^<\n]+)/);
-                const sourceM = block.match(/المصدر\s*:\s*([^<\n]+)/);
-                const gradeM = block.match(/الدرجة?\s*:\s*([^<\n]+)/);
-                if (textM) {
-                    results.push({
-                        text: textM[1].replace(/<[^>]+>/g, '').trim(),
-                        narrator: narratorM ? narratorM[1].trim() : '',
-                        scholar: scholarM ? scholarM[1].trim() : '',
-                        source: sourceM ? sourceM[1].trim() : '',
-                        grade: gradeM ? gradeM[1].trim() : 'غير محدد'
-                    });
-                }
-            }
-            return results;
-        };
-
         try {
-            // Try server API first
-            let url = `/api/hadith/verify?skey=${encodeURIComponent(query)}`;
-            if (filterSahih) url += "&grade=sahih";
+            // Try direct Dorar API from client (works in some browsers)
+            const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(query)}`;
+            const res = await fetch(dorarUrl, { mode: 'cors' });
+            
+            if (res.ok) {
+                const data = await res.json();
+                let parsed: HadithResult[] = [];
 
-            const response = await fetch(url);
-            const data = await response.json();
+                if (data?.ahadith?.result) {
+                    const html = data.ahadith.result;
+                    // Parse using الراوي as separator
+                    const parts = html.split(/الراوي\s*:\s*/gi);
+                    for (let i = 1; i < parts.length && parsed.length < 15; i++) {
+                        const info = parts[i];
+                        const prevPart = parts[i - 1];
+                        // Extract hadith text from end of previous part
+                        const textChunks = prevPart.split('>');
+                        let rawText = textChunks[textChunks.length - 1] || '';
+                        rawText = rawText.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, '').trim();
+                        
+                        const narratorM = info.match(/^([^<\n,]+)/);
+                        const scholarM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
+                        const sourceM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                        const gradeM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
 
-            if (data.error || !response.ok) {
-                throw new Error(data.error || 'Server error');
-            }
-
-            const resultsList = data.results || [];
-            if (resultsList.length > 0) {
-                setResults(resultsList);
-            } else {
-                setError("لم يتم العثور على نتائج. جرب كلمات أخرى.");
-            }
-        } catch (serverErr) {
-            // Fallback: call Dorar API directly from client
-            try {
-                const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(query)}`;
-                const dorarRes = await fetch(dorarUrl);
-                if (dorarRes.ok) {
-                    const dorarData = await dorarRes.json();
-                    let parsed: HadithResult[] = [];
-
-                    if (dorarData?.ahadith?.result) {
-                        parsed = parseDorarHtml(dorarData.ahadith.result);
-                    }
-                    if (parsed.length === 0 && dorarData?.ahadith?.data) {
-                        parsed = (dorarData.ahadith.data || []).map((h: any) => ({
-                            text: h.hadith || h.text || '',
-                            narrator: h.rawi || h.narrator || '',
-                            scholar: h.mohadith || h.scholar || '',
-                            source: h.book || h.source || '',
-                            grade: h.grade || h.hukm || 'غير محدد'
-                        }));
-                    }
-
-                    if (filterSahih) {
-                        parsed = parsed.filter(h => {
-                            const g = h.grade.toLowerCase();
-                            return g.includes('صحيح') || g.includes('حسن') || g.includes('جيد');
-                        });
-                    }
-
-                    if (parsed.length > 0) {
-                        setResults(parsed);
-                    } else {
-                        // Last resort fallback
-                        const FALLBACK_DB: Record<string, HadithResult[]> = {
-                            'صلاة': [{ text: "صلوا كما رأيتموني أصلي", grade: "صحيح", source: "البخاري", narrator: "مالك بن الحويرث", scholar: "البخاري" }],
-                            'وضوء': [{ text: "من توضأ فأحسن الوضوء خرجت خطاياه من جسده حتى تخرج من تحت أظفاره", grade: "صحيح", source: "مسلم", narrator: "عثمان بن عفان", scholar: "مسلم" }],
-                            'نية': [{ text: "إنما الأعمال بالنيات وإنما لكل امرئ ما نوى", grade: "صحيح", source: "البخاري", narrator: "عمر بن الخطاب", scholar: "البخاري" }],
-                            'طهور': [{ text: "الطهور شطر الإيمان والحمد لله تملأ الميزان", grade: "صحيح", source: "مسلم", narrator: "أبو مالك الأشعري", scholar: "مسلم" }],
-                        };
-                        let found = false;
-                        for (const k in FALLBACK_DB) {
-                            if (query.includes(k)) { setResults(FALLBACK_DB[k]); found = true; break; }
+                        if (rawText.length > 10) {
+                            const result: HadithResult = {
+                                text: rawText,
+                                narrator: narratorM ? narratorM[1].trim() : '',
+                                scholar: scholarM ? scholarM[1].trim() : '',
+                                source: sourceM ? sourceM[1].trim() : '',
+                                grade: gradeM ? gradeM[1].trim() : 'غير محدد'
+                            };
+                            if (!filterSahih || result.grade.includes('صحيح') || result.grade.includes('حسن')) {
+                                parsed.push(result);
+                            }
                         }
-                        if (!found) setError("لم يتم العثور على نتائج. جرب كلمات أخرى.");
                     }
-                } else {
-                    setError("حدث خطأ في الاتصال بقاعدة البيانات. حاول مرة أخرى.");
                 }
-            } catch {
-                setError("حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.");
+                
+                if (data?.ahadith?.data && parsed.length === 0) {
+                    parsed = (data.ahadith.data || []).map((h: any) => ({
+                        text: h.hadith || h.text || '',
+                        narrator: h.rawi || h.narrator || '',
+                        scholar: h.mohadith || h.scholar || '',
+                        source: h.book || h.source || '',
+                        grade: h.grade || h.hukm || 'غير محدد'
+                    })).filter((h: HadithResult) => h.text.length > 5);
+                }
+
+                if (parsed.length > 0) {
+                    setResults(parsed);
+                    return;
+                }
+            }
+            
+            // If Dorar failed, try server proxy
+            throw new Error('Dorar client failed');
+        } catch {
+            // Try server proxy as fallback
+            try {
+                const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(query)}${filterSahih ? '&grade=sahih' : ''}`);
+                const serverData = await serverRes.json();
+                if (serverData.results?.length > 0) {
+                    setResults(serverData.results);
+                    return;
+                }
+            } catch {}
+            
+            // Final fallback: built-in hadith database
+            const HADITH_DB: Record<string, HadithResult[]> = {
+                'نية': [{ text: "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى، فمن كانت هجرته إلى الله ورسوله فهجرته إلى الله ورسوله، ومن كانت هجرته لدنيا يصيبها أو امرأة ينكحها فهجرته إلى ما هاجر إليه", narrator: "عمر بن الخطاب", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }],
+                'أعمال': [{ text: "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى", narrator: "عمر بن الخطاب", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }],
+                'طهور': [{ text: "الطُّهورُ شطرُ الإيمانِ، والحمدُ للهِ تملأُ الميزانَ، وسبحانَ اللهِ والحمدُ للهِ تملآنِ ما بين السماءِ والأرضِ", narrator: "أبو مالك الأشعري", scholar: "مسلم", source: "صحيح مسلم", grade: "صحيح" }],
+                'صلاة': [{ text: "صلُّوا كما رأيتُموني أصلِّي", narrator: "مالك بن الحويرث", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }, { text: "بُنِيَ الإسلامُ على خمسٍ: شهادةِ أنْ لا إلهَ إلَّا اللهُ وأنَّ محمَّدًا رسولُ اللهِ، وإقامِ الصَّلاةِ، وإيتاءِ الزَّكاةِ، وحجِّ البيتِ، وصومِ رمضانَ", narrator: "عبد الله بن عمر", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }],
+                'وضوء': [{ text: "مَن تَوَضَّأَ فأحسَنَ الوضوءَ خرَجتْ خطاياهُ مِن جسدِهِ حتى تخرُجَ مِن تحتِ أظفارِهِ", narrator: "عثمان بن عفان", scholar: "مسلم", source: "صحيح مسلم", grade: "صحيح" }],
+                'صيام': [{ text: "مَن صامَ رمضانَ إيمانًا واحتسابًا غُفِرَ لهُ ما تقدَّمَ من ذنبِهِ", narrator: "أبو هريرة", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }],
+                'رمضان': [{ text: "مَن صامَ رمضانَ إيمانًا واحتسابًا غُفِرَ لهُ ما تقدَّمَ من ذنبِهِ", narrator: "أبو هريرة", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }, { text: "إذا جاءَ رمضانُ فُتِّحت أبوابُ الجنَّةِ، وغُلِّقت أبوابُ النَّارِ، وصُفِّدت الشَّياطينُ", narrator: "أبو هريرة", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }],
+                'ذكر': [{ text: "مثلُ الذي يذكُرُ ربَّهُ والذي لا يذكُرُ ربَّهُ مثلُ الحيِّ والميِّتِ", narrator: "أبو موسى الأشعري", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }],
+                'قرآن': [{ text: "خيرُكم مَن تعلَّمَ القرآنَ وعلَّمَهُ", narrator: "عثمان بن عفان", scholar: "البخاري", source: "صحيح البخاري", grade: "صحيح" }],
+                'حسن': [{ text: "اتَّقِ اللهَ حيثما كنتَ، وأتبعِ السَّيِّئةَ الحسنةَ تمحُها، وخالقِ النَّاسَ بخُلُقٍ حسنٍ", narrator: "أبو ذر الغفاري", scholar: "الترمذي", source: "سنن الترمذي", grade: "حسن" }],
+                'خلق': [{ text: "إنَّ مِن أحبِّكم إليَّ وأقربِكم منِّي مجلسًا يومَ القيامةِ أحاسنُكم أخلاقًا", narrator: "جابر بن عبد الله", scholar: "الترمذي", source: "سنن الترمذي", grade: "صحيح" }],
+                'جنة': [{ text: "مَن سلَكَ طريقًا يلتمِسُ فيهِ علمًا سهَّلَ اللهُ لهُ بهِ طريقًا إلى الجنَّةِ", narrator: "أبو هريرة", scholar: "مسلم", source: "صحيح مسلم", grade: "صحيح" }],
+                'علم': [{ text: "مَن سلَكَ طريقًا يلتمِسُ فيهِ علمًا سهَّلَ اللهُ لهُ بهِ طريقًا إلى الجنَّةِ", narrator: "أبو هريرة", scholar: "مسلم", source: "صحيح مسلم", grade: "صحيح" }],
+                'صبر': [{ text: "عجبًا لأمرِ المؤمنِ إنَّ أمرَهُ كلَّهُ خيرٌ وليسَ ذاكَ لأحدٍ إلَّا للمؤمنِ إنْ أصابتْهُ سرَّاءُ شكَرَ فكانَ خيرًا لهُ وإنْ أصابتْهُ ضرَّاءُ صبرَ فكانَ خيرًا لهُ", narrator: "صهيب الرومي", scholar: "مسلم", source: "صحيح مسلم", grade: "صحيح" }],
+                'دعاء': [{ text: "الدُّعاءُ هوَ العبادةُ", narrator: "النعمان بن بشير", scholar: "الترمذي", source: "سنن الترمذي", grade: "صحيح" }],
+                'توبة': [{ text: "للهُ أشدُّ فرحًا بتوبةِ عبدِهِ حينَ يتوبُ إليهِ من أحدِكم كان على راحلتِهِ بأرضِ فلاةٍ فانفلتتْ منهُ وعليها طعامُهُ وشرابُهُ فأيسَ منها", narrator: "أنس بن مالك", scholar: "مسلم", source: "صحيح مسلم", grade: "صحيح" }],
+            };
+
+            let found = false;
+            for (const k in HADITH_DB) {
+                if (query.includes(k)) {
+                    setResults(HADITH_DB[k]);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                // Search through all hadith texts
+                const allHadiths = Object.values(HADITH_DB).flat();
+                const matches = allHadiths.filter(h => h.text.includes(query) || query.split(' ').some(w => w.length > 2 && h.text.includes(w)));
+                if (matches.length > 0) {
+                    setResults(matches);
+                } else {
+                    setError("لم يتم العثور على نتائج. جرب كلمات مختلفة مثل: صلاة، صيام، نية، وضوء، قرآن");
+                }
             }
         } finally {
             setLoading(false);

@@ -170,11 +170,9 @@ export default function TafseerPage(){
     }
   };
 
-  // Helper: build audio URL — everyayah primary, mp3quran fallback
+  // Helper: build audio URL — mp3quran primary (more reliable), everyayah fallback
   const buildUrl = (rec: Rec, sn: number, nis: number) =>
-    rec.ev
-      ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3`
-      : `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
+    `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
 
   const handleTimeUpdate = () => {
     const a = currentAudio();
@@ -252,10 +250,13 @@ export default function TafseerPage(){
   const isAdvancingRef=useRef(false);
   const recIdRef=useRef(recId);
   const pgRef=useRef(pg);
+  const hifzIdxRef=useRef(0);
 
   const [hifz,setHifz]=useState(false);
   const [recording,setRecording]=useState(false);
   const [hifzIdx,setHifzIdx]=useState(0);
+  // Keep ref in sync with state so recognition handler always has latest value
+  useEffect(()=>{hifzIdxRef.current=hifzIdx;},[hifzIdx]);
   const [hifzRes,setHifzRes]=useState<Map<string,"ok"|"err">>(new Map());
   const [recTxt,setRecTxt]=useState("");
   const [wordMatchLevels,setWordMatchLevels]=useState<number[]>([]);
@@ -396,24 +397,31 @@ export default function TafseerPage(){
     const a=currentAudio();
     if(!a)return;
 
-    // Try mirror of everyayah, then mp3quran server, then skip
+    // Try everyayah as first fallback
+    const evUrl = rec.ev
+      ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`
+      : null;
+    // Try mirror as second fallback
     const mirrorUrl = rec.ev
       ? `https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`
       : null;
-    const serverUrl = `${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
 
-    const tryServer=()=>{
-      a.src=serverUrl;
-      a.load();
-      a.play().catch(()=>{ /* skip silently to next */ handleEnded(); });
+    const tryMirror=()=>{
+      if(mirrorUrl){
+        a.src=mirrorUrl;
+        a.load();
+        a.play().catch(()=>{ handleEnded(); }); // skip to next verse
+      } else {
+        handleEnded(); // skip to next verse
+      }
     };
 
-    if(mirrorUrl && !a.src.includes('mirrors.quranicaudio.com')){
-      a.src=mirrorUrl;
+    if(evUrl && !a.src.includes('everyayah.com')){
+      a.src=evUrl;
       a.load();
-      a.play().catch(tryServer);
+      a.play().catch(tryMirror);
     } else {
-      tryServer();
+      tryMirror();
     }
   };
 
@@ -466,7 +474,8 @@ export default function TafseerPage(){
     
     r.onresult=(e:any)=>{
       if(!pq.data) return;
-      const exp=pq.data[hifzIdx]; if(!exp) return;
+      const idx=hifzIdxRef.current; // Always use ref for current index
+      const exp=pq.data[idx]; if(!exp) return;
       if(isAdvancingRef.current) return;
 
       // Gather all spoken text
@@ -581,14 +590,19 @@ export default function TafseerPage(){
 
     r.onerror=(e:any)=>{
       if(e.error==='no-speech'||e.error==='audio-capture'||e.error==='network'){
-        setTimeout(()=>{try{r.start();}catch{}},400);
+        setTimeout(()=>{try{r.start();}catch{}},500);
       }
     };
-    r.onend=()=>{if(recording&&!isAdvancingRef.current) try{r.start();}catch{}};
+    r.onend=()=>{
+      // Always auto-restart if still recording
+      if(!isAdvancingRef.current){
+        setTimeout(()=>{try{r.start();}catch{}},300);
+      }
+    };
     recRef.current=r;
     r.start();
     setRecording(true);
-  },[hifzIdx,pq.data,recording]);
+  },[pq.data]); // removed hifzIdx from deps - we use ref instead
 
   const stopHifz=useCallback(()=>{if(recRef.current){recRef.current.onend=null;try{recRef.current.stop();}catch{}recRef.current=null;}setRecording(false);},[]);
   const reveal=(i:number)=>{
