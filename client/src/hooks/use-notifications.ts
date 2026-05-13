@@ -17,7 +17,7 @@ interface NotificationSettings {
 }
 
 const defaultSettings: NotificationSettings = {
-    enabled: false,
+    enabled: true,
     prayerReminder: true,
     reminderMinutes: 10,
     morningAdhkar: true,
@@ -113,11 +113,12 @@ export async function schedulePrayerNotificationsInSW(
                 isha: iqamaTimes.Isha || iqamaTimes.isha
             },
             settings: {
-                enabled: settings.enabled,
+                enabled: Notification.permission === 'granted',
                 reminderMinutes: settings.reminderMinutes,
                 morningAdhkarEnabled: settings.morningAdhkar,
                 eveningAdhkarEnabled: settings.eveningAdhkar,
                 iqamaNotification: settings.iqamaReminder,
+                adhanNotification: true,
             }
         };
 

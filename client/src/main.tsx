@@ -41,10 +41,12 @@ async function sendCachedPrayerTimesToSW() {
                     isha: iqamaTimes.Isha || iqamaTimes.isha
                 },
                 settings: {
-                    enabled: settings.enabled || false,
+                    enabled: ('Notification' in window && Notification.permission === 'granted') || settings.enabled || true,
                     reminderMinutes: settings.reminderMinutes || 10,
                     morningAdhkarEnabled: settings.morningAdhkar !== false,
-                    eveningAdhkarEnabled: settings.eveningAdhkar !== false
+                    eveningAdhkarEnabled: settings.eveningAdhkar !== false,
+                    adhanNotification: true,
+                    iqamaNotification: true,
                 }
             };
 

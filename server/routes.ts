@@ -221,7 +221,16 @@ export async function registerRoutes(
 
             try {
                 const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(searchKey)}`;
-                const response = await fetch(dorarUrl, { signal: controller.signal });
+                const response = await fetch(dorarUrl, {
+                    signal: controller.signal,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'application/json, text/plain, */*',
+                        'Accept-Language': 'ar,en;q=0.9',
+                        'Referer': 'https://dorar.net/',
+                        'Origin': 'https://dorar.net',
+                    }
+                });
                 clearTimeout(timeout);
 
                 if (!response.ok) {
