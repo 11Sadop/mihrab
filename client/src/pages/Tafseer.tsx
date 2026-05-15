@@ -547,21 +547,28 @@ export default function TafseerPage(){
       
       setWordMatchLevels(newLevels);
       const ratio=expWords.length>0?seqMatched/expWords.length:0;
-      
-      // Real-time feedback
-      if(ratio>0.15 && ratio<0.65){
-        setHifzFeedback({type:'ok', msg:`⏳ ${Math.round(ratio*100)}% ...`});
+      const firstMissingIdx = newLevels.findIndex((l)=>l===0);
+      const missedCount=newLevels.filter(l=>l===0).length;
+      const pronCount=newLevels.filter(l=>l===2).length;
+      const endingWindow = expWords.slice(Math.max(0, expWords.length - 3));
+      const endingMatched = endingWindow.length > 0 && endingWindow.every((w) => spokenWords.includes(w));
+
+      if(ratio>0.15 && ratio<0.85){
+        setHifzFeedback({type:'ok', msg:`Listening... ${Math.round(ratio*100)}%`});
       }
-      if(pronIssues.length>0 && ratio>=0.4 && ratio<0.65){
-        setHifzFeedback({type:'wrong_pron', msg:'⚠️ تحقق من النطق', details:pronIssues.slice(0,3)});
+      if(pronIssues.length>0 && ratio>=0.4 && ratio<0.85){
+        setHifzFeedback({type:'wrong_pron', msg:'Check pronunciation', details:pronIssues.slice(0,3)});
         setHifzStatus('pron');
       }
-      
-      // ✅ Verse completed — require 70% sequential match
-      if(ratio>=0.70 && !isAdvancingRef.current){
+      if(firstMissingIdx !== -1){
+        const missingWord = expWords[firstMissingIdx];
+        setHifzFeedback({type:'wrong_verse', msg:'Continue from this word', details:[missingWord]});
+        setHifzStatus('wrong');
+      }
+
+      // Verse completed: stricter rule for real correction
+      if(ratio>=0.90 && missedCount<=1 && endingMatched && !isAdvancingRef.current){
         isAdvancingRef.current=true;
-        const missedCount=newLevels.filter(l=>l===0).length;
-        const pronCount=newLevels.filter(l=>l===2).length;
         const isPerfect=missedCount===0 && pronCount===0;
         
         if(isPerfect){

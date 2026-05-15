@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { useSeo } from "@/hooks/use-seo";
 import { useToast } from "@/hooks/use-toast";
 import { hadithDatabase } from "@/data/hadithDatabase";
+import { sahihBukhariHadiths } from "@/data/sahihBukhari";
+import { sahihMuslimHadiths } from "@/data/sahihMuslim";
 
 async function generateVerifyImage(text: string, grade: string, source: string): Promise<Blob | null> {
     const canvas = document.createElement('canvas');
@@ -70,6 +72,11 @@ interface HadithResult {
     grade: string;
 }
 
+interface RankedHadithResult extends HadithResult {
+    trustScore: number;
+    relevanceScore: number;
+}
+
 function normalizeArabicText(text: string): string {
     return text
         .toLowerCase()
@@ -80,6 +87,23 @@ function normalizeArabicText(text: string): string {
         .replace(/[^\u0600-\u06FF\s]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function isTrustedGrade(grade: string): boolean {
+    const g = grade.toLowerCase();
+    return grade.includes("صحيح") || grade.includes("حسن") || g.includes("sahih") || g.includes("hasan");
+}
+
+function calcTrustScore(grade: string, source: string): number {
+    const s = source.toLowerCase();
+    const g = grade.toLowerCase();
+    let score = 0;
+    if (s.includes("البخاري") || s.includes("muslim") || s.includes("مسلم")) score += 100;
+    if (s.includes("dorar")) score += 20;
+    if (g.includes("صحيح") || g.includes("sahih")) score += 40;
+    if (g.includes("حسن") || g.includes("hasan")) score += 30;
+    if (g.includes("ضعيف") || g.includes("موضوع") || g.includes("weak")) score -= 20;
+    return score;
 }
 
 export default function HadithVerifyPage() {
@@ -133,83 +157,82 @@ export default function HadithVerifyPage() {
         setResults([]);
         setHasSearched(true);
 
+        const normalizedQuery = normalizeArabicText(query);
+        const merged: RankedHadithResult[] = [];
+
         try {
-            // Use server proxy (has proper headers to bypass Dorar blocking)
             const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(query)}${filterSahih ? '&grade=sahih' : ''}`);
             const serverData = await serverRes.json();
-            if (serverData.results?.length > 0) {
-                setResults(serverData.results);
-                return;
-            }
-        } catch {}
-        
-        // If server failed, try direct Dorar (may work on some networks)
-        try {
-            const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(query)}`;
-            const res = await fetch(dorarUrl, { mode: 'cors' });
-            
-            if (res.ok) {
-                const data = await res.json();
-                let parsed: HadithResult[] = [];
-
-                if (data?.ahadith?.result) {
-                    const html = data.ahadith.result;
-                    const parts = html.split(/الراوي\s*:\s*/gi);
-                    for (let i = 1; i < parts.length && parsed.length < 15; i++) {
-                        const info = parts[i];
-                        const prevPart = parts[i - 1];
-                        const textChunks = prevPart.split('>');
-                        let rawText = textChunks[textChunks.length - 1] || '';
-                        rawText = rawText.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, '').trim();
-                        
-                        const narratorM = info.match(/^([^<\n,]+)/);
-                        const scholarM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
-                        const sourceM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
-                        const gradeM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
-
-                        if (rawText.length > 10) {
-                            const result: HadithResult = {
-                                text: rawText,
-                                narrator: narratorM ? narratorM[1].trim() : '',
-                                scholar: scholarM ? scholarM[1].trim() : '',
-                                source: sourceM ? sourceM[1].trim() : '',
-                                grade: gradeM ? gradeM[1].trim() : 'غير محدد'
-                            };
-                            if (!filterSahih || result.grade.includes('صحيح') || result.grade.includes('حسن')) {
-                                parsed.push(result);
-                            }
-                        }
-                    }
-                }
-                
-                if (parsed.length > 0) {
-                    setResults(parsed);
-                    return;
+            if (Array.isArray(serverData.results)) {
+                for (const item of serverData.results) {
+                    const haystack = normalizeArabicText(`${item.text || ""} ${item.narrator || ""} ${item.source || ""} ${item.grade || ""}`);
+                    if (!haystack.includes(normalizedQuery)) continue;
+                    if (filterSahih && !isTrustedGrade(item.grade || "")) continue;
+                    merged.push({
+                        text: item.text || "",
+                        narrator: item.narrator || "",
+                        scholar: item.scholar || "",
+                        source: item.source || "Dorar",
+                        grade: item.grade || "unknown",
+                        trustScore: calcTrustScore(item.grade || "", item.source || ""),
+                        relevanceScore: haystack.length ? normalizedQuery.length / haystack.length : 0,
+                    });
                 }
             }
         } catch {}
-        const normalizedQuery = normalizeArabicText(query);
-        const localResults = hadithDatabase
-            .map((item) => ({
+
+        const localCorpus: HadithResult[] = [
+            ...hadithDatabase.map((item) => ({
                 text: item.text,
                 narrator: item.rawi || "",
                 scholar: item.explanation || "",
-                source: item.source || "قاعدة بيانات محلية",
-                grade: item.status || "غير محدد",
-            }))
-            .filter((item) => {
-                const haystack = normalizeArabicText(`${item.text} ${item.narrator} ${item.source} ${item.grade}`);
-                if (!haystack.includes(normalizedQuery)) return false;
-                if (!filterSahih) return true;
-                return item.grade.includes("صحيح") || item.grade.includes("حسن");
-            })
-            .slice(0, 20);
+                source: item.source || "Local database",
+                grade: item.status || "unknown",
+            })),
+            ...sahihBukhariHadiths.map((item) => ({
+                text: item.text,
+                narrator: "",
+                scholar: "Al-Bukhari",
+                source: `Sahih Bukhari - ${item.book}`,
+                grade: "sahih",
+            })),
+            ...sahihMuslimHadiths.map((item) => ({
+                text: item.text,
+                narrator: "",
+                scholar: "Muslim",
+                source: `Sahih Muslim - ${item.book}`,
+                grade: "sahih",
+            })),
+        ];
 
-        if (localResults.length > 0) {
-            setResults(localResults);
+        for (const item of localCorpus) {
+            const haystack = normalizeArabicText(`${item.text} ${item.narrator} ${item.source} ${item.grade}`);
+            if (!haystack.includes(normalizedQuery)) continue;
+            if (filterSahih && !isTrustedGrade(item.grade)) continue;
+            merged.push({
+                ...item,
+                trustScore: calcTrustScore(item.grade, item.source),
+                relevanceScore: haystack.length ? normalizedQuery.length / haystack.length : 0,
+            });
+        }
+
+        const deduped = removeDuplicates(merged).map((item) => ({
+            ...item,
+            trustScore: calcTrustScore(item.grade, item.source),
+            relevanceScore: (item as any).relevanceScore ?? 0,
+        }));
+
+        const ranked = deduped.sort((a, b) => {
+            if ((b as any).trustScore !== (a as any).trustScore) return (b as any).trustScore - (a as any).trustScore;
+            return (b as any).relevanceScore - (a as any).relevanceScore;
+        });
+
+        if (ranked.length > 0) {
+            setResults(ranked.slice(0, 80));
             setLoading(false);
             return;
         }
+
         setError("No results found. Check your internet connection and try different keywords.");
         setLoading(false);
     };
@@ -474,5 +497,7 @@ export default function HadithVerifyPage() {
         </div>
     );
 }
+
+
 
 
