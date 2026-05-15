@@ -1,6 +1,6 @@
 import { usePrayerTimes, getNextPrayer } from "@/hooks/use-prayer-times";
 import { Header } from "@/components/Header";
-import { Loader2, MapPin, Search, Navigation, Clock } from "lucide-react";
+import { Loader2, MapPin, Search, Navigation, Clock, Moon, Sun } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ function formatTo12Hour(time24: string): string {
 function getTimeInMinutes(time: string): number {
   const normalized = normalizeTime(time);
   const [hours, minutes] = normalized.split(':').map(Number);
-  if (isNaN(hours) || isNaN(minutes)) return 0;
+  if (isNaN(hours) || isNaN(minutes)) return -1;
   return hours * 60 + minutes;
 }
 
@@ -132,6 +132,7 @@ export default function PrayerTimes() {
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains("dark"));
   const [currentTime, setCurrentTime] = useState(() => {
     const now = new Date();
     return now.getHours() * 60 + now.getMinutes();
@@ -261,6 +262,7 @@ export default function PrayerTimes() {
       if (!prayerTime) continue;
       
       const adhanTime = getTimeInMinutes(prayerTime);
+      if (adhanTime < 0) continue;
       const iqamaOffset = IQAMA_OFFSETS[prayer] || 15;
       const iqamaTime = adhanTime + iqamaOffset;
       
@@ -284,6 +286,7 @@ export default function PrayerTimes() {
     if (!fajrTime) return null;
     
     const fajrAdhan = getTimeInMinutes(fajrTime);
+    if (fajrAdhan < 0) return null;
     const fajrIqama = fajrAdhan + (IQAMA_OFFSETS['Fajr'] || 20);
     return {
       id: 'Fajr',
@@ -297,6 +300,48 @@ export default function PrayerTimes() {
   };
 
   const nextPrayer = getNextPrayerWithIqama();
+
+  const toggleTheme = () => {
+    const root = document.documentElement;
+    if (root.classList.contains("dark")) {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+      setIsDarkMode(false);
+    } else {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      setIsDarkMode(true);
+    }
+  };
+  const currentPrayer = useMemo(() => {
+    if (!prayerData?.timings) return null;
+
+    const prayers = [
+      { id: 'Fajr', name: 'الفجر' },
+      { id: 'Dhuhr', name: 'الظهر' },
+      { id: 'Asr', name: 'العصر' },
+      { id: 'Maghrib', name: 'المغرب' },
+      { id: 'Isha', name: 'العشاء' },
+    ];
+
+    const valid = prayers
+      .map((prayer) => ({
+        ...prayer,
+        time: prayerData.timings[prayer.id],
+        minutes: getTimeInMinutes(prayerData.timings[prayer.id]),
+      }))
+      .filter((prayer) => !!prayer.time && prayer.minutes >= 0);
+
+    if (!valid.length) return null;
+
+    for (let i = valid.length - 1; i >= 0; i--) {
+      if (currentTime >= valid[i].minutes) {
+        return valid[i];
+      }
+    }
+
+    return valid[valid.length - 1];
+  }, [currentTime, prayerData?.timings]);
 
   // If no location and not requesting, show city picker automatically
   if (!hasLocation && !isRequestingLocation && !showCityPicker) {
@@ -460,8 +505,17 @@ export default function PrayerTimes() {
               <span>{savedLocation?.city || "موقعك الحالي"}</span>
             </button>
 
+            <Button onClick={toggleTheme} variant="outline" className="w-full" data-testid="button-theme-toggle-prayer">
+              {isDarkMode ? <Sun className="w-4 h-4 ml-2" /> : <Moon className="w-4 h-4 ml-2" />}
+              {isDarkMode ? "Light mode" : "Dark mode"}
+            </Button>
+
+
             {nextPrayer && (
               <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-center">
+                {currentPrayer && (
+                  <p className="text-xs text-primary font-semibold mb-2">Current prayer: {currentPrayer.name}</p>
+                )}
                 <p className="text-sm text-muted-foreground mb-1">
                   {nextPrayer.isInIqamaWindow ? "وقت الإقامة" : "الصلاة القادمة"}
                 </p>
@@ -485,7 +539,7 @@ export default function PrayerTimes() {
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground mt-2">
-                    بعد {Math.floor(nextPrayer.remainingMinutes / 60)} ساعة و {nextPrayer.remainingMinutes % 60} دقيقة
+                    {Number.isFinite(nextPrayer.remainingMinutes) ? `In ${Math.floor(nextPrayer.remainingMinutes / 60)}h ${nextPrayer.remainingMinutes % 60}m` : "Calculating remaining time..."}
                   </p>
                 )}
               </div>
@@ -537,3 +591,6 @@ export default function PrayerTimes() {
     </div>
   );
 }
+
+
+

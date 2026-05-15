@@ -756,6 +756,23 @@ export default function TafseerPage(){
     setShowSharePage(false);
   };
 
+  const downloadVerseAudio = async (sn:number, nis:number) => {
+    try {
+      const rec = getReciter();
+      const url = buildUrl(rec, sn, nis);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("download_failed");
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `quran-${rec.id}-${pad3(sn)}${pad3(nis)}.mp3`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    } catch {
+      alert("تعذر تحميل التلاوة الآن، حاول مرة أخرى");
+    }
+  };
+
   // Groups
   const groups:{sn:number;sname:string;ayahs:{nis:number;text:string;gi:number;orig:string}[]}[]=[];
   if(pq.data){let cur:typeof groups[0]|null=null;pq.data.forEach((a:any,i:number)=>{if(!cur||cur.sn!==a.sn){cur={sn:a.sn,sname:a.sname,ayahs:[]};groups.push(cur);}cur.ayahs.push({nis:a.nis,text:a.text,gi:i,orig:a.orig});});}
@@ -899,6 +916,7 @@ export default function TafseerPage(){
                 <button onClick={()=>{playQueueRef.current=null;playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>الآية</button>
                 <button onClick={()=>{toggleBookmark(`${selVerse.sn}-${selVerse.nis}`);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4"/>{bookmarks.has(`${selVerse.sn}-${selVerse.nis}`)?"إزالة الحفظ":"حفظ العلامة"}</button>
               </div></div>
+            <button onClick={()=>downloadVerseAudio(selVerse.sn, selVerse.nis)} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold flex items-center justify-center gap-1"><Volume2 className="w-4 h-4"/>Download verse recitation</button>
             <button onClick={()=>{setShowOptions(false);setShowTafseer(true);setTafseerText('');setTafseerLoading(true);(() => {
               const src = TAFSEER_SOURCES.find(s=>s.id===tafseerSource);
               if(src?.api==='tafseer'){
@@ -957,7 +975,7 @@ export default function TafseerPage(){
           <button onClick={()=>recording?stopHifz():startHifz()} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 ${recording?"bg-red-500 text-white animate-pulse":"bg-amber-500 text-white"}`}>
             {recording?<><MicOff className="w-3 h-3"/>إيقاف</>:<><Mic className="w-3 h-3"/>ابدأ</>}</button>
           <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>كشف</button>
-          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>تخطي</button>
+          <button onClick={()=>setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1))} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>Skip</button>
         </div>
       </div>}
 
@@ -1121,3 +1139,7 @@ export default function TafseerPage(){
     </div>
   );
 }
+
+
+
+

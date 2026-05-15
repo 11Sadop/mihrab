@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/hooks/use-seo";
 import { useToast } from "@/hooks/use-toast";
+import { hadithDatabase } from "@/data/hadithDatabase";
 
 async function generateVerifyImage(text: string, grade: string, source: string): Promise<Blob | null> {
     const canvas = document.createElement('canvas');
@@ -67,6 +68,18 @@ interface HadithResult {
     scholar: string;
     source: string;
     grade: string;
+}
+
+function normalizeArabicText(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[إأآا]/g, "ا")
+        .replace(/ى/g, "ي")
+        .replace(/ة/g, "ه")
+        .replace(/[ًٌٍَُِّْـ]/g, "")
+        .replace(/[^\u0600-\u06FF\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 }
 
 export default function HadithVerifyPage() {
@@ -175,8 +188,29 @@ export default function HadithVerifyPage() {
                 }
             }
         } catch {}
+        const normalizedQuery = normalizeArabicText(query);
+        const localResults = hadithDatabase
+            .map((item) => ({
+                text: item.text,
+                narrator: item.rawi || "",
+                scholar: item.explanation || "",
+                source: item.source || "قاعدة بيانات محلية",
+                grade: item.status || "غير محدد",
+            }))
+            .filter((item) => {
+                const haystack = normalizeArabicText(`${item.text} ${item.narrator} ${item.source} ${item.grade}`);
+                if (!haystack.includes(normalizedQuery)) return false;
+                if (!filterSahih) return true;
+                return item.grade.includes("صحيح") || item.grade.includes("حسن");
+            })
+            .slice(0, 20);
 
-        setError("لم يتم العثور على نتائج. تأكد من اتصالك بالإنترنت وجرب كلمات مختلفة");
+        if (localResults.length > 0) {
+            setResults(localResults);
+            setLoading(false);
+            return;
+        }
+        setError("No results found. Check your internet connection and try different keywords.");
         setLoading(false);
     };
 
@@ -440,3 +474,5 @@ export default function HadithVerifyPage() {
         </div>
     );
 }
+
+
