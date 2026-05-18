@@ -90,19 +90,17 @@ function normalizeArabicText(text: string): string {
 }
 
 function isTrustedGrade(grade: string): boolean {
-    const g = grade.toLowerCase();
-    return grade.includes("صحيح") || grade.includes("حسن") || g.includes("sahih") || g.includes("hasan");
+    return grade.includes("صحيح") || grade.includes("حسن") || grade.includes("جيد") || grade.includes("ثابت");
 }
 
 function calcTrustScore(grade: string, source: string): number {
-    const s = source.toLowerCase();
-    const g = grade.toLowerCase();
     let score = 0;
-    if (s.includes("البخاري") || s.includes("muslim") || s.includes("مسلم")) score += 100;
-    if (s.includes("dorar")) score += 20;
-    if (g.includes("صحيح") || g.includes("sahih")) score += 40;
-    if (g.includes("حسن") || g.includes("hasan")) score += 30;
-    if (g.includes("ضعيف") || g.includes("موضوع") || g.includes("weak")) score -= 20;
+    if (source.includes("البخاري") || source.includes("مسلم")) score += 100;
+    if (source.includes("الدرر")) score += 20;
+    if (source.includes("الترمذي") || source.includes("أبو داود") || source.includes("النسائي")) score += 50;
+    if (grade.includes("صحيح")) score += 40;
+    if (grade.includes("حسن")) score += 30;
+    if (grade.includes("ضعيف") || grade.includes("موضوع")) score -= 20;
     return score;
 }
 
@@ -160,22 +158,48 @@ export default function HadithVerifyPage() {
         const normalizedQuery = normalizeArabicText(query);
         const merged: RankedHadithResult[] = [];
 
+        // Helper to translate any remaining English grades
+        const translateGrade = (g: string): string => {
+            if (!g) return 'غير محدد';
+            const map: Record<string, string> = {
+                'sahih': 'صحيح', 'hasan': 'حسن', 'daif': 'ضعيف', 'weak': 'ضعيف',
+                'mawdu': 'موضوع', 'unknown': 'غير محدد', 'authentic': 'صحيح',
+            };
+            const lower = g.toLowerCase().trim();
+            return map[lower] || (/[\u0600-\u06FF]/.test(g) ? g : 'غير محدد');
+        };
+        const translateField = (val: string): string => {
+            if (!val) return '';
+            const map: Record<string, string> = {
+                'al-bukhari': 'البخاري', 'bukhari': 'البخاري', 'muslim': 'مسلم',
+                'al-tirmidhi': 'الترمذي', 'abu dawud': 'أبو داود',
+                'sahih al-bukhari': 'صحيح البخاري', 'sahih bukhari': 'صحيح البخاري',
+                'sahih muslim': 'صحيح مسلم', 'local database': 'قاعدة بيانات محلية',
+                'dorar': 'الدرر السنية',
+            };
+            const lower = val.toLowerCase().trim();
+            if (map[lower]) return map[lower];
+            for (const [en, ar] of Object.entries(map)) {
+                if (lower.includes(en)) return val.replace(new RegExp(en, 'gi'), ar);
+            }
+            return val;
+        };
+
         try {
             const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(query)}${filterSahih ? '&grade=sahih' : ''}`);
             const serverData = await serverRes.json();
             if (Array.isArray(serverData.results)) {
+                // Add ALL Dorar results without filtering - Dorar already searched for us
                 for (const item of serverData.results) {
-                    const haystack = normalizeArabicText(`${item.text || ""} ${item.narrator || ""} ${item.source || ""} ${item.grade || ""}`);
-                    if (!haystack.includes(normalizedQuery)) continue;
                     if (filterSahih && !isTrustedGrade(item.grade || "")) continue;
                     merged.push({
                         text: item.text || "",
                         narrator: item.narrator || "",
-                        scholar: item.scholar || "",
-                        source: item.source || "Dorar",
-                        grade: item.grade || "unknown",
+                        scholar: translateField(item.scholar || ""),
+                        source: translateField(item.source || "الدرر السنية"),
+                        grade: translateGrade(item.grade || ""),
                         trustScore: calcTrustScore(item.grade || "", item.source || ""),
-                        relevanceScore: haystack.length ? normalizedQuery.length / haystack.length : 0,
+                        relevanceScore: 1,
                     });
                 }
             }
@@ -186,22 +210,22 @@ export default function HadithVerifyPage() {
                 text: item.text,
                 narrator: item.rawi || "",
                 scholar: item.explanation || "",
-                source: item.source || "Local database",
-                grade: item.status || "unknown",
+                source: translateField(item.source || "قاعدة بيانات محلية"),
+                grade: translateGrade(item.status || ""),
             })),
             ...sahihBukhariHadiths.map((item) => ({
                 text: item.text,
                 narrator: "",
-                scholar: "Al-Bukhari",
-                source: `Sahih Bukhari - ${item.book}`,
-                grade: "sahih",
+                scholar: "البخاري",
+                source: `صحيح البخاري - ${item.book}`,
+                grade: "صحيح",
             })),
             ...sahihMuslimHadiths.map((item) => ({
                 text: item.text,
                 narrator: "",
-                scholar: "Muslim",
-                source: `Sahih Muslim - ${item.book}`,
-                grade: "sahih",
+                scholar: "مسلم",
+                source: `صحيح مسلم - ${item.book}`,
+                grade: "صحيح",
             })),
         ];
 
@@ -233,7 +257,7 @@ export default function HadithVerifyPage() {
             return;
         }
 
-        setError("No results found. Check your internet connection and try different keywords.");
+        setError("لم يتم العثور على نتائج. تأكد من اتصالك بالإنترنت وجرب كلمات مختلفة.");
         setLoading(false);
     };
 
