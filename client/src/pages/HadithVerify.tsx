@@ -185,25 +185,106 @@ export default function HadithVerifyPage() {
             return val;
         };
 
-        try {
-            const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(query)}${filterSahih ? '&grade=sahih' : ''}`);
-            const serverData = await serverRes.json();
-            if (Array.isArray(serverData.results)) {
-                // Add ALL Dorar results without filtering - Dorar already searched for us
-                for (const item of serverData.results) {
-                    if (filterSahih && !isTrustedGrade(item.grade || "")) continue;
-                    merged.push({
-                        text: item.text || "",
-                        narrator: item.narrator || "",
-                        scholar: translateField(item.scholar || ""),
-                        source: translateField(item.source || "الدرر السنية"),
-                        grade: translateGrade(item.grade || ""),
-                        trustScore: calcTrustScore(item.grade || "", item.source || ""),
-                        relevanceScore: 1,
+        // Parse Dorar HTML response into hadith results
+        const parseDorarHtml = (html: string): HadithResult[] => {
+            const parsed: HadithResult[] = [];
+            
+            // Strategy 1: Look for hadith divs
+            const divRx = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+            let m;
+            while ((m = divRx.exec(html)) !== null && parsed.length < 50) {
+                const block = m[1];
+                const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
+                const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
+                const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
+                const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                const grdM = block.match(/الدرجة?\s*:\s*([^<\n]+)/i);
+                if (txtM) {
+                    const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
+                    if (text.length > 10) parsed.push({
+                        text, narrator: narM ? narM[1].replace(/<[^>]+>/g,'').trim() : '',
+                        scholar: translateField(schM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                        source: translateField(srcM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                        grade: translateGrade(grdM?.[1]?.replace(/<[^>]+>/g,'')||'')
                     });
                 }
             }
-        } catch {}
+            
+            // Strategy 2: Split by الراوي
+            if (parsed.length === 0) {
+                const parts = html.split(/الراوي\s*:\s*/gi);
+                for (let i = 1; i < parts.length && parsed.length < 50; i++) {
+                    const info = parts[i];
+                    const prev = parts[i-1];
+                    const chunks = prev.split('>');
+                    const text = (chunks[chunks.length-1]||'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
+                    const narM = info.match(/^([^<\n,]{2,60})/);
+                    const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
+                    const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                    const grdM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
+                    if (text.length > 10) parsed.push({
+                        text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
+                        scholar: translateField(schM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                        source: translateField(srcM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                        grade: translateGrade(grdM?.[1]?.replace(/<[^>]+>/g,'')||'')
+                    });
+                }
+            }
+            return parsed;
+        };
+
+        // ═══ PRIMARY: Direct Dorar API from browser ═══
+        try {
+            const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(query)}&st=a&xclude=0&page=1`;
+            const dorarRes = await fetch(dorarUrl);
+            if (dorarRes.ok) {
+                const data = await dorarRes.json();
+                if (data.ahadith?.result) {
+                    const dorarResults = parseDorarHtml(data.ahadith.result);
+                    for (const item of dorarResults) {
+                        if (filterSahih && !isTrustedGrade(item.grade)) continue;
+                        merged.push({ ...item, trustScore: calcTrustScore(item.grade, item.source), relevanceScore: 1 });
+                    }
+                }
+                // Also try structured data
+                if (merged.length === 0 && data.ahadith?.data) {
+                    for (const h of (data.ahadith.data || [])) {
+                        const text = (h.hadith||h.text||'').replace(/<[^>]+>/g,'').trim();
+                        if (text.length > 5) {
+                            const item = {
+                                text, narrator: (h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim(),
+                                scholar: translateField(h.mohadith||h.scholar||''),
+                                source: translateField(h.book||h.source||''),
+                                grade: translateGrade(h.grade||h.hukm||'')
+                            };
+                            if (filterSahih && !isTrustedGrade(item.grade)) continue;
+                            merged.push({ ...item, trustScore: calcTrustScore(item.grade, item.source), relevanceScore: 1 });
+                        }
+                    }
+                }
+            }
+        } catch { /* Dorar direct failed, try page 2 of strategies below */ }
+
+        // ═══ FALLBACK: Server proxy (may work from some hosting providers) ═══
+        if (merged.length === 0) {
+            try {
+                const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(query)}${filterSahih ? '&grade=sahih' : ''}`);
+                const serverData = await serverRes.json();
+                if (Array.isArray(serverData.results)) {
+                    for (const item of serverData.results) {
+                        if (filterSahih && !isTrustedGrade(item.grade || "")) continue;
+                        merged.push({
+                            text: item.text || "", narrator: item.narrator || "",
+                            scholar: translateField(item.scholar || ""),
+                            source: translateField(item.source || "الدرر السنية"),
+                            grade: translateGrade(item.grade || ""),
+                            trustScore: calcTrustScore(item.grade || "", item.source || ""),
+                            relevanceScore: 1,
+                        });
+                    }
+                }
+            } catch {}
+        }
 
         const localCorpus: HadithResult[] = [
             ...hadithDatabase.map((item) => ({
