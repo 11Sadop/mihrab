@@ -194,7 +194,7 @@ export default function TafseerPage(){
       const remaining = a.duration - a.currentTime;
       const nextNis = q.nis + 1;
       const nextKey = `${q.sn}-${nextNis}`;
-      if (remaining <= 4.0 && nextPreloadedKey.current !== nextKey) {
+      if (remaining <= 6.0 && nextPreloadedKey.current !== nextKey) {
         const rec = getReciter();
         const url = buildUrl(rec, q.sn, nextNis);
         const b = bufferAudio();
@@ -571,19 +571,25 @@ export default function TafseerPage(){
         isAdvancingRef.current=true;
         const isPerfect=missedCount===0 && pronCount===0;
         
+        // Show the full verse text as feedback for review
+        const versePreview = exp.text.length > 60 ? exp.text.substring(0, 60) + '...' : exp.text;
+        
         if(isPerfect){
-          setHifzFeedback({type:'ok', msg:'ممتاز! أحسنت ✅'}); setHifzStatus('ok');
+          setHifzFeedback({type:'ok', msg:`✅ ممتاز! أحسنت — آية ${exp.nis}`}); setHifzStatus('ok');
         } else if(pronCount>0 && missedCount===0){
-          setHifzFeedback({type:'wrong_pron', msg:'جيد مع ملاحظات بالنطق ⚠️', details:pronIssues.slice(0,3)}); setHifzStatus('pron');
+          setHifzFeedback({type:'wrong_pron', msg:`⚠️ جيد مع ملاحظات — آية ${exp.nis}`, details:pronIssues.slice(0,3)}); setHifzStatus('pron');
         } else {
-          setHifzFeedback({type:'ok', msg:'أحسنت ✅'}); setHifzStatus('ok');
+          setHifzFeedback({type:'ok', msg:`✅ أحسنت — آية ${exp.nis}`}); setHifzStatus('ok');
         }
         
         playLocalSound('ok');
         const k=`${exp.sn}-${exp.nis}`;
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,isPerfect?'ok':'ok');return n;});
         
-        // Auto-advance after short delay
+        // Show full verse text in word match (all green)
+        setWordMatchLevels(expWords.map(() => 1));
+        
+        // Auto-advance after 2 seconds (so user can see the verse)
         setTimeout(()=>{
           confirmedIdx=0;
           setHifzIdx(prev=>{
@@ -600,7 +606,7 @@ export default function TafseerPage(){
           // Restart recognition fresh
           try{r.stop();}catch{}
           setTimeout(()=>{try{r.start();}catch{}},250);
-        },1000);
+        },2000);
       }
     };
 
