@@ -215,12 +215,13 @@ export async function registerRoutes(
 
             // Call Dorar Al-Sunniya API with timeout
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 8000);
+            const timeout = setTimeout(() => controller.abort(), 15000);
 
             let results: any[] = [];
 
             try {
-                const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(searchKey)}`;
+                // st=a = all narrations, xclude=0 = include all, rawi=0 = any narrator
+                const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(searchKey)}&st=a&xclude=0&page=1`;
                 const response = await fetch(dorarUrl, {
                     signal: controller.signal,
                     headers: {

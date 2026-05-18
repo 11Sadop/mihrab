@@ -121,12 +121,7 @@ export default function Zakat() {
     });
 
     const nisabMet = totalPureGoldGrams >= NISAB_GOLD_GRAMS;
-
-    if (nisabMet) {
-      setZakatResult({ amount: totalGoldValue * ZAKAT_RATE, nisabMet: true });
-    } else {
-      setZakatResult({ amount: 0, nisabMet: false });
-    }
+    setZakatResult({ amount: totalGoldValue * ZAKAT_RATE, nisabMet });
   };
 
   const calculateSilverZakat = () => {
@@ -140,24 +135,14 @@ export default function Zakat() {
     });
 
     const nisabMet = totalPureSilverGrams >= NISAB_SILVER_GRAMS;
-
-    if (nisabMet) {
-      setZakatResult({ amount: totalSilverValue * ZAKAT_RATE, nisabMet: true });
-    } else {
-      setZakatResult({ amount: 0, nisabMet: false });
-    }
+    setZakatResult({ amount: totalSilverValue * ZAKAT_RATE, nisabMet });
   };
 
   const calculateMoneyZakat = () => {
     const amount = parseFloat(moneyAmount) || 0;
     const nisabValue = NISAB_GOLD_GRAMS * goldKarats[0].pricePerGram;
     const nisabMet = amount >= nisabValue;
-
-    if (nisabMet) {
-      setZakatResult({ amount: amount * ZAKAT_RATE, nisabMet: true });
-    } else {
-      setZakatResult({ amount: 0, nisabMet: false });
-    }
+    setZakatResult({ amount: amount * ZAKAT_RATE, nisabMet });
   };
 
   const calculateStocksZakat = () => {
@@ -166,12 +151,7 @@ export default function Zakat() {
     const totalValue = shares * price;
     const nisabValue = NISAB_GOLD_GRAMS * goldKarats[0].pricePerGram;
     const nisabMet = totalValue >= nisabValue;
-
-    if (nisabMet) {
-      setZakatResult({ amount: totalValue * ZAKAT_RATE, nisabMet: true });
-    } else {
-      setZakatResult({ amount: 0, nisabMet: false });
-    }
+    setZakatResult({ amount: totalValue * ZAKAT_RATE, nisabMet });
   };
 
   const handleCalculate = () => {
@@ -514,34 +494,45 @@ export default function Zakat() {
           </Button>
 
           {zakatResult !== null && (
-            <div className={`rounded-2xl p-6 text-center space-y-2 ${zakatResult.nisabMet ? 'bg-primary/10' : 'bg-orange-100 dark:bg-orange-900/30'}`}>
-              <p className="text-sm text-muted-foreground">مقدار الزكاة</p>
+            <div className={`rounded-2xl p-6 text-center space-y-3 ${zakatResult.nisabMet ? 'bg-primary/10 border-2 border-primary/30' : 'bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700'}`}>
+              {/* Status Badge */}
+              {zakatResult.nisabMet ? (
+                <div className="inline-flex items-center gap-2 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-4 py-1.5 rounded-full text-sm font-bold">
+                  <span className="text-lg">✅</span>
+                  بلغ النصاب - وجبت الزكاة
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 px-4 py-1.5 rounded-full text-sm font-bold">
+                  <span className="text-lg">⚠️</span>
+                  لم يبلغ النصاب - لا تجب الزكاة
+                </div>
+              )}
+
+              <p className="text-sm text-muted-foreground">{zakatResult.nisabMet ? 'مقدار الزكاة الواجبة' : 'لو بلغ النصاب لكان مقدار الزكاة'}</p>
               <p className={`text-4xl font-bold ${zakatResult.nisabMet ? 'text-primary' : 'text-orange-600 dark:text-orange-400'}`}>
                 {zakatResult.amount.toLocaleString("ar-SA", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </p>
-              <p className="text-sm text-muted-foreground mb-4">ريال</p>
+              <p className="text-sm text-muted-foreground">ريال</p>
 
               {!zakatResult.nisabMet && (
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
-                  المبلغ أقل من النصاب - لا تجب الزكاة
+                <p className="text-xs text-orange-600/80 dark:text-orange-400/80 bg-orange-100/50 dark:bg-orange-900/20 rounded-lg p-3 mt-2">
+                  💡 المبلغ أقل من النصاب ({activeTab === 'silver' ? '595 جرام فضة خالصة' : `ما يعادل ${nisabMoneyValue.toLocaleString('ar-SA')} ريال`}). أكمل حولاً كاملاً إذا بلغ النصاب.
                 </p>
               )}
 
-              {zakatResult.nisabMet && (
-                <div className="pt-4 flex justify-center border-t border-primary/20">
-                  <Button
-                    variant="outline"
-                    className="gap-2 bg-transparent hover:bg-primary/10 border-primary/20 text-primary"
-                    onClick={handleShare}
-                  >
-                    <Share2 className="w-4 h-4" />
-                    مشاركة النتيجة
-                  </Button>
-                </div>
-              )}
+              <div className="pt-4 flex justify-center border-t border-primary/20">
+                <Button
+                  variant="outline"
+                  className="gap-2 bg-transparent hover:bg-primary/10 border-primary/20 text-primary"
+                  onClick={handleShare}
+                >
+                  <Share2 className="w-4 h-4" />
+                  مشاركة النتيجة
+                </Button>
+              </div>
             </div>
           )}
         </Card>

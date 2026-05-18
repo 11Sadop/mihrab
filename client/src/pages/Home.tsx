@@ -47,27 +47,32 @@ export default function Home() {
 
   // Live countdown to next prayer
   const [countdown, setCountdown] = useState('');
+  const [countdownStarted, setCountdownStarted] = useState<number | null>(null);
+  const [initialDiffMinutes, setInitialDiffMinutes] = useState<number | null>(null);
+
   useEffect(() => {
     if (!nextPrayer) return;
+    // Store when we started counting and the initial diff
+    setCountdownStarted(Date.now());
+    setInitialDiffMinutes(nextPrayer.diff);
+  }, [nextPrayer?.name, nextPrayer?.diff]);
+
+  useEffect(() => {
+    if (countdownStarted === null || initialDiffMinutes === null) return;
     const update = () => {
-      const now = new Date();
-      const [h, m] = nextPrayer.time.split(':').map(Number);
-      let target = new Date(now);
-      target.setHours(h, m, 0, 0);
-      if (target <= now) target.setDate(target.getDate() + 1);
-      const diff = target.getTime() - now.getTime();
-      if (diff <= 0) { setCountdown(''); return; }
-      const hrs = Math.floor(diff / 3600000);
-      const mins = Math.floor((diff % 3600000) / 60000);
-      const secs = Math.floor((diff % 60000) / 1000);
-      if (hrs > 0) setCountdown(`${hrs} ساعة و ${mins} دقيقة`);
-      else if (mins > 0) setCountdown(`${mins} دقيقة و ${secs} ثانية`);
-      else setCountdown(`${secs} ثانية`);
+      const elapsedMs = Date.now() - countdownStarted;
+      const totalRemainingMs = (initialDiffMinutes * 60 * 1000) - elapsedMs;
+      if (totalRemainingMs <= 0) { setCountdown('حان الوقت'); return; }
+      const hrs = Math.floor(totalRemainingMs / 3600000);
+      const mins = Math.floor((totalRemainingMs % 3600000) / 60000);
+      const secs = Math.floor((totalRemainingMs % 60000) / 1000);
+      if (hrs > 0) setCountdown(`${hrs}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`);
+      else setCountdown(`${mins}:${secs.toString().padStart(2,'0')}`);
     };
     update();
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
-  }, [nextPrayer?.time]);
+  }, [countdownStarted, initialDiffMinutes]);
 
   const handleShareHadith = async () => {
     if (!dailyHadith) return;
