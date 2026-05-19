@@ -1047,7 +1047,7 @@ export default function TafseerPage(){
                   </div>}
                   
                   {/* Ayahs Grid — consistent font scaled to fit viewport height */}
-                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:'clamp(18px, min(6vw, calc((100vh - 180px) / 28)), 42px)',lineHeight:'2.4',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.12em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
+                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:'clamp(16px, min(6.5vw, calc((100vh - 190px) / 35)), 38px)',lineHeight:'2.3',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.12em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
                     {g.ayahs.map(a=>{
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
@@ -1059,14 +1059,15 @@ export default function TafseerPage(){
                             style={{background:'rgba(245,158,11,0.12)',padding:'4px 10px',borderRadius:'10px'}}>
                             {words.map((w:string, wi:number)=>{
                                const ml = wi < wordMatchLevels.length ? wordMatchLevels[wi] : 0;
-                               const nextIdx = wordMatchLevels.findIndex(x => x === 0);
-                               const isNext = ml === 0 && (nextIdx === -1 ? wi === 0 : wi === nextIdx);
+                               const nextIdx = wordMatchLevels.findIndex(x => x === 0 || x === 3);
+                               const isNext = (ml === 0 || ml === 3) && (nextIdx === -1 ? wi === 0 : wi === nextIdx);
                                let clr = 'transparent';
                                if (ml === 1) clr = colors.text;
-                               else if (ml === 2) clr = '#eab308';
+                               else if (ml === 2) clr = '#f59e0b';
+                               else if (ml === 3) clr = '#ef4444';
                                return <span key={wi} style={{
                                  color: ml > 0 ? clr : 'transparent',
-                                 borderBottom: ml === 0 && isNext ? '2px solid #22c55e' : 'none',
+                                 borderBottom: ml === 0 && isNext ? '2px solid #22c55e' : ml === 3 ? '2px dashed #ef4444' : 'none',
                                  transition: 'all 0.3s',
                                  marginRight: '2px',
                                  opacity: ml > 0 ? 1 : (isNext ? 0.5 : 0)
@@ -1104,14 +1105,16 @@ export default function TafseerPage(){
             </div>
             
             {/* Page Footer with Navigation */}
-            <div className="mt-4 mb-16 flex flex-col items-center gap-8">
-                <div className="flex justify-center items-center gap-10 opacity-80">
-                    <div className="h-px flex-1 w-24" style={{background:`linear-gradient(to right, transparent, ${colors.border})`}} />
-                    <div className="flex flex-col items-center">
-                        <span className="text-xs font-bold opacity-30 mb-2" style={{color:colors.text}}>صفحة</span>
-                        <span className="text-5xl font-bold" style={{color:colors.text, fontFamily:'Arial, sans-serif'}}>{pg.toLocaleString('ar-EG')}</span>
+            <div className="mt-6 mb-12 flex flex-col items-center gap-8">
+                <div className="flex justify-center items-center opacity-80">
+                    <div className="relative flex items-center justify-center" style={{width:'50px', height:'50px'}}>
+                      {/* Decorative ornate border for page number */}
+                      <svg className="absolute inset-0 w-full h-full text-amber-600/60 dark:text-amber-500/50" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 2 L80 15 L95 45 L80 85 L50 98 L20 85 L5 45 L20 15 Z" stroke="currentColor" strokeWidth="2.5" />
+                        <path d="M50 8 L75 20 L88 45 L75 80 L50 92 L25 80 L12 45 L25 20 Z" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3"/>
+                      </svg>
+                      <span className="text-sm font-bold relative z-10 pt-1" style={{color:colors.text, fontFamily:'Arial, sans-serif'}}>{pg.toLocaleString('ar-EG')}</span>
                     </div>
-                    <div className="h-px flex-1 w-24" style={{background:`linear-gradient(to left, transparent, ${colors.border})`}} />
                 </div>
                 {/* Desktop Navigation Buttons — highly visible */}
                 <div className="hidden md:flex items-center gap-6 mt-4">
