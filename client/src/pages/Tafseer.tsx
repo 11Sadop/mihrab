@@ -481,32 +481,34 @@ export default function TafseerPage(){
     // Track which sequential word index we've confirmed up to
     let confirmedIdx = 0;
     
+    // Accumulate finalized text across pauses
+    let finalTranscript = '';
+    
     r.onresult=(e:any)=>{
       if(!pq.data) return;
       const idx=hifzIdxRef.current; // Always use ref for current index
       const exp=pq.data[idx]; if(!exp) return;
       if(isAdvancingRef.current) return;
 
-      // Gather all spoken text
-      let fullText = '';
-      for(let i=0;i<e.results.length;i++) {
+      let interimTranscript = '';
+      for(let i=e.resultIndex; i<e.results.length; i++) {
         const res=e.results[i];
-        // Pick the alternative closest to expected verse
         let best=res[0].transcript;
         if(res.length>1){
           const expN=normAr(exp.text);
           let topScore=-1;
           for(let j=0;j<res.length;j++){
             const alt=normAr(res[j].transcript);
-            // Simple overlap score
             const altWords=alt.split(' ');
             let sc=0; for(const w of altWords){ if(expN.includes(w)) sc++; }
             if(sc>topScore){topScore=sc;best=res[j].transcript;}
           }
         }
-        fullText+=best+' ';
+        if(res.isFinal) finalTranscript += best + ' ';
+        else interimTranscript += best + ' ';
       }
       
+      const fullText = finalTranscript + interimTranscript;
       hifzTxtRef.current=fullText;
       setRecTxt(fullText.split(' ').slice(-6).join(' '));
 
@@ -608,6 +610,7 @@ export default function TafseerPage(){
           });
           setHifzFeedback(null); setHifzStatus('none');
           hifzTxtRef.current=''; setRecTxt(''); setWordMatchLevels([]);
+          finalTranscript = ''; // Reset accumulation for the next verse
           // Restart recognition fresh
           try{r.stop();}catch{}
           setTimeout(()=>{try{r.start();}catch{}},250);
@@ -1004,17 +1007,17 @@ export default function TafseerPage(){
         {pq.isLoading?<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p>فشل تحميل الصفحة</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة المحاولة</Button></div>
         :<div className="flex-1 w-full max-w-4xl mx-auto px-4 md:px-12 relative min-h-full">
-            <div className={`flex flex-col pt-32 pb-32 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
+            <div className={`flex flex-col pt-4 pb-8 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
               {groups.map((g,gi)=>{
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
                   {/* Surah/Juz Header */}
-                  <div className="flex justify-between items-center mb-6 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
+                  <div className="flex justify-between items-center mb-4 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
                     <span>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
                     <span>الْجُزْءُ {juzForPage(pg).toLocaleString('ar-EG')}</span>
                   </div>
 
                   {/* Surah Frame (Only for verse 1) */}
-                  {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center scale-110">
+                  {g.ayahs[0].nis===1&&<div className="text-center my-4 flex justify-center scale-110">
                     <div className="relative px-12 py-3 min-w-[220px]">
                       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 60" preserveAspectRatio="none">
                         <path d="M10 5 L190 5 L195 10 L195 50 L190 55 L10 55 L5 50 L5 10 Z" fill={colors.border+'10'} stroke={colors.border} strokeWidth="1.5"/>
@@ -1101,7 +1104,7 @@ export default function TafseerPage(){
             </div>
             
             {/* Page Footer with Navigation */}
-            <div className="mt-16 mb-32 flex flex-col items-center gap-8">
+            <div className="mt-4 mb-16 flex flex-col items-center gap-8">
                 <div className="flex justify-center items-center gap-10 opacity-80">
                     <div className="h-px flex-1 w-24" style={{background:`linear-gradient(to right, transparent, ${colors.border})`}} />
                     <div className="flex flex-col items-center">
