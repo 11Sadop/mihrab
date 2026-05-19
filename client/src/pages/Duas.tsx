@@ -8,11 +8,19 @@ import { Input } from "@/components/ui/input";
 import { useSeo } from "@/hooks/use-seo";
 
 const categories = [
-  { id: "forgiveness", label: "الاستغفار", icon: "🤲" },
-  { id: "stress", label: "الهم والغم", icon: "💫" },
-  { id: "travel", label: "السفر", icon: "✈️" },
-  { id: "family", label: "الأهل والمنزل", icon: "🏠" },
-  { id: "health", label: "الشفاء", icon: "💚" },
+  { id: "forgiveness", label: "الاستغفار", icon: "🤲", smartKey: null },
+  { id: "stress", label: "الهم والغم", icon: "💫", smartKey: null },
+  { id: "travel", label: "السفر", icon: "✈️", smartKey: 'سفر' },
+  { id: "family", label: "الأهل والمنزل", icon: "🏠", smartKey: null },
+  { id: "health", label: "الشفاء", icon: "💚", smartKey: 'مرض' },
+  { id: "omrah", label: "العمرة", icon: "🕋", smartKey: 'عمرة' },
+  { id: "hajj", label: "الحج", icon: "🕌", smartKey: 'حج' },
+  { id: "quran", label: "القرآن", icon: "📖", smartKey: 'قرآن' },
+  { id: "prayer", label: "الصلاة", icon: "🕌", smartKey: 'صلاة' },
+  { id: "sleep", label: "النوم", icon: "🌙", smartKey: 'نوم' },
+  { id: "morning", label: "الصباح", icon: "🌅", smartKey: 'صباح' },
+  { id: "evening", label: "المساء", icon: "🌆", smartKey: 'مساء' },
+  { id: "food", label: "الطعام", icon: "🍽️", smartKey: 'طعام' }
 ];
 
 // Smart context-based suggestions database
@@ -132,95 +140,15 @@ export default function DuasPage() {
   });
   const [selectedCategory, setSelectedCategory] = useState("forgiveness");
   const { data: duasList, isLoading } = useDuas(selectedCategory);
-  const [smartQuery, setSmartQuery] = useState("");
-
-  // Smart search result
-  const smartResult = useMemo(() => {
-    if (!smartQuery.trim()) return null;
-    const words = smartQuery.trim().split(/\s+/);
-    for (const word of words) {
-      const key = KEYWORD_MAP[word];
-      if (key && SMART_SUGGESTIONS[key]) {
-        return SMART_SUGGESTIONS[key];
-      }
-    }
-    // Fuzzy: check if any keyword is included in the query
-    for (const [keyword, category] of Object.entries(KEYWORD_MAP)) {
-      if (smartQuery.includes(keyword)) {
-        return SMART_SUGGESTIONS[category];
-      }
-    }
-    return null;
-  }, [smartQuery]);
+  // Check if selected category has smart suggestions
+  const selectedCatObj = categories.find(c => c.id === selectedCategory);
+  const smartContent = selectedCatObj?.smartKey ? SMART_SUGGESTIONS[selectedCatObj.smartKey] : null;
 
   return (
     <div className="min-h-screen pb-32 bg-background">
-      <Header title="الأدعية والسنن" subtitle="أدعية وسنن من الكتاب والسنة" />
+      <Header title="الأدعية والسنن" subtitle="أدعية وسنن من الكتاب والسنة" showBack={true} />
       
       <main className="container max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pt-6 space-y-6">
-        
-        {/* Smart Search */}
-        <div className="relative" dir="rtl">
-          <div className="relative">
-            <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500" />
-            <Input
-              value={smartQuery}
-              onChange={e => setSmartQuery(e.target.value)}
-              placeholder="اكتب أي شيء... بسافر، بروح أعتمر، بقرا قرآن..."
-              className="pr-10 pl-10 text-right text-base h-12 rounded-xl border-amber-200 dark:border-amber-800 focus:border-amber-500 bg-amber-50/50 dark:bg-amber-950/20"
-            />
-            {smartQuery && (
-              <button onClick={() => setSmartQuery("")} className="absolute left-3 top-1/2 -translate-y-1/2">
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-1 text-right">
-            💡 جرب: "بروح أعتمر" أو "بسافر" أو "بقرا قرآن" أو "بنام"
-          </p>
-        </div>
-
-        {/* Smart Results */}
-        {smartResult && (
-          <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            <h2 className="text-lg font-bold text-right">{smartResult.title}</h2>
-            {smartResult.items.map((item, i) => (
-              <div key={i} className={cn(
-                "p-4 rounded-2xl border text-right",
-                item.text.startsWith("سُنَّة:")
-                  ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
-                  : "bg-card border-border"
-              )}>
-                <p className={cn(
-                  "font-bold leading-[2]",
-                  item.text.startsWith("سُنَّة:") ? "text-sm text-amber-800 dark:text-amber-200" : "text-base"
-                )} style={{ fontFamily: item.text.startsWith("سُنَّة:") ? 'inherit' : "'Amiri', 'Noto Naskh Arabic', serif" }}>
-                  {item.text}
-                </p>
-                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1 justify-end">
-                  📚 {item.source}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {smartQuery && !smartResult && (
-          <div className="text-center py-6 text-muted-foreground bg-card rounded-2xl border border-border">
-            <Search className="w-8 h-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">لم أجد نتائج مطابقة</p>
-            <p className="text-xs mt-1">جرب كلمات مثل: عمرة، حج، سفر، صلاة، قرآن، نوم</p>
-          </div>
-        )}
-
-        {/* Divider when smart results shown */}
-        {smartResult && (
-          <div className="flex items-center gap-3 py-2">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-muted-foreground font-bold">أدعية حسب التصنيف</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-        )}
 
         {/* Category Tabs */}
         <div className="flex flex-wrap gap-2 flex-row-reverse">
@@ -241,8 +169,29 @@ export default function DuasPage() {
         </div>
 
         {/* Content */}
-        <div className="space-y-4">
-          {isLoading ? (
+        <div className="space-y-4 pt-2">
+          {smartContent ? (
+            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              {smartContent.items.map((item, i) => (
+                <div key={i} className={cn(
+                  "p-4 rounded-2xl border text-right",
+                  item.text.startsWith("سُنَّة:")
+                    ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+                    : "bg-card border-border shadow-sm"
+                )}>
+                  <p className={cn(
+                    "font-bold leading-[2]",
+                    item.text.startsWith("سُنَّة:") ? "text-sm text-amber-800 dark:text-amber-200" : "text-base lg:text-lg"
+                  )} style={{ fontFamily: item.text.startsWith("سُنَّة:") ? 'inherit' : "'Amiri', 'Noto Naskh Arabic', serif" }}>
+                    {item.text}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1 justify-end opacity-70">
+                    📚 {item.source}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : isLoading ? (
             <div className="py-20 flex justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>

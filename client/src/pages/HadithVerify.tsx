@@ -233,12 +233,17 @@ export default function HadithVerifyPage() {
             return parsed;
         };
 
-        // ═══ PRIMARY: Direct Dorar API from browser ═══
+        // ═══ PRIMARY: Direct Dorar API via AllOrigins Proxy ═══
         try {
+            // Using allorigins to bypass CORS and IP blocks on the client side safely
             const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(query)}&st=a&xclude=0&page=1`;
-            const dorarRes = await fetch(dorarUrl);
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(dorarUrl)}`;
+            
+            const dorarRes = await fetch(proxyUrl);
             if (dorarRes.ok) {
-                const data = await dorarRes.json();
+                const proxyData = await dorarRes.json();
+                const data = JSON.parse(proxyData.contents); // allorigins wraps response in contents
+                
                 if (data.ahadith?.result) {
                     const dorarResults = parseDorarHtml(data.ahadith.result);
                     for (const item of dorarResults) {
@@ -263,7 +268,7 @@ export default function HadithVerifyPage() {
                     }
                 }
             }
-        } catch { /* Dorar direct failed, try page 2 of strategies below */ }
+        } catch { /* Proxy failed, try fallback */ }
 
         // ═══ FALLBACK: Server proxy (may work from some hosting providers) ═══
         if (merged.length === 0) {

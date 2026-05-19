@@ -519,65 +519,70 @@ export default function TafseerPage(){
       let spIdx=0; // pointer into spoken words
       let newLevels:number[]=[];
       let pronIssues:string[]=[];
+      let wrongIssues:string[]=[];
       let seqMatched=0;
       
       for(let ei=0;ei<expWords.length;ei++){
         const target=expWords[ei];
         if(target.length<1){newLevels.push(1);seqMatched++;continue;}
         
-        let found=false;
-        // Search forward in spoken words (allow skipping up to 8 filler words)
-        for(let si=spIdx;si<Math.min(spIdx+8,spokenWords.length);si++){
-          const sim=wordSim(spokenWords[si],target);
-          if(sim>=0.55){
-            found=true;
-            spIdx=si+1;
-            seqMatched++;
-            if(sim>=0.85){
-              newLevels.push(1); // perfect
-            } else {
-              newLevels.push(2); // close but pronunciation issue
-              pronIssues.push(`"${target}"`);
+        if (spIdx < spokenWords.length) {
+          let found=false;
+          // Search forward in spoken words (allow skipping up to 3 filler words)
+          for(let si=spIdx;si<Math.min(spIdx+4,spokenWords.length);si++){
+            const sim=wordSim(spokenWords[si],target);
+            if(sim>=0.55){
+              found=true;
+              spIdx=si+1;
+              seqMatched++;
+              if(sim>=0.85){
+                newLevels.push(1); // perfect
+              } else {
+                newLevels.push(2); // close but pronunciation issue
+                pronIssues.push(target);
+              }
+              break;
             }
-            break;
           }
+          if(!found) {
+             // The user said a word, but it didn't match the target. It's a mistake.
+             newLevels.push(3); // 3 = wrong word
+             wrongIssues.push(target);
+             // don't advance spIdx too fast, let them correct it
+             if (spIdx < spokenWords.length - 2) spIdx++; 
+          }
+        } else {
+          newLevels.push(0); // not matched yet (waiting for user)
         }
-        if(!found) newLevels.push(0); // not matched yet
       }
       
       setWordMatchLevels(newLevels);
       const ratio=expWords.length>0?seqMatched/expWords.length:0;
-      const firstMissingIdx = newLevels.findIndex((l)=>l===0);
-      const missedCount=newLevels.filter(l=>l===0).length;
+      const missedCount=newLevels.filter(l=>l===0||l===3).length;
       const pronCount=newLevels.filter(l=>l===2).length;
-      const endingWindow = expWords.slice(Math.max(0, expWords.length - 3));
-      const endingMatched = endingWindow.length > 0 && endingWindow.every((w) => spokenWords.includes(w));
+      const wrongCount=newLevels.filter(l=>l===3).length;
+      const endingWindow = expWords.slice(Math.max(0, expWords.length - 2));
+      const endingMatched = endingWindow.length > 0 && endingWindow.some((w) => spokenWords.some(sw=>wordSim(sw,w)>0.6));
 
-      if(ratio>0.15 && ratio<0.85){
-        setHifzFeedback({type:'ok', msg:`Listening... ${Math.round(ratio*100)}%`});
-      }
-      if(pronIssues.length>0 && ratio>=0.4 && ratio<0.85){
-        setHifzFeedback({type:'wrong_pron', msg:'Check pronunciation', details:pronIssues.slice(0,3)});
-        setHifzStatus('pron');
-      }
-      if(firstMissingIdx !== -1){
-        const missingWord = expWords[firstMissingIdx];
-        setHifzFeedback({type:'wrong_verse', msg:'Continue from this word', details:[missingWord]});
+      if(wrongCount > 0) {
+        setHifzFeedback({type:'wrong_verse', msg:'يوجد خطأ في الكلمة', details:wrongIssues.slice(0,2)});
         setHifzStatus('wrong');
+      } else if(pronIssues.length>0 && ratio>=0.4) {
+        setHifzFeedback({type:'wrong_pron', msg:'تنبيه في النطق', details:pronIssues.slice(0,2)});
+        setHifzStatus('pron');
+      } else if(ratio>0.15 && ratio<0.85){
+        setHifzFeedback({type:'ok', msg:`يستمع... ${Math.round(ratio*100)}%`});
       }
 
       // Verse completed: stricter rule for real correction
-      if(ratio>=0.90 && missedCount<=1 && endingMatched && !isAdvancingRef.current){
+      if(ratio>=0.90 && missedCount===0 && endingMatched && !isAdvancingRef.current){
         isAdvancingRef.current=true;
-        const isPerfect=missedCount===0 && pronCount===0;
-        
-        // Show the full verse text as feedback for review
-        const versePreview = exp.text.length > 60 ? exp.text.substring(0, 60) + '...' : exp.text;
+        const isPerfect=missedCount===0 && pronCount===0 && wrongCount===0;
         
         if(isPerfect){
           setHifzFeedback({type:'ok', msg:`✅ ممتاز! أحسنت — آية ${exp.nis}`}); setHifzStatus('ok');
-        } else if(pronCount>0 && missedCount===0){
-          setHifzFeedback({type:'wrong_pron', msg:`⚠️ جيد مع ملاحظات — آية ${exp.nis}`, details:pronIssues.slice(0,3)}); setHifzStatus('pron');
+        } else if(pronCount>0 && wrongCount===0){
+          setHifzFeedback({type:'wrong_pron', msg:`⚠️ جيد مع ملاحظات — آية ${exp.nis}`, details:pronIssues.slice(0,2)}); setHifzStatus('pron');
         } else {
           setHifzFeedback({type:'ok', msg:`✅ أحسنت — آية ${exp.nis}`}); setHifzStatus('ok');
         }
@@ -586,7 +591,7 @@ export default function TafseerPage(){
         const k=`${exp.sn}-${exp.nis}`;
         setHifzRes(prev=>{const n=new Map(prev);n.set(k,isPerfect?'ok':'ok');return n;});
         
-        // Show full verse text in word match (all green)
+        // Show full verse text in word match
         setWordMatchLevels(expWords.map(() => 1));
         
         // Auto-advance after 2 seconds (so user can see the verse)
@@ -1038,8 +1043,8 @@ export default function TafseerPage(){
                     </span>
                   </div>}
                   
-                  {/* Ayahs Grid — consistent font like Ayah app */}
-                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:'clamp(28px,6.5vw,42px)',lineHeight:'2.4',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.12em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
+                  {/* Ayahs Grid — consistent font scaled to fit viewport height */}
+                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:'clamp(18px, min(6vw, calc((100vh - 180px) / 28)), 42px)',lineHeight:'2.4',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.12em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
                     {g.ayahs.map(a=>{
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
