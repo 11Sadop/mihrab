@@ -391,10 +391,10 @@ export async function registerRoutes(
                 });
             }
 
-            // Remove duplicates
+            // Remove duplicates - relax deduplication to preserve different narrations
             const seen = new Set<string>();
             results = results.filter((r: any) => {
-                const key = r.text.substring(0, 40).replace(/\s+/g,'');
+                const key = `${r.text.substring(0, 150).replace(/\s+/g,'')}_${r.narrator || ''}_${r.scholar || ''}_${r.source || ''}`;
                 if (seen.has(key)) return false;
                 seen.add(key);
                 return true;

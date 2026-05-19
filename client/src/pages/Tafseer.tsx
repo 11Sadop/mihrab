@@ -39,24 +39,14 @@ const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
 
-// Robust bismillah removal
-const BISM_PLAIN='بسم الله الرحمن الرحيم';
+// Robust Uthmani Bismillah removal
 function removeBismillah(t:string):string{
-  const s=strip(t);
-  if(s.startsWith(BISM_PLAIN)){
-    let plainIdx=0,origIdx=0;
-    const plainTarget=BISM_PLAIN.replace(/\s/g,'');
-    while(origIdx<t.length&&plainIdx<plainTarget.length){
-      const c=t[origIdx];
-      if(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653\u0654\u0655]/.test(c)){origIdx++;continue;}
-      const nc=c.replace(/[ٱإأآا]/g,'ا');
-      if(nc===plainTarget[plainIdx]||c===' '){if(c!==' ')plainIdx++;origIdx++;}
-      else{origIdx++;plainIdx++;}
-    }
-    while(origIdx<t.length&&t[origIdx]===' ')origIdx++;
-    return t.slice(origIdx);
+  let s = t.replace(/\uFEFF/g, '').trim();
+  const BISM = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
+  if(s.startsWith(BISM)){
+    return s.slice(BISM.length).trim();
   }
-  return t;
+  return s;
 }
 
 const fetchPage=async(p:number)=>{
@@ -64,7 +54,7 @@ const fetchPage=async(p:number)=>{
   if(!r.ok)throw new Error("Fail");const d=await r.json();
   return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
     let t=a.text;
-    if(a.numberInSurah===1&&a.surah.number!==9){
+    if(a.numberInSurah===1&&a.surah.number!==9&&a.surah.number!==1){
       t=removeBismillah(t);
     }
     return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:cleanDisplay(t.trim()),orig:norm(a.text),juz:a.juz};
@@ -256,6 +246,7 @@ export default function TafseerPage(){
   const recIdRef=useRef(recId);
   const pgRef=useRef(pg);
   const hifzIdxRef=useRef(0);
+  const finalTranscriptRef=useRef('');
 
   const [hifz,setHifz]=useState(false);
   const [recording,setRecording]=useState(false);
@@ -301,7 +292,14 @@ export default function TafseerPage(){
     window.addEventListener('keydown',handleKey);
     return ()=>window.removeEventListener('keydown',handleKey);
   },[pg,showSearch,showOptions,showTafseer,showSettings,showSharePage]);
-  const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");setWordMatchLevels([]);};
+  const resetHifz=()=>{
+    setHifzIdx(0);
+    setHifzRes(new Map());
+    setRecTxt("");
+    setWordMatchLevels([]);
+    finalTranscriptRef.current = '';
+    hifzTxtRef.current = '';
+  };
 
   const searchTimeout=useRef<any>(null);
   const handleSearch=(val:string)=>{
@@ -449,7 +447,8 @@ export default function TafseerPage(){
     if(!SR){alert("المتصفح لا يدعم التعرف على الصوت. استخدم Chrome");return;}
     const r=new SR();
     r.lang="ar-SA";
-    r.continuous=true;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    r.continuous=!isIOS;
     r.interimResults=true;
     r.maxAlternatives=5;
     
@@ -478,11 +477,7 @@ export default function TafseerPage(){
       return 1 - levenshtein(a,b)/maxLen;
     };
     
-    // Track which sequential word index we've confirmed up to
     let confirmedIdx = 0;
-    
-    // Accumulate finalized text across pauses
-    let finalTranscript = '';
     
     r.onresult=(e:any)=>{
       if(!pq.data) return;
@@ -504,11 +499,11 @@ export default function TafseerPage(){
             if(sc>topScore){topScore=sc;best=res[j].transcript;}
           }
         }
-        if(res.isFinal) finalTranscript += best + ' ';
+        if(res.isFinal) finalTranscriptRef.current += best + ' ';
         else interimTranscript += best + ' ';
       }
       
-      const fullText = finalTranscript + interimTranscript;
+      const fullText = finalTranscriptRef.current + interimTranscript;
       hifzTxtRef.current=fullText;
       setRecTxt(fullText.split(' ').slice(-6).join(' '));
 
@@ -610,7 +605,7 @@ export default function TafseerPage(){
           });
           setHifzFeedback(null); setHifzStatus('none');
           hifzTxtRef.current=''; setRecTxt(''); setWordMatchLevels([]);
-          finalTranscript = ''; // Reset accumulation for the next verse
+          finalTranscriptRef.current = ''; // Reset accumulation for the next verse
           // Restart recognition fresh
           try{r.stop();}catch{}
           setTimeout(()=>{try{r.start();}catch{}},250);
@@ -640,7 +635,12 @@ export default function TafseerPage(){
     const a=pq.data[i];
     playLocalSound('error');
     setHifzRes(prev=>{const m=new Map(prev);m.set(`${a.sn}-${a.nis}`,"err");return m;});
-    if(i===hifzIdx){setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));setWordMatchLevels([]);}
+    if(i===hifzIdx){
+      setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1));
+      setWordMatchLevels([]);
+      finalTranscriptRef.current = '';
+      hifzTxtRef.current = '';
+    }
   };
 
   useEffect(()=>{return()=>{stopHifz();stopAudio();};},[]);
@@ -1009,6 +1009,10 @@ export default function TafseerPage(){
         :<div className="flex-1 w-full max-w-4xl mx-auto px-4 md:px-12 relative min-h-full">
             <div className={`flex flex-col pt-4 pb-8 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
               {groups.map((g,gi)=>{
+                const isShortPage = g.ayahs.length <= 8;
+                const fontClamp = isShortPage 
+                  ? 'clamp(25px, min(7.5vh, 9vw), 45px)' 
+                  : 'clamp(18px, min(4.8vh, 6.2vw), 36px)';
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
                   {/* Surah/Juz Header */}
                   <div className="flex justify-between items-center mb-4 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
@@ -1047,7 +1051,7 @@ export default function TafseerPage(){
                   </div>}
                   
                   {/* Ayahs Grid — consistent font scaled to fit viewport height */}
-                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:'clamp(16px, min(6.5vw, calc((100vh - 190px) / 35)), 38px)',lineHeight:'2.3',fontWeight:'normal',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.12em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
+                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:fontClamp,lineHeight:'2.5',fontWeight:'bold',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.18em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
                     {g.ayahs.map(a=>{
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;

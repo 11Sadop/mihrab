@@ -2,7 +2,9 @@
 
 @font-face {
       font-family: 'KFGQPC HAFS Uthmanic Script';
-      src: url('https://fonts.cdnfonts.com/s/111693/KfgqpcHafsUthmanicScriptRegular-1jGEe.woff') format('woff');
+      src: url('/KfgqpcHafsUthmanicScript.woff2') format('woff2'),
+           url('https://db.onlinewebfonts.com/t/a565b17e58e287300f1cd79645ae1770.woff2') format('woff2'),
+           url('https://fonts.cdnfonts.com/s/111693/KfgqpcHafsUthmanicScriptRegular-1jGEe.woff') format('woff');
       font-weight: normal;
       font-style: normal;
       font-display: swap;
@@ -85,6 +87,7 @@
       }
       .font-quran {
               font-family: 'KFGQPC HAFS Uthmanic Script', 'Amiri Quran', 'Scheherazade New', 'Amiri', serif;
+              font-weight: bold;
               letter-spacing: -0.01em;
               line-height: 2.2;
               font-feature-settings: "liga" 1, "calt" 1, "rlig" 1, "kern" 1;

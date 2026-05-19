@@ -233,59 +233,62 @@ export default function HadithVerifyPage() {
             return parsed;
         };
 
-        // ═══ PRIMARY: Direct Dorar API via AllOrigins Proxy ═══
+        // ═══ PRIMARY: Server proxy (very fast and supports full HTML scraping & Sunnah.com) ═══
         try {
-            // Using allorigins to bypass CORS and IP blocks on the client side safely
-            const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(query)}&st=a&xclude=0&page=1`;
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(dorarUrl)}`;
-            
-            const dorarRes = await fetch(proxyUrl);
-            if (dorarRes.ok) {
-                const proxyData = await dorarRes.json();
-                const data = JSON.parse(proxyData.contents); // allorigins wraps response in contents
-                
-                if (data.ahadith?.result) {
-                    const dorarResults = parseDorarHtml(data.ahadith.result);
-                    for (const item of dorarResults) {
-                        if (filterSahih && !isTrustedGrade(item.grade)) continue;
-                        merged.push({ ...item, trustScore: calcTrustScore(item.grade, item.source), relevanceScore: 1 });
-                    }
-                }
-                // Also try structured data
-                if (merged.length === 0 && data.ahadith?.data) {
-                    for (const h of (data.ahadith.data || [])) {
-                        const text = (h.hadith||h.text||'').replace(/<[^>]+>/g,'').trim();
-                        if (text.length > 5) {
-                            const item = {
-                                text, narrator: (h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim(),
-                                scholar: translateField(h.mohadith||h.scholar||''),
-                                source: translateField(h.book||h.source||''),
-                                grade: translateGrade(h.grade||h.hukm||'')
-                            };
-                            if (filterSahih && !isTrustedGrade(item.grade)) continue;
-                            merged.push({ ...item, trustScore: calcTrustScore(item.grade, item.source), relevanceScore: 1 });
-                        }
-                    }
-                }
-            }
-        } catch { /* Proxy failed, try fallback */ }
-
-        // ═══ FALLBACK: Server proxy (may work from some hosting providers) ═══
-        if (merged.length === 0) {
-            try {
-                const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(query)}${filterSahih ? '&grade=sahih' : ''}`);
+            const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(query)}${filterSahih ? '&grade=sahih' : ''}`);
+            if (serverRes.ok) {
                 const serverData = await serverRes.json();
                 if (Array.isArray(serverData.results)) {
                     for (const item of serverData.results) {
                         if (filterSahih && !isTrustedGrade(item.grade || "")) continue;
                         merged.push({
-                            text: item.text || "", narrator: item.narrator || "",
+                            text: item.text || "", 
+                            narrator: item.narrator || "",
                             scholar: translateField(item.scholar || ""),
                             source: translateField(item.source || "الدرر السنية"),
                             grade: translateGrade(item.grade || ""),
                             trustScore: calcTrustScore(item.grade || "", item.source || ""),
                             relevanceScore: 1,
                         });
+                    }
+                }
+            }
+        } catch { /* Server failed, try fallback */ }
+
+        // ═══ FALLBACK: Direct Dorar API via AllOrigins Proxy ═══
+        if (merged.length === 0) {
+            try {
+                // Using allorigins to bypass CORS and IP blocks on the client side safely
+                const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(query)}&st=a&xclude=0&page=1`;
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(dorarUrl)}`;
+                
+                const dorarRes = await fetch(proxyUrl);
+                if (dorarRes.ok) {
+                    const proxyData = await dorarRes.json();
+                    const data = JSON.parse(proxyData.contents); // allorigins wraps response in contents
+                    
+                    if (data.ahadith?.result) {
+                        const dorarResults = parseDorarHtml(data.ahadith.result);
+                        for (const item of dorarResults) {
+                            if (filterSahih && !isTrustedGrade(item.grade)) continue;
+                            merged.push({ ...item, trustScore: calcTrustScore(item.grade, item.source), relevanceScore: 1 });
+                        }
+                    }
+                    // Also try structured data
+                    if (merged.length === 0 && data.ahadith?.data) {
+                        for (const h of (data.ahadith.data || [])) {
+                            const text = (h.hadith||h.text||'').replace(/<[^>]+>/g,'').trim();
+                            if (text.length > 5) {
+                                const item = {
+                                    text, narrator: (h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim(),
+                                    scholar: translateField(h.mohadith||h.scholar||''),
+                                    source: translateField(h.book||h.source||''),
+                                    grade: translateGrade(h.grade||h.hukm||'')
+                                };
+                                if (filterSahih && !isTrustedGrade(item.grade)) continue;
+                                merged.push({ ...item, trustScore: calcTrustScore(item.grade, item.source), relevanceScore: 1 });
+                            }
+                        }
                     }
                 }
             } catch {}
