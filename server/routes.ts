@@ -217,6 +217,7 @@ export async function registerRoutes(
             const cleanQueryForSearch = (text: string): string => {
                 if (!text) return "";
                 return text
+                    .replace(/[ًٌٍَُِّْـ]/g, "") // Strip Tashkeel first!
                     .replace(/[\(\)\[\]\{\}«»"'`.,\/#!$%\^&\*;:{}=\-_~?؟]/g, " ")
                     .replace(/[\uFDFA\uFDFB\u0610\u0611\u0612\u0613]/g, " ") // ﷺ, ؓ, etc.
                     .replace(/\s+/g, " ")
@@ -230,9 +231,9 @@ export async function registerRoutes(
                     "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
                 ]);
                 const words = text.split(/\s+/).filter(w => w.length >= 2 && !ARABIC_STOP_WORDS.has(w));
-                if (words.length <= 4) return text;
-                const sortedWords = [...words].sort((a, b) => b.length - a.length);
-                return sortedWords.slice(0, 4).join(" ");
+                if (words.length <= 4) return words.join(" ");
+                // Preserve original order by taking the first 4 contiguous content words
+                return words.slice(0, 4).join(" ");
             };
 
             const cleanedSearchKey = cleanQueryForSearch(searchKey);
@@ -308,7 +309,10 @@ export async function registerRoutes(
                                 const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
                                 const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
                                 const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
-                                const grdM = block.match(/الدرجة?\s*:\s*([^<\n]+)/i);
+                                let grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
+                                if (!grdM) {
+                                    grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
+                                }
                                 if (txtM) {
                                     const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
                                     if (text.length > 10) pageResults.push({
@@ -329,7 +333,10 @@ export async function registerRoutes(
                                     const narM = info.match(/^([^<\n,]+)/);
                                     const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
                                     const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
-                                    const grdM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
+                                    let grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
+                                    if (!grdM) {
+                                        grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
+                                    }
                                     if (text.length > 10) pageResults.push({
                                         text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
                                         scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
@@ -384,7 +391,10 @@ export async function registerRoutes(
                                 const narM = info.match(/^([^<\n,]{2,50})/);
                                 const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
                                 const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
-                                const grdM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
+                                let grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
+                                if (!grdM) {
+                                    grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
+                                }
                                 
                                 if (text.length > 10) list.push({
                                     text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',

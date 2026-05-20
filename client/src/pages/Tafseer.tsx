@@ -164,9 +164,14 @@ export default function TafseerPage(){
   // Keep ref updated so event listener always calls latest version
   handleEndedRef.current = handleEnded;
 
-  // Helper: build audio URL — mp3quran primary (more reliable), everyayah fallback
-  const buildUrl = (rec: Rec, sn: number, nis: number) =>
-    `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
+  // Helper: build audio URL — everyayah CDN primary (fastest/cached), mp3quran primary fallback
+  const buildUrl = (rec: Rec, sn: number, nis: number) => {
+    if (rec.ev) {
+      return `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3`;
+    }
+    return `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
+  };
+
 
   const handleTimeUpdate = () => {
     const a = currentAudio();
@@ -403,31 +408,39 @@ export default function TafseerPage(){
     const a=currentAudio();
     if(!a)return;
 
-    // Try everyayah as first fallback
-    const evUrl = rec.ev
-      ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`
-      : null;
-    // Try mirror as second fallback
-    const mirrorUrl = rec.ev
-      ? `https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3`
-      : null;
+    const src = a.src || "";
+    const evUrl = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3` : "";
+    const mirrorUrl = rec.ev ? `https://mirrors.quranicaudio.com/everyayah/${rec.ev}/${pad3(q.sn)}${pad3(q.nis)}.mp3` : "";
+    const mp3quranUrl = `${rec.server}/${pad3(q.sn)}${pad3(q.nis)}.mp3`;
 
-    const tryMirror=()=>{
-      if(mirrorUrl){
-        a.src=mirrorUrl;
-        a.load();
-        a.play().catch(()=>{ handleEnded(); }); // skip to next verse
-      } else {
-        handleEnded(); // skip to next verse
-      }
-    };
-
-    if(evUrl && !a.src.includes('everyayah.com')){
-      a.src=evUrl;
+    if (src.includes("everyayah.com") && mirrorUrl) {
+      a.src = mirrorUrl;
       a.load();
-      a.play().catch(tryMirror);
+      a.play().catch(() => {
+        a.src = mp3quranUrl;
+        a.load();
+        a.play().catch(() => handleEnded());
+      });
+    } else if (src.includes("quranicaudio.com")) {
+      a.src = mp3quranUrl;
+      a.load();
+      a.play().catch(() => handleEnded());
     } else {
-      tryMirror();
+      if (evUrl) {
+        a.src = evUrl;
+        a.load();
+        a.play().catch(() => {
+          if (mirrorUrl) {
+            a.src = mirrorUrl;
+            a.load();
+            a.play().catch(() => handleEnded());
+          } else {
+            handleEnded();
+          }
+        });
+      } else {
+        handleEnded();
+      }
     }
   };
   handleErrRef.current = handleErr;
@@ -630,6 +643,17 @@ export default function TafseerPage(){
   },[pq.data]); // removed hifzIdx from deps - we use ref instead
 
   const stopHifz=useCallback(()=>{if(recRef.current){recRef.current.onend=null;try{recRef.current.stop();}catch{}recRef.current=null;}setRecording(false);},[]);
+
+  useEffect(() => {
+    if (hifz) {
+      startHifz();
+    } else {
+      stopHifz();
+    }
+    return () => {
+      stopHifz();
+    };
+  }, [hifz, startHifz, stopHifz]);
   const reveal=(i:number)=>{
     if(!pq.data)return;
     const a=pq.data[i];
@@ -858,7 +882,7 @@ export default function TafseerPage(){
           <div className="flex items-center gap-1">
             <button onClick={()=>setShowSearch(true)} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><Search className="w-4 h-4"/></button>
             <button onClick={()=>setShowSettings(!showSettings)} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><Settings className="w-4 h-4"/></button>
-            <button onClick={()=>{setHifz(!hifz);if(hifz)stopHifz();resetHifz();}} className={`p-1.5 rounded-lg ${hifz?'bg-amber-500 text-white shadow-md':'opacity-60 hover:opacity-100'}`} style={hifz?{}:{color:colors.text}}>
+            <button onClick={()=>{setHifz(!hifz);resetHifz();}} className={`p-1.5 rounded-lg ${hifz?'bg-amber-500 text-white shadow-md':'opacity-60 hover:opacity-100'}`} style={hifz?{}:{color:colors.text}}>
               <Mic className="w-4 h-4"/></button>
             <button onClick={()=>setShowUI(false)} className="p-1.5 rounded-lg opacity-50 hover:opacity-100" style={{color:colors.text}}><ChevronLeft className="w-4 h-4" style={{transform:'rotate(90deg)'}}/></button>
           </div>
@@ -998,7 +1022,7 @@ export default function TafseerPage(){
                  background: hifzFeedback.type === 'ok' ? 'rgba(34,197,94,0.2)' : hifzFeedback.type === 'wrong_verse' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
                  color: hifzFeedback.type === 'ok' ? '#4ade80' : hifzFeedback.type === 'wrong_verse' ? '#f87171' : '#f59e0b'
                }}>
-            {hifzFeedback.text}
+            {hifzFeedback.msg}
           </div>
         )}
       </div>}
@@ -1027,20 +1051,22 @@ export default function TafseerPage(){
                   {/* Ornate Surah Frame (Only for verse 1) */}
                   {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center scale-100">
                     <div className="relative px-16 py-4 min-w-[280px] max-w-[360px] flex items-center justify-center">
-                      <svg className="absolute inset-0 w-full h-full text-amber-600/70 dark:text-amber-500/50" viewBox="0 0 400 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M 30,5 L 370,5 C 385,5 395,15 395,35 C 395,55 385,65 370,65 L 30,65 C 15,65 5,55 5,35 C 5,15 15,5 30,5 Z" stroke="currentColor" strokeWidth="2.5" fill="currentColor" fillOpacity="0.04" />
-                        <path d="M 35,9 L 365,9 C 378,9 387,17 387,35 C 387,53 378,61 365,61 L 35,61 C 22,61 13,53 13,35 C 13,17 22,9 35,9 Z" stroke="currentColor" strokeWidth="0.75" strokeDasharray="3,3" />
-                        <path d="M 12,35 C 18,25 25,35 15,35" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M 12,35 C 18,45 25,35 15,35" stroke="currentColor" strokeWidth="1.5" />
-                        <circle cx="20" cy="35" r="2" fill="currentColor" />
-                        <path d="M 388,35 C 382,25 375,35 385,35" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M 388,35 C 382,45 375,35 385,35" stroke="currentColor" strokeWidth="1.5" />
-                        <circle cx="380" cy="35" r="2" fill="currentColor" />
-                        <path d="M 8,35 L 2,35 M 5,30 L 5,40" stroke="currentColor" strokeWidth="1.2" />
-                        <path d="M 392,35 L 398,35 M 395,30 L 395,40" stroke="currentColor" strokeWidth="1.2" />
+                      <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/60" viewBox="0 0 400 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 40 10 L 180 10 L 200 2 L 220 10 L 360 10 C 380 10, 395 22, 395 40 C 395 58, 380 70, 360 70 L 220 70 L 200 78 L 180 70 L 40 70 C 20 70, 5 58, 5 40 C 5 22, 20 10, 40 10 Z" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.03" />
+                        <path d="M 45 14 L 183 14 L 200 7 L 217 14 L 355 14 C 372 14, 387 24, 387 40 C 387 56, 372 66, 355 66 L 217 66 L 200 73 L 183 66 L 45 66 C 28 66, 13 56, 13 40 C 13 24, 28 14, 45 14 Z" stroke="currentColor" strokeWidth="0.8" strokeDasharray="3,3" />
+                        <path d="M 13 40 C 22 28, 35 40, 20 40 M 13 40 C 22 52, 35 40, 20 40" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                        <circle cx="25" cy="40" r="2.5" fill="currentColor" />
+                        <path d="M 387 40 C 378 28, 365 40, 380 40 M 387 40 C 378 52, 365 40, 380 40" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                        <circle cx="375" cy="40" r="2.5" fill="currentColor" />
+                        <path d="M 8 40 L 2 40 M 5 35 L 5 45" stroke="currentColor" strokeWidth="1.5" />
+                        <path d="M 392 40 L 398 40 M 395 35 L 395 45" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="200" cy="7" r="1.5" fill="currentColor" />
+                        <circle cx="200" cy="73" r="1.5" fill="currentColor" />
                       </svg>
-                      <span className="font-quran relative z-10 block pt-0.5" style={{fontSize:'clamp(20px, 4.8vw, 25px)', color:colors.text, fontWeight:'normal'}}>
+                      <span className="font-quran relative z-10 flex items-center gap-2 pt-1" style={{fontSize:'clamp(19px, 4.6vw, 24px)', color:colors.text, fontWeight:'normal'}}>
+                        <span className="text-amber-500/80 dark:text-amber-400/70 text-base">⚜️</span>
                         سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}
+                        <span className="text-amber-500/80 dark:text-amber-400/70 text-base">⚜️</span>
                       </span>
                     </div>
                   </div>}
@@ -1065,10 +1091,14 @@ export default function TafseerPage(){
                             height: '2.2em',
                             verticalAlign: 'middle'
                           }}>
-                          <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M16 2 L20.2 6.2 L26 6.2 L26 12 L30.2 16 L26 20.2 L26 26 L20.2 26 L16 30.2 L11.8 26 L6 26 L6 20.2 L1.8 16 L6 11.8 L6 6.2 L11.8 6.2 Z" 
-                                  stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.04" />
-                            <circle cx="16" cy="16" r="8" stroke="currentColor" strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                          <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="16" cy="16" r="12" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.04" />
+                            <circle cx="16" cy="16" r="9.5" stroke="currentColor" strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                            <path d="M16 2 L18 5 L16 7 L14 5 Z M16 30 L18 27 L16 25 L14 27 Z M2 16 L5 18 L7 16 L5 14 Z M30 16 L27 18 L25 16 L27 14 Z" fill="currentColor" />
+                            <circle cx="7" cy="7" r="1" fill="currentColor" />
+                            <circle cx="25" cy="7" r="1" fill="currentColor" />
+                            <circle cx="7" cy="25" r="1" fill="currentColor" />
+                            <circle cx="25" cy="25" r="1" fill="currentColor" />
                           </svg>
                           <span className="relative z-10 font-bold" style={{
                             fontSize: '0.45em',
@@ -1124,10 +1154,14 @@ export default function TafseerPage(){
                             })}
                             <span className="inline-flex items-center justify-center mx-1 opacity-50 relative" data-v="1"
                                 style={{width:'2em',height:'2em', verticalAlign:'middle'}}>
-                                <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M16 2 L20.2 6.2 L26 6.2 L26 12 L30.2 16 L26 20.2 L26 26 L20.2 26 L16 30.2 L11.8 26 L6 26 L6 20.2 L1.8 16 L6 11.8 L6 6.2 L11.8 6.2 Z" 
-                                        stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.04" />
-                                  <circle cx="16" cy="16" r="8" stroke="currentColor" strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                                <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <circle cx="16" cy="16" r="12" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.04" />
+                                  <circle cx="16" cy="16" r="9.5" stroke="currentColor" strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                                  <path d="M16 2 L18 5 L16 7 L14 5 Z M16 30 L18 27 L16 25 L14 27 Z M2 16 L5 18 L7 16 L5 14 Z M30 16 L27 18 L25 16 L27 14 Z" fill="currentColor" />
+                                  <circle cx="7" cy="7" r="1" fill="currentColor" />
+                                  <circle cx="25" cy="7" r="1" fill="currentColor" />
+                                  <circle cx="7" cy="25" r="1" fill="currentColor" />
+                                  <circle cx="25" cy="25" r="1" fill="currentColor" />
                                 </svg>
                                 <span className="relative z-10 font-bold" style={{
                                   fontSize: '0.45em',
@@ -1162,9 +1196,13 @@ export default function TafseerPage(){
                             verticalAlign: 'middle'
                           }}>
                           <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M16 2 L20.2 6.2 L26 6.2 L26 12 L30.2 16 L26 20.2 L26 26 L20.2 26 L16 30.2 L11.8 26 L6 26 L6 20.2 L1.8 16 L6 11.8 L6 6.2 L11.8 6.2 Z" 
-                                  stroke={isP ? '#16a34a' : 'currentColor'} strokeWidth="1.2" fill={isP ? '#16a34a' : 'currentColor'} fillOpacity="0.04" />
-                            <circle cx="16" cy="16" r="8" stroke={isP ? '#16a34a' : 'currentColor'} strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                            <circle cx="16" cy="16" r="12" stroke={isP ? '#16a34a' : 'currentColor'} strokeWidth="1.2" fill={isP ? '#16a34a' : 'currentColor'} fillOpacity="0.04" />
+                            <circle cx="16" cy="16" r="9.5" stroke={isP ? '#16a34a' : 'currentColor'} strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                            <path d="M16 2 L18 5 L16 7 L14 5 Z M16 30 L18 27 L16 25 L14 27 Z M2 16 L5 18 L7 16 L5 14 Z M30 16 L27 18 L25 16 L27 14 Z" fill={isP ? '#16a34a' : 'currentColor'} />
+                            <circle cx="7" cy="7" r="1" fill={isP ? '#16a34a' : 'currentColor'} />
+                            <circle cx="25" cy="7" r="1" fill={isP ? '#16a34a' : 'currentColor'} />
+                            <circle cx="7" cy="25" r="1" fill={isP ? '#16a34a' : 'currentColor'} />
+                            <circle cx="25" cy="25" r="1" fill={isP ? '#16a34a' : 'currentColor'} />
                           </svg>
                           <span className="relative z-10 font-bold" style={{
                             fontSize: '0.45em',

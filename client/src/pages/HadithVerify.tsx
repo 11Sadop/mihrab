@@ -167,6 +167,7 @@ export default function HadithVerifyPage() {
     const cleanQuerySymbols = (text: string): string => {
         if (!text) return "";
         return text
+            .replace(/[ًٌٍَُِّْـ]/g, "") // Strip Tashkeel first!
             .replace(/[\(\)\[\]\{\}«»"'`.,\/#!$%\^&\*;:{}=\-_~?؟]/g, " ")
             .replace(/[\uFDFA\uFDFB\u0610\u0611\u0612\u0613]/g, " ") // ﷺ, ؓ, etc.
             .replace(/\s+/g, " ")
@@ -225,7 +226,10 @@ export default function HadithVerifyPage() {
                 const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
                 const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
                 const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
-                const grdM = block.match(/الدرجة?\s*:\s*([^<\n]+)/i);
+                let grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
+                if (!grdM) {
+                    grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
+                }
                 if (txtM) {
                     const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
                     if (text.length > 10) parsed.push({
@@ -248,7 +252,10 @@ export default function HadithVerifyPage() {
                     const narM = info.match(/^([^<\n,]{2,60})/);
                     const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
                     const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
-                    const grdM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
+                    let grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
+                    if (!grdM) {
+                        grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
+                    }
                     if (text.length > 10) parsed.push({
                         text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
                         scholar: translateField(schM?.[1]?.replace(/<[^>]+>/g,'')||''),
@@ -384,7 +391,7 @@ export default function HadithVerifyPage() {
                     }
                 }
                 overlapRatio = matchCount / activeTokens.length;
-                if (overlapRatio >= 0.70) {
+                if (overlapRatio >= 0.40) {
                     isMatch = true;
                 }
             }
