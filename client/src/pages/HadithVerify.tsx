@@ -104,6 +104,52 @@ function calcTrustScore(grade: string, source: string): number {
     return score;
 }
 
+function decodeGarbledDorarText(text: string): string {
+    if (!text) return "";
+    if (text.includes("Ø§Ù„") || text.includes("Ø") || text.includes("Ù") || text.includes("æ")) {
+        try {
+            const bytes = new Uint8Array(text.length);
+            for (let i = 0; i < text.length; i++) {
+                bytes[i] = text.charCodeAt(i) & 0xff;
+            }
+            return new TextDecoder('utf-8').decode(bytes);
+        } catch {
+            return text;
+        }
+    }
+    return text;
+}
+
+const fetchWithProxy = async (url: string): Promise<string | null> => {
+    // 1. Try AllOrigins
+    try {
+        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        if (res.ok) {
+            const data = await res.json();
+            return data.contents || null;
+        }
+    } catch {}
+    // 2. Try Corsproxy.io
+    try {
+        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+        if (res.ok) return await res.text();
+    } catch {}
+    // 3. Try Codetabs
+    try {
+        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
+        if (res.ok) return await res.text();
+    } catch {}
+    return null;
+};
+
+function cleanQuerySymbols(text: string): string {
+    if (!text) return "";
+    return text
+        .replace(/[«»"'"()\[\]{}*\-–_+=\/\\|؛،؟?.,:;!]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
 export default function HadithVerifyPage() {
     useSeo({
         title: "التحقق من صحة الأحاديث - ابحث وتحقق",
@@ -160,33 +206,24 @@ export default function HadithVerifyPage() {
                 URL.revokeObjectURL(url);
                 toast({ title: 'تم تحميل الصورة ✅' });
             }
-        } catch { toast({ title: 'خطأ في إنشاء الصورة' }); }
-        finally { setGeneratingIdx(null); }
-    };
-
-    const cleanQuerySymbols = (text: string): string => {
-        if (!text) return "";
-        return text
-            .replace(/[ًٌٍَُِّْـ]/g, "") // Strip Tashkeel first!
-            .replace(/[\(\)\[\]\{\}«»"'`.,\/#!$%\^&\*;:{}=\-_~?؟]/g, " ")
-            .replace(/[\uFDFA\uFDFB\u0610\u0611\u0612\u0613]/g, " ") // ﷺ, ؓ, etc.
-            .replace(/\s+/g, " ")
-            .trim();
+        } catch {
+            toast({ title: 'خطأ في إنشاء الصورة' });
+        } finally {
+            setGeneratingIdx(null);
+        }
     };
 
     const searchHadith = async () => {
         if (!query.trim()) return;
 
-        setLoading(true);
         setError("");
         setResults([]);
         setHasSearched(true);
+        setLoading(true);
 
         const cleanedQuery = cleanQuerySymbols(query);
         const normalizedQuery = normalizeArabicText(cleanedQuery);
-        const merged: RankedHadithResult[] = [];
 
-        // Helper to translate any remaining English grades
         const translateGrade = (g: string): string => {
             if (!g) return 'غير محدد';
             const map: Record<string, string> = {
@@ -196,6 +233,7 @@ export default function HadithVerifyPage() {
             const lower = g.toLowerCase().trim();
             return map[lower] || (/[\u0600-\u06FF]/.test(g) ? g : 'غير محدد');
         };
+
         const translateField = (val: string): string => {
             if (!val) return '';
             const map: Record<string, string> = {
@@ -213,7 +251,6 @@ export default function HadithVerifyPage() {
             return val;
         };
 
-        // Parse Dorar HTML response into hadith results
         const parseDorarHtml = (html: string): HadithResult[] => {
             const parsed: HadithResult[] = [];
             
@@ -223,20 +260,21 @@ export default function HadithVerifyPage() {
             while ((m = divRx.exec(html)) !== null && parsed.length < 50) {
                 const block = m[1];
                 const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
-                const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
-                const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
-                const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
-                let grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
-                if (!grdM) {
-                    grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
+                const narratorM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
+                const scholarM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
+                const sourceM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                let gradeM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
+                if (!gradeM) {
+                    gradeM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
                 }
                 if (txtM) {
                     const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
                     if (text.length > 10) parsed.push({
-                        text, narrator: narM ? narM[1].replace(/<[^>]+>/g,'').trim() : '',
-                        scholar: translateField(schM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                        source: translateField(srcM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                        grade: translateGrade(grdM?.[1]?.replace(/<[^>]+>/g,'')||'')
+                        text, 
+                        narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
+                        scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                        source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                        grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||'')
                     });
                 }
             }
@@ -249,87 +287,24 @@ export default function HadithVerifyPage() {
                     const prev = parts[i-1];
                     const chunks = prev.split('>');
                     const text = (chunks[chunks.length-1]||'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
-                    const narM = info.match(/^([^<\n,]{2,60})/);
-                    const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
-                    const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
-                    let grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
-                    if (!grdM) {
-                        grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
+                    const narratorM = info.match(/^([^<\n,]{2,60})/);
+                    const scholarM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
+                    const sourceM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                    let gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
+                    if (!gradeM) {
+                        gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
                     }
                     if (text.length > 10) parsed.push({
-                        text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
-                        scholar: translateField(schM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                        source: translateField(srcM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                        grade: translateGrade(grdM?.[1]?.replace(/<[^>]+>/g,'')||'')
+                        text, 
+                        narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
+                        scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                        source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                        grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||'')
                     });
                 }
             }
             return parsed;
         };
-
-        // Only query remote APIs if online
-        if (!isOffline) {
-            // ═══ PRIMARY: Server proxy (very fast and supports full HTML scraping & Sunnah.com) ═══
-            try {
-                const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(cleanedQuery)}${filterSahih ? '&grade=sahih' : ''}`);
-                if (serverRes.ok) {
-                    const serverData = await serverRes.json();
-                    if (Array.isArray(serverData.results)) {
-                        for (const item of serverData.results) {
-                            if (filterSahih && !isTrustedGrade(item.grade || "")) continue;
-                            merged.push({
-                                text: item.text || "", 
-                                narrator: item.narrator || "",
-                                scholar: translateField(item.scholar || ""),
-                                source: translateField(item.source || "الدرر السنية"),
-                                grade: translateGrade(item.grade || ""),
-                                trustScore: calcTrustScore(item.grade || "", item.source || ""),
-                                relevanceScore: 1.0,
-                            });
-                        }
-                    }
-                }
-            } catch { /* Server failed, try fallback */ }
-
-            // ═══ FALLBACK: Direct Dorar API via AllOrigins Proxy ═══
-            if (merged.length === 0) {
-                try {
-                    // Using allorigins to bypass CORS and IP blocks on the client side safely
-                    const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(cleanedQuery)}&st=a&xclude=0&page=1`;
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(dorarUrl)}`;
-                    
-                    const dorarRes = await fetch(proxyUrl);
-                    if (dorarRes.ok) {
-                        const proxyData = await dorarRes.json();
-                        const data = JSON.parse(proxyData.contents); // allorigins wraps response in contents
-                        
-                        if (data.ahadith?.result) {
-                            const dorarResults = parseDorarHtml(data.ahadith.result);
-                            for (const item of dorarResults) {
-                                if (filterSahih && !isTrustedGrade(item.grade)) continue;
-                                merged.push({ ...item, trustScore: calcTrustScore(item.grade, item.source), relevanceScore: 1.0 });
-                            }
-                        }
-                        // Also try structured data
-                        if (merged.length === 0 && data.ahadith?.data) {
-                            for (const h of (data.ahadith.data || [])) {
-                                const text = (h.hadith||h.text||'').replace(/<[^>]+>/g,'').trim();
-                                if (text.length > 5) {
-                                    const item = {
-                                        text, narrator: (h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim(),
-                                        scholar: translateField(h.mohadith||h.scholar||''),
-                                        source: translateField(h.book||h.source||''),
-                                        grade: translateGrade(h.grade||h.hukm||'')
-                                    };
-                                    if (filterSahih && !isTrustedGrade(item.grade)) continue;
-                                    merged.push({ ...item, trustScore: calcTrustScore(item.grade, item.source), relevanceScore: 1.0 });
-                                }
-                            }
-                        }
-                    }
-                } catch {}
-            }
-        }
 
         const localCorpus: HadithResult[] = [
             ...hadithDatabase.map((item) => ({
@@ -355,7 +330,6 @@ export default function HadithVerifyPage() {
             })),
         ];
 
-        // Tokenized word-overlap matcher for local database search
         const ARABIC_STOP_WORDS = new Set([
             "من", "عن", "ان", "في", "على", "لا", "ما", "الى", "ثم", "انه", "كان", 
             "قال", "الله", "رسول", "صلي", "عليه", "وسلم", "يا", "ايها", "قد", "لقد",
@@ -372,18 +346,17 @@ export default function HadithVerifyPage() {
 
         const activeTokens = queryTokens.length > 0 ? queryTokens : backupTokens;
 
+        const localResults: RankedHadithResult[] = [];
         for (const item of localCorpus) {
             const normalizedText = normalizeArabicText(item.text);
             const haystack = normalizeArabicText(`${item.text} ${item.narrator} ${item.source} ${item.grade}`);
             
-            // Check exact substring match first (highest priority)
             let isMatch = haystack.includes(normalizedQuery);
             let overlapRatio = 0.0;
             
             if (isMatch) {
                 overlapRatio = 1.0;
             } else if (activeTokens.length > 0) {
-                // If not exact match, check token overlap
                 let matchCount = 0;
                 for (const token of activeTokens) {
                     if (normalizedText.includes(token)) {
@@ -399,45 +372,154 @@ export default function HadithVerifyPage() {
             if (!isMatch) continue;
             if (filterSahih && !isTrustedGrade(item.grade)) continue;
 
-            merged.push({
+            localResults.push({
                 ...item,
                 trustScore: calcTrustScore(item.grade, item.source),
                 relevanceScore: overlapRatio,
             });
         }
 
-        const deduped = removeDuplicates(merged).map((item) => ({
-            ...item,
-            trustScore: calcTrustScore(item.grade, item.source),
-            relevanceScore: (item as any).relevanceScore ?? 0.0,
-        }));
-
-        const ranked = deduped.sort((a, b) => {
-            if ((b as any).trustScore !== (a as any).trustScore) return (b as any).trustScore - (a as any).trustScore;
-            return (b as any).relevanceScore - (a as any).relevanceScore;
+        const initialDeduped = removeDuplicates(localResults).sort((a, b) => {
+            if (b.trustScore !== a.trustScore) return b.trustScore - a.trustScore;
+            return b.relevanceScore - a.relevanceScore;
         });
 
-        if (ranked.length > 0) {
-            setResults(ranked.slice(0, 80));
+        // 1. Optimistic Local Rendering - Set results immediately
+        setResults(initialDeduped.slice(0, 80));
+
+        if (isOffline) {
             setLoading(false);
+            if (initialDeduped.length === 0) {
+                setError("لم يتم العثور على نتائج في قاعدة البيانات المحلية. تأكد من اتصالك بالإنترنت وجرب كلمات مختلفة.");
+            }
             return;
         }
 
-        setError("لم يتم العثور على نتائج. تأكد من اتصالك بالإنترنت وجرب كلمات مختلفة.");
-        setLoading(false);
+        // 2. Background Concurrent Online Search
+        (async () => {
+            const merged: RankedHadithResult[] = [...localResults];
+            
+            // Try backend API proxy
+            try {
+                const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(cleanedQuery)}${filterSahih ? '&grade=sahih' : ''}`);
+                if (serverRes.ok) {
+                    const serverData = await serverRes.json();
+                    if (Array.isArray(serverData.results)) {
+                        for (const item of serverData.results) {
+                            if (filterSahih && !isTrustedGrade(item.grade || "")) continue;
+                            merged.push({
+                                text: item.text || "", 
+                                narrator: item.narrator || "",
+                                scholar: translateField(item.scholar || ""),
+                                source: translateField(item.source || "الدرر السنية"),
+                                grade: translateGrade(item.grade || ""),
+                                trustScore: calcTrustScore(item.grade || "", item.source || ""),
+                                relevanceScore: 1.0,
+                            });
+                        }
+                    }
+                }
+            } catch { /* Fallback */ }
+
+            // If no online results obtained yet, fallback to client-side CORS proxy fallbacks
+            const hasOnlineResults = merged.some(r => r.source !== "قاعدة بيانات محلية" && !r.source.startsWith("صحيح"));
+            if (!hasOnlineResults) {
+                try {
+                    const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(cleanedQuery)}&st=a&xclude=0&page=1`;
+                    const proxyResponseHtml = await fetchWithProxy(dorarUrl);
+                    if (proxyResponseHtml) {
+                        const decodedHtml = decodeGarbledDorarText(proxyResponseHtml);
+                        let data: any = null;
+                        try {
+                            data = JSON.parse(decodedHtml);
+                        } catch {
+                            try {
+                                const directObj = typeof proxyResponseHtml === 'string' ? JSON.parse(proxyResponseHtml) : proxyResponseHtml;
+                                if (directObj.contents) {
+                                    data = JSON.parse(decodeGarbledDorarText(directObj.contents));
+                                } else {
+                                    data = directObj;
+                                }
+                            } catch {}
+                        }
+
+                        if (data) {
+                            let rawHtml = data.ahadith?.result;
+                            if (rawHtml) {
+                                rawHtml = decodeGarbledDorarText(rawHtml);
+                                const dorarResults = parseDorarHtml(rawHtml);
+                                for (const item of dorarResults) {
+                                    if (filterSahih && !isTrustedGrade(item.grade)) continue;
+                                    merged.push({
+                                        ...item,
+                                        trustScore: calcTrustScore(item.grade, item.source),
+                                        relevanceScore: 1.0
+                                    });
+                                }
+                            }
+                            
+                            if (data.ahadith?.data) {
+                                for (const h of (data.ahadith.data || [])) {
+                                    const rawText = h.hadith || h.text || '';
+                                    const text = decodeGarbledDorarText(rawText).replace(/<[^>]+>/g,'').trim();
+                                    if (text.length > 5) {
+                                        const item = {
+                                            text, 
+                                            narrator: decodeGarbledDorarText(h.rawi || h.narrator || '').replace(/<[^>]+>/g,'').trim(),
+                                            scholar: translateField(decodeGarbledDorarText(h.mohadith || h.scholar || '')),
+                                            source: translateField(decodeGarbledDorarText(h.book || h.source || '')),
+                                            grade: translateGrade(decodeGarbledDorarText(h.grade || h.hukm || ''))
+                                        };
+                                        if (filterSahih && !isTrustedGrade(item.grade)) continue;
+                                        merged.push({
+                                            ...item,
+                                            trustScore: calcTrustScore(item.grade, item.source),
+                                            relevanceScore: 1.0
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch {}
+            }
+
+            const finalDeduped = removeDuplicates(merged).map((item) => ({
+                ...item,
+                trustScore: calcTrustScore(item.grade, item.source),
+                relevanceScore: (item as any).relevanceScore ?? 0.0,
+            }));
+
+            const finalRanked = finalDeduped.sort((a, b) => {
+                if (b.trustScore !== a.trustScore) return b.trustScore - a.trustScore;
+                return b.relevanceScore - a.relevanceScore;
+            });
+
+            if (finalRanked.length > 0) {
+                setResults(finalRanked.slice(0, 80));
+                setError("");
+            } else {
+                if (initialDeduped.length === 0) {
+                    setError("لم يتم العثور على نتائج. تأكد من اتصالك بالإنترنت وجرب كلمات مختلفة.");
+                }
+            }
+            setLoading(false);
+        })();
     };
 
-    const removeDuplicates = (items: HadithResult[]) => {
+    const removeDuplicates = <T extends HadithResult>(items: T[]): T[] => {
         return items.filter(
             (value, index, self) =>
                 index ===
-                self.findIndex(
-                    (t) =>
-                        t.text.trim() === value.text.trim() &&
-                        t.grade.trim() === value.grade.trim() &&
-                        t.narrator.trim() === value.narrator.trim() &&
-                        t.source.trim() === value.source.trim()
-                )
+                self.findIndex((t) => {
+                    const normA = normalizeArabicText(t.text).substring(0, 80).replace(/\s+/g, '');
+                    const normB = normalizeArabicText(value.text).substring(0, 80).replace(/\s+/g, '');
+                    const narratorA = normalizeArabicText(t.narrator || '');
+                    const narratorB = normalizeArabicText(value.narrator || '');
+                    const sourceA = normalizeArabicText(t.source || '');
+                    const sourceB = normalizeArabicText(value.source || '');
+                    return normA === normB && narratorA === narratorB && sourceA === sourceB;
+                })
         );
     };
 

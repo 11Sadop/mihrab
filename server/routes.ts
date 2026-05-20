@@ -224,6 +224,18 @@ export async function registerRoutes(
                     .trim();
             };
 
+            const decodeGarbledText = (text: string): string => {
+                if (!text) return "";
+                if (text.includes("Ø§Ù„") || text.includes("Ø") || text.includes("Ù") || text.includes("æ")) {
+                    try {
+                        return Buffer.from(text, 'binary').toString('utf8');
+                    } catch {
+                        return text;
+                    }
+                }
+                return text;
+            };
+
             const getFallbackQuery = (text: string): string => {
                 const ARABIC_STOP_WORDS = new Set([
                     "من", "عن", "ان", "في", "على", "لا", "ما", "الى", "ثم", "انه", "كان", 
@@ -232,7 +244,6 @@ export async function registerRoutes(
                 ]);
                 const words = text.split(/\s+/).filter(w => w.length >= 2 && !ARABIC_STOP_WORDS.has(w));
                 if (words.length <= 4) return words.join(" ");
-                // Preserve original order by taking the first 4 contiguous content words
                 return words.slice(0, 4).join(" ");
             };
 
@@ -299,8 +310,7 @@ export async function registerRoutes(
                         const data = await resp.json();
                         let pageResults: any[] = [];
                         if (data.ahadith?.result) {
-                            const html = data.ahadith.result;
-                            // Parse HTML - try div.hadith blocks first
+                            const html = decodeGarbledText(data.ahadith.result);
                             const divRx = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
                             let m;
                             while ((m = divRx.exec(html)) !== null && pageResults.length < 50) {
@@ -316,13 +326,15 @@ export async function registerRoutes(
                                 if (txtM) {
                                     const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
                                     if (text.length > 10) pageResults.push({
-                                        text, narrator: narM ? narM[1].replace(/<[^>]+>/g,'').trim() : '',
-                                        scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
+                                        text: decodeGarbledText(text), 
+                                        narrator: decodeGarbledText(narM ? narM[1].replace(/<[^>]+>/g,'').trim() : ''),
+                                        scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
+                                        source: tlField(decodeGarbledText(srcM?.[1]||'')), 
+                                        grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
                                     });
                                 }
                             }
                             
-                            // Fallback: split by الراوي
                             if (pageResults.length === 0) {
                                 const parts = html.split(/الراوي\s*:\s*/gi);
                                 for (let i = 1; i < parts.length && pageResults.length < 50; i++) {
@@ -338,19 +350,22 @@ export async function registerRoutes(
                                         grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
                                     }
                                     if (text.length > 10) pageResults.push({
-                                        text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
-                                        scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
+                                        text: decodeGarbledText(text), 
+                                        narrator: decodeGarbledText(narM?narM[1].replace(/<[^>]+>/g,'').trim():''),
+                                        scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
+                                        source: tlField(decodeGarbledText(srcM?.[1]||'')), 
+                                        grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
                                     });
                                 }
                             }
                         }
-                        // Structured data fallback
                         if (pageResults.length === 0 && data.ahadith?.data) {
                             return (data.ahadith.data||[]).map((h:any) => ({
-                                text: (h.hadith||h.text||'').replace(/<[^>]+>/g,'').trim(),
-                                narrator: (h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim(),
-                                scholar: tlField(h.mohadith||h.scholar||''), source: tlField(h.book||h.source||''),
-                                grade: tlGrade(h.grade||h.hukm||'')
+                                text: decodeGarbledText((h.hadith||h.text||'').replace(/<[^>]+>/g,'').trim()),
+                                narrator: decodeGarbledText((h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim()),
+                                scholar: tlField(decodeGarbledText(h.mohadith||h.scholar||'')), 
+                                source: tlField(decodeGarbledText(h.book||h.source||'')),
+                                grade: tlGrade(decodeGarbledText(h.grade||h.hukm||''))
                             })).filter((h:any) => h.text.length > 5);
                         }
                         return pageResults;
@@ -373,14 +388,12 @@ export async function registerRoutes(
                         clearTimeout(t2);
 
                         if (r2.ok) {
-                            const html = await r2.text();
-                            // Parse the search results page
+                            const html = decodeGarbledText(await r2.text());
                             const parts = html.split(/الراوي\s*:\s*/gi);
                             for (let i = 1; i < parts.length && list.length < 50; i++) {
                                 const info = parts[i];
                                 const prev = parts[i-1];
                                 
-                                // Extract hadith text - look for the last text node before الراوي
                                 const chunks = prev.split('>');
                                 let text = '';
                                 for (let c = chunks.length - 1; c >= 0; c--) {
@@ -397,8 +410,11 @@ export async function registerRoutes(
                                 }
                                 
                                 if (text.length > 10) list.push({
-                                    text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
-                                    scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
+                                    text: decodeGarbledText(text), 
+                                    narrator: decodeGarbledText(narM?narM[1].replace(/<[^>]+>/g,'').trim():''),
+                                    scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
+                                    source: tlField(decodeGarbledText(srcM?.[1]||'')), 
+                                    grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
                                 });
                             }
                         }
@@ -435,9 +451,11 @@ export async function registerRoutes(
                                 const arabicBody = h.hadith?.find((t:any) => t.lang === 'ar')?.body || '';
                                 if (arabicBody.length > 10) {
                                     results.push({
-                                        text: arabicBody.replace(/<[^>]+>/g,'').trim(),
-                                        narrator: '', scholar: tlField(h.collection?.[0]?.name||''),
-                                        source: tlField(h.collection?.[0]?.name||''), grade: 'غير مححدد'
+                                        text: decodeGarbledText(arabicBody.replace(/<[^>]+>/g,'').trim()),
+                                        narrator: '', 
+                                        scholar: tlField(h.collection?.[0]?.name||''),
+                                        source: tlField(h.collection?.[0]?.name||''), 
+                                        grade: 'غير محدد'
                                     });
                                 }
                             }

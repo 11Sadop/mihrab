@@ -82,36 +82,46 @@ const TAFSEER_SOURCES=[
 ];
 
 export default function TafseerPage(){
-  const audio1Ref = useRef<HTMLAudioElement | null>(null);
-  const audio2Ref = useRef<HTMLAudioElement | null>(null);
-  const activeAudioRef = useRef<'1'|'2'>('1');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextPreloadedKey = useRef<string>("");
   // Refs for event handlers to avoid stale closures
   const handleEndedRef = useRef<()=>void>(()=>{});
   const handleErrRef = useRef<()=>void>(()=>{});
   const handleTimeUpdateRef = useRef<()=>void>(()=>{});
 
+  const [isBuffering, setIsBuffering] = useState(false);
+
   useEffect(() => {
-    audio1Ref.current = new Audio();
-    audio2Ref.current = new Audio();
+    const a = new Audio();
+    audioRef.current = a;
     
     // Use wrapper functions that call refs - so handlers always use latest version
     const onEnded = () => handleEndedRef.current();
     const onTimeUpdate = () => handleTimeUpdateRef.current();
     const onError = () => handleErrRef.current();
+    const onWaiting = () => setIsBuffering(true);
+    const onPlaying = () => setIsBuffering(false);
+    const onCanPlay = () => setIsBuffering(false);
+    const onStalled = () => setIsBuffering(true);
     
-    const setup = (a: HTMLAudioElement) => {
-      a.addEventListener('ended', onEnded);
-      a.addEventListener('timeupdate', onTimeUpdate);
-      a.addEventListener('error', onError);
-      a.preload = 'auto';
-    };
-    if(audio1Ref.current) setup(audio1Ref.current);
-    if(audio2Ref.current) setup(audio2Ref.current);
+    a.addEventListener('ended', onEnded);
+    a.addEventListener('timeupdate', onTimeUpdate);
+    a.addEventListener('error', onError);
+    a.addEventListener('waiting', onWaiting);
+    a.addEventListener('playing', onPlaying);
+    a.addEventListener('canplay', onCanPlay);
+    a.addEventListener('stalled', onStalled);
+    a.preload = 'auto';
 
     return () => {
-      audio1Ref.current?.pause();
-      audio2Ref.current?.pause();
+      a.pause();
+      a.removeEventListener('ended', onEnded);
+      a.removeEventListener('timeupdate', onTimeUpdate);
+      a.removeEventListener('error', onError);
+      a.removeEventListener('waiting', onWaiting);
+      a.removeEventListener('playing', onPlaying);
+      a.removeEventListener('canplay', onCanPlay);
+      a.removeEventListener('stalled', onStalled);
     };
   }, []);
 
@@ -123,37 +133,15 @@ export default function TafseerPage(){
     new Audio(urls[type]).play().catch(()=>{});
   };
 
-  const currentAudio = () => activeAudioRef.current === '1' ? audio1Ref.current : audio2Ref.current;
-  const bufferAudio = () => activeAudioRef.current === '1' ? audio2Ref.current : audio1Ref.current;
+  const currentAudio = () => audioRef.current;
+  const bufferAudio = () => null;
 
   const handleEnded = () => {
     const q = playQueueRef.current;
     if (q && q.nis < q.maxNis) {
       const nextNis = q.nis + 1;
-      const nextKey = `${q.sn}-${nextNis}`;
       playQueueRef.current = { ...q, nis: nextNis };
-      
-      if (nextPreloadedKey.current === nextKey) {
-        activeAudioRef.current = activeAudioRef.current === '1' ? '2' : '1';
-        const a = currentAudio();
-        if (a) {
-          a.play().then(() => {
-            setPlayingKey(nextKey);
-            setPlayingSn(q.sn);
-            ensureVerseVisible(q.sn, nextNis);
-            nextPreloadedKey.current = "";
-            if(nextNis < q.maxNis) {
-              const rec = getReciter();
-              const n2 = nextNis + 1;
-              const urlN2 = buildUrl(rec, q.sn, n2);
-              const b = bufferAudio();
-              if(b){ b.src = urlN2; b.load(); nextPreloadedKey.current = `${q.sn}-${n2}`; }
-            }
-          }).catch(() => { playVerse(q.sn, nextNis); }); // retry on fail
-        }
-      } else {
-        playVerse(q.sn, nextNis);
-      }
+      playVerse(q.sn, nextNis);
     } else {
       setPlayingKey("");
       playQueueRef.current = null;
@@ -174,7 +162,7 @@ export default function TafseerPage(){
 
 
   const handleTimeUpdate = () => {
-    const a = currentAudio();
+    const a = audioRef.current;
     if (!a) return;
     
     // Scrub bar
@@ -271,6 +259,10 @@ export default function TafseerPage(){
   const surah=surahForPage(pg);
   const juz=juzForPage(pg);
   const pq=useQuery({queryKey:["qp",pg],queryFn:()=>fetchPage(pg)});
+  const pqDataRef = useRef<any[] | null>(null);
+  useEffect(()=>{
+    pqDataRef.current = pq.data || null;
+  },[pq.data]);
   const colors=QBG[qTheme]||QBG.dark;
 
   useEffect(()=>{localStorage.setItem('q-theme',qTheme);},[qTheme]);
@@ -359,7 +351,9 @@ export default function TafseerPage(){
     }
 
     const url = buildUrl(rec, sn, nis);
+    setIsBuffering(true);
     a.src=url;
+    a.load();
     a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
     
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
@@ -373,12 +367,11 @@ export default function TafseerPage(){
   };
 
   const stopAudio=()=>{
-    audio1Ref.current?.pause();
-    if(audio1Ref.current){audio1Ref.current.currentTime=0;}
-    audio2Ref.current?.pause();
-    if(audio2Ref.current){audio2Ref.current.currentTime=0;}
+    audioRef.current?.pause();
+    if(audioRef.current){audioRef.current.currentTime=0;}
     nextPreloadedKey.current='';
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
+    setIsBuffering(false);
     if('mediaSession' in navigator)navigator.mediaSession.playbackState='none';
   };
 
@@ -493,9 +486,9 @@ export default function TafseerPage(){
     let confirmedIdx = 0;
     
     r.onresult=(e:any)=>{
-      if(!pq.data) return;
+      if(!pqDataRef.current) return;
       const idx=hifzIdxRef.current; // Always use ref for current index
-      const exp=pq.data[idx]; if(!exp) return;
+      const exp=pqDataRef.current[idx]; if(!exp) return;
       if(isAdvancingRef.current) return;
 
       let interimTranscript = '';
@@ -608,9 +601,9 @@ export default function TafseerPage(){
         setTimeout(()=>{
           confirmedIdx=0;
           setHifzIdx(prev=>{
-            const next=Math.min(prev+1,(pq.data?.length||1)-1);
+            const next=Math.min(prev+1,(pqDataRef.current?.length||1)-1);
             setTimeout(()=>{
-              const el=document.getElementById(`verse-${pq.data![next].sn}-${pq.data![next].nis}`);
+              const el=document.getElementById(`verse-${pqDataRef.current![next].sn}-${pqDataRef.current![next].nis}`);
               if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
             },200);
             isAdvancingRef.current=false;
@@ -640,20 +633,15 @@ export default function TafseerPage(){
     recRef.current=r;
     r.start();
     setRecording(true);
-  },[pq.data]); // removed hifzIdx from deps - we use ref instead
+  },[]); // removed hifzIdx and pq.data from deps - we use ref instead
 
   const stopHifz=useCallback(()=>{if(recRef.current){recRef.current.onend=null;try{recRef.current.stop();}catch{}recRef.current=null;}setRecording(false);},[]);
 
   useEffect(() => {
-    if (hifz) {
-      startHifz();
-    } else {
-      stopHifz();
-    }
     return () => {
       stopHifz();
     };
-  }, [hifz, startHifz, stopHifz]);
+  }, [stopHifz]);
   const reveal=(i:number)=>{
     if(!pq.data)return;
     const a=pq.data[i];
