@@ -990,68 +990,113 @@ export default function TafseerPage(){
           <div className="flex gap-1">
             <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">✓{Array.from(hifzRes.values()).filter(v=>v==="ok").length}</span>
             <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">✗{Array.from(hifzRes.values()).filter(v=>v==="err").length}</span>
-          </div></div>
-        {hifzFeedback&&<div className="mt-1 px-2 py-1 rounded-lg text-[11px] font-bold text-center animate-pulse" style={{background:hifzFeedback.type==='ok'?'rgba(34,197,94,0.2)':hifzFeedback.type==='wrong_verse'?'rgba(239,68,68,0.2)':'rgba(245,158,11,0.2)',color:hifzFeedback.type==='ok'?'#4ade80':hifzFeedback.type==='wrong_verse'?'#f87171':'#fbbf24'}}>{hifzFeedback.msg}{hifzFeedback.details&&<span className="block text-[10px] opacity-80 mt-0.5">{hifzFeedback.details.join(' • ')}</span>}</div>}
-        <div className="flex gap-1.5 mt-1">
-          <button onClick={()=>recording?stopHifz():startHifz()} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 ${recording?"bg-red-500 text-white animate-pulse":"bg-amber-500 text-white"}`}>
-            {recording?<><MicOff className="w-3 h-3"/>إيقاف</>:<><Mic className="w-3 h-3"/>ابدأ</>}</button>
-          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>كشف</button>
-          <button onClick={()=>setHifzIdx(prev=>Math.min(prev+1,(pq.data?.length||1)-1))} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>Skip</button>
+          </div>
         </div>
+        {hifzFeedback && (
+          <div className="mt-1 px-2 py-1 rounded-lg text-[11px] font-bold text-center animate-pulse"
+               style={{
+                 background: hifzFeedback.type === 'ok' ? 'rgba(34,197,94,0.2)' : hifzFeedback.type === 'wrong_verse' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
+                 color: hifzFeedback.type === 'ok' ? '#4ade80' : hifzFeedback.type === 'wrong_verse' ? '#f87171' : '#f59e0b'
+               }}>
+            {hifzFeedback.text}
+          </div>
+        )}
       </div>}
 
-      {/* ═══ MUSHAF ═══ */}
-      <div className="overflow-y-auto scrollbar-hide flex flex-col"
-        style={{height:'calc(100dvh - env(safe-area-inset-top,0px))', marginTop:(showUI?55:0)+(hifz&&showUI?46:0)}}
-        onTouchStart={onTS} onTouchEnd={onTE}>
-        {pq.isLoading?<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
-        :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p>فشل تحميل الصفحة</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة المحاولة</Button></div>
-        :<div className="flex-1 w-full max-w-4xl mx-auto px-4 md:px-12 relative min-h-full">
-            <div className={`flex flex-col pt-4 pb-8 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
+      {/* ═══ MAIN PAGE CONTAINER ═══ */}
+      {pq.isLoading ? (
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh]">
+          <Loader2 className="w-10 h-10 animate-spin text-primary opacity-60 mb-4" />
+          <p className="text-sm opacity-50" style={{color:colors.text}}>جاري تحميل الصفحة الشريفة...</p>
+        </div>
+      ) : (
+        <div onTouchStart={onTS} onTouchEnd={onTE} className="flex-1 overflow-y-auto w-full h-full" style={{
+          paddingTop: showUI ? 'calc(55px + env(safe-area-inset-top, 20px) + (hifz ? 48px : 0px))' : 'env(safe-area-inset-top, 0px)',
+          scrollBehavior: 'smooth'
+        }}>
+          <div className="flex-1 w-full max-w-2xl mx-auto px-4 md:px-8 relative min-h-full">
+            <div className={`flex flex-col pt-8 md:pt-16 pb-12 md:pb-20 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
               {groups.map((g,gi)=>{
-                const isShortPage = g.ayahs.length <= 8;
-                const fontClamp = isShortPage 
-                  ? 'clamp(25px, min(7.5vh, 9vw), 45px)' 
-                  : 'clamp(18px, min(4.8vh, 6.2vw), 36px)';
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
                   {/* Surah/Juz Header */}
-                  <div className="flex justify-between items-center mb-4 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
+                  <div className="flex justify-between items-center mb-6 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
                     <span>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
                     <span>الْجُزْءُ {juzForPage(pg).toLocaleString('ar-EG')}</span>
                   </div>
 
-                  {/* Surah Frame (Only for verse 1) */}
-                  {g.ayahs[0].nis===1&&<div className="text-center my-4 flex justify-center scale-110">
-                    <div className="relative px-12 py-3 min-w-[220px]">
-                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 60" preserveAspectRatio="none">
-                        <path d="M10 5 L190 5 L195 10 L195 50 L190 55 L10 55 L5 50 L5 10 Z" fill={colors.border+'10'} stroke={colors.border} strokeWidth="1.5"/>
-                        <circle cx="10" cy="30" r="3" fill={colors.border}/> <circle cx="190" cy="30" r="3" fill={colors.border}/>
+                  {/* Ornate Surah Frame (Only for verse 1) */}
+                  {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center scale-100">
+                    <div className="relative px-16 py-4 min-w-[280px] max-w-[360px] flex items-center justify-center">
+                      <svg className="absolute inset-0 w-full h-full text-amber-600/70 dark:text-amber-500/50" viewBox="0 0 400 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 30,5 L 370,5 C 385,5 395,15 395,35 C 395,55 385,65 370,65 L 30,65 C 15,65 5,55 5,35 C 5,15 15,5 30,5 Z" stroke="currentColor" strokeWidth="2.5" fill="currentColor" fillOpacity="0.04" />
+                        <path d="M 35,9 L 365,9 C 378,9 387,17 387,35 C 387,53 378,61 365,61 L 35,61 C 22,61 13,53 13,35 C 13,17 22,9 35,9 Z" stroke="currentColor" strokeWidth="0.75" strokeDasharray="3,3" />
+                        <path d="M 12,35 C 18,25 25,35 15,35" stroke="currentColor" strokeWidth="1.5" />
+                        <path d="M 12,35 C 18,45 25,35 15,35" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="20" cy="35" r="2" fill="currentColor" />
+                        <path d="M 388,35 C 382,25 375,35 385,35" stroke="currentColor" strokeWidth="1.5" />
+                        <path d="M 388,35 C 382,45 375,35 385,35" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="380" cy="35" r="2" fill="currentColor" />
+                        <path d="M 8,35 L 2,35 M 5,30 L 5,40" stroke="currentColor" strokeWidth="1.2" />
+                        <path d="M 392,35 L 398,35 M 395,30 L 395,40" stroke="currentColor" strokeWidth="1.2" />
                       </svg>
-                      <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(20px, 4.5vw, 26px)',color:colors.text, paddingTop:'2px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>                    </div>
+                      <span className="font-quran relative z-10 block pt-0.5" style={{fontSize:'clamp(20px, 4.8vw, 25px)', color:colors.text, fontWeight:'normal'}}>
+                        سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}
+                      </span>
+                    </div>
                   </div>}
                   
                   {/* Basmala */}
-                  {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center mt-2 mb-8" dir="rtl">
+                  {g.ayahs[0].nis===1&&g.sn!==9&&<div className="text-center my-3" dir="rtl">
                       <span onClick={()=>{if(!hifz){setSelVerse({sn:g.sn,nis:1,text:g.ayahs[0].orig});setShowOptions(true);}}}
-                      className="font-quran transition-all duration-200 rounded cursor-pointer leading-[2.5] block" 
+                      className="font-quran transition-all duration-200 rounded cursor-pointer block" 
                       style={{
-                        fontSize: 'clamp(28px, 6vw, 42px)',
+                        fontSize: isMobile ? 'clamp(17px, 4.8vw, 23px)' : 'clamp(19px, min(4.5vh, 5vw), 25px)',
+                        fontWeight: 'normal',
                         color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#16a34a' : colors.text,
                         background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
-                        padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 12px' : '0'
+                        padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 12px' : '0',
+                        lineHeight: '2'
                       }}>
                       بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
                       {g.sn===1 && (
-                        <span className="inline-flex items-center justify-center mx-1"
-                          style={{width:'1.6em',height:'1.6em',borderRadius:'50%',border:`1.5px solid ${(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e'}`,fontSize:'0.5em',color:(playingKey===`${g.sn}-1` && g.sn===1)?'#16a34a':'#c8a96e', verticalAlign:'middle', fontFamily:'Arial, sans-serif'}}>
-                          ١
+                        <span className="inline-flex items-center justify-center mx-1.5 relative" data-v="1"
+                          style={{
+                            width: '2.2em',
+                            height: '2.2em',
+                            verticalAlign: 'middle'
+                          }}>
+                          <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 2 L20.2 6.2 L26 6.2 L26 12 L30.2 16 L26 20.2 L26 26 L20.2 26 L16 30.2 L11.8 26 L6 26 L6 20.2 L1.8 16 L6 11.8 L6 6.2 L11.8 6.2 Z" 
+                                  stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.04" />
+                            <circle cx="16" cy="16" r="8" stroke="currentColor" strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                          </svg>
+                          <span className="relative z-10 font-bold" style={{
+                            fontSize: '0.45em',
+                            color: (playingKey===`${g.sn}-1` && g.sn===1) ? '#16a34a' : colors.text,
+                            fontFamily: 'Tajawal, sans-serif',
+                            lineHeight: '1',
+                            paddingTop: '1px'
+                          }}>
+                            ١
+                          </span>
                         </span>
                       )}
                     </span>
                   </div>}
                   
                   {/* Ayahs Grid — consistent font scaled to fit viewport height */}
-                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:fontClamp,lineHeight:'2.5',fontWeight:'bold',letterSpacing:'0.01em',color:colors.text,wordSpacing:'0.18em',textAlignLast:'center',direction:'rtl',textAlign:'justify'}}>
+                  <div className="text-justify font-quran select-text animate-fade-in" dir="rtl" style={{
+                    fontSize: isMobile ? 'clamp(18px, 5.2vw, 25px)' : 'clamp(20px, min(4.8vh, 5.2vw), 28px)',
+                    lineHeight: isMobile ? '2.15' : '2.55',
+                    fontWeight: 'normal',
+                    letterSpacing: '0.01em',
+                    color: colors.text,
+                    wordSpacing: isMobile ? '0.04em' : '0.12em',
+                    textAlignLast: 'center',
+                    direction: 'rtl',
+                    textAlign: 'justify',
+                    padding: '0 12px'
+                  }}>
                     {g.ayahs.map(a=>{
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
@@ -1075,11 +1120,24 @@ export default function TafseerPage(){
                                  transition: 'all 0.3s',
                                  marginRight: '2px',
                                  opacity: ml > 0 ? 1 : (isNext ? 0.5 : 0)
-                               }}>{w} </span>
+                                }}>{w} </span>
                             })}
-                            <span className="inline-flex items-center justify-center mx-1 opacity-50" data-v="1"
-                                style={{width:'1.6em',height:'1.6em',borderRadius:'50%',border:'1.5px solid #c8a96e',fontSize:'0.5em',color:'#c8a96e', verticalAlign:'middle', fontFamily:'Arial, sans-serif'}}>
-                                ؟
+                            <span className="inline-flex items-center justify-center mx-1 opacity-50 relative" data-v="1"
+                                style={{width:'2em',height:'2em', verticalAlign:'middle'}}>
+                                <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M16 2 L20.2 6.2 L26 6.2 L26 12 L30.2 16 L26 20.2 L26 26 L20.2 26 L16 30.2 L11.8 26 L6 26 L6 20.2 L1.8 16 L6 11.8 L6 6.2 L11.8 6.2 Z" 
+                                        stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.04" />
+                                  <circle cx="16" cy="16" r="8" stroke="currentColor" strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                                </svg>
+                                <span className="relative z-10 font-bold" style={{
+                                  fontSize: '0.45em',
+                                  color: colors.text,
+                                  fontFamily: 'Tajawal, sans-serif',
+                                  lineHeight: '1',
+                                  paddingTop: '1px'
+                                }}>
+                                  ؟
+                                </span>
                             </span>
                          </span>;
                       }
@@ -1095,10 +1153,28 @@ export default function TafseerPage(){
                           }}>
                           {a.text}
                         </span>
-                        {/* Quranic end-of-verse ornament with number — no circle, inline with text */}
-                        <span className="inline-flex items-center justify-center mx-1" data-v="1"
-                          style={{width:'1.6em',height:'1.6em',borderRadius:'50%',border:`1.5px solid ${isP?'#16a34a':'#c8a96e'}`,fontSize:'0.5em',color:isP?'#16a34a':bookmarks.has(k)?'#ec4899':'#c8a96e', opacity: hidden ? 0 : 1, verticalAlign:'middle', fontFamily:'Arial, sans-serif'}}>
-                          {hidden?'':a.nis.toLocaleString('ar-EG')}
+                        {/* Beautiful Traditional Gold End-of-Verse Ornament SVG with Arabic number */}
+                        <span className="inline-flex items-center justify-center mx-1 relative" data-v="1"
+                          style={{
+                            width: '2em',
+                            height: '2em',
+                            opacity: hidden ? 0 : 1,
+                            verticalAlign: 'middle'
+                          }}>
+                          <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 2 L20.2 6.2 L26 6.2 L26 12 L30.2 16 L26 20.2 L26 26 L20.2 26 L16 30.2 L11.8 26 L6 26 L6 20.2 L1.8 16 L6 11.8 L6 6.2 L11.8 6.2 Z" 
+                                  stroke={isP ? '#16a34a' : 'currentColor'} strokeWidth="1.2" fill={isP ? '#16a34a' : 'currentColor'} fillOpacity="0.04" />
+                            <circle cx="16" cy="16" r="8" stroke={isP ? '#16a34a' : 'currentColor'} strokeWidth="0.8" strokeDasharray="1.5,1.5" />
+                          </svg>
+                          <span className="relative z-10 font-bold" style={{
+                            fontSize: '0.45em',
+                            color: isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : colors.text,
+                            fontFamily: 'Tajawal, sans-serif',
+                            lineHeight: '1',
+                            paddingTop: '1px'
+                          }}>
+                            {hidden ? '' : a.nis.toLocaleString('ar-EG')}
+                          </span>
                         </span>
                         {SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#16a34a':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
                       </span>;
@@ -1141,8 +1217,9 @@ export default function TafseerPage(){
                 </div>
                 <p className="md:hidden text-xs opacity-40 font-bold" style={{color:colors.text}}>اسحب للتنقل بين الصفحات</p>
             </div>
-        </div>}
+        </div>
       </div>
+    )}
 
       {/* ═══ BOTTOM PLAYER ═══ */}
       {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card/90 backdrop-blur-md border-t border-border shadow-[0_-4px_25px_rgba(0,0,0,0.15)]" style={{paddingBottom:'env(safe-area-inset-bottom,6px)'}}>

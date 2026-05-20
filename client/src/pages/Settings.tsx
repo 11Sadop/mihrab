@@ -8,13 +8,32 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { cities, citiesByCountry, countryOrder } from "@/data/cities";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
+
+interface Rec{id:string;name:string;server:string;ev?:string;}
+const RECITERS:Rec[]=[
+  {id:"afasy",   name:"مشاري العفاسي",      server:"https://server8.mp3quran.net/afs",             ev:"Alafasy_128kbps"},
+  {id:"maher",   name:"ماهر المعيقلي",      server:"https://server12.mp3quran.net/maher",          ev:"Maher_AlMuaiqly_128kbps"},
+  {id:"sudais",  name:"عبدالرحمن السديس",   server:"https://server11.mp3quran.net/sds",            ev:"AbdurRahmaanAs-Sudais_192kbps"},
+  {id:"hosary",  name:"محمود خليل الحصري", server:"https://server13.mp3quran.net/husr",           ev:"Husary_128kbps"},
+  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",          ev:"Minshawy_Murattal_128kbps"},
+  {id:"basit",   name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",           ev:"Abdul_Basit_Murattal_192kbps"},
+  {id:"dosari",  name:"ياسر الدوسري",       server:"https://server11.mp3quran.net/yasser",         ev:"Yasser_Ad-Dussary_128kbps"},
+  {id:"ghamdi",  name:"سعد الغامدي",        server:"https://server7.mp3quran.net/s_gmd",          ev:"Sa_d_al-Ghaamidi_128kbps"},
+  {id:"shuraym", name:"سعود الشريم",        server:"https://server7.mp3quran.net/shur",           ev:"Sa_ood_ash-Shuraym_128kbps"},
+  {id:"ajamy",   name:"أحمد العجمي",        server:"https://server10.mp3quran.net/ajm",           ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
+  {id:"ayyoub",  name:"محمد أيوب",          server:"https://server8.mp3quran.net/ayyub",          ev:"Muhammad_Ayyoub_128kbps"},
+  {id:"juhany",  name:"عبدالله الجهني",     server:"https://server11.mp3quran.net/jhn",           ev:"Abdullah_Juhany_128kbps"},
+  {id:"tablawi", name:"محمد الطبلاوي",      server:"https://server6.mp3quran.net/tablawi",        ev:"Mohammad_al_Tablaway_128kbps"},
+];
+
+const SURAHS=[{id:1,n:"الفاتحة",c:7},{id:2,n:"البقرة",c:286},{id:3,n:"آل عمران",c:200},{id:4,n:"النساء",c:176},{id:5,n:"المائدة",c:120},{id:6,n:"الأنعام",c:165},{id:7,n:"الأعراف",c:206},{id:8,n:"الأنفال",c:75},{id:9,n:"التوبة",c:129},{id:10,n:"يونس",c:109},{id:11,n:"هود",c:123},{id:12,n:"يوسف",c:111},{id:13,n:"الرعد",c:43},{id:14,n:"إبراهيم",c:52},{id:15,n:"الحجر",c:99},{id:16,n:"النحل",c:128},{id:17,n:"الإسراء",c:111},{id:18,n:"الكهف",c:110},{id:19,n:"مريم",c:98},{id:20,n:"طه",c:135},{id:21,n:"الأنبياء",c:112},{id:22,n:"الحج",c:78},{id:23,n:"المؤمنون",c:118},{id:24,n:"النور",c:64},{id:25,n:"الفرقان",c:77},{id:26,n:"الشعراء",c:227},{id:27,n:"النمل",c:93},{id:28,n:"القصص",c:88},{id:29,n:"العنكبوت",c:69},{id:30,n:"الروم",c:60},{id:31,n:"لقمان",c:34},{id:32,n:"السجدة",c:30},{id:33,n:"الأحزاب",c:73},{id:34,n:"سبأ",c:54},{id:35,n:"فاطر",c:45},{id:36,n:"يس",c:83},{id:37,n:"الصافات",c:182},{id:38,n:"ص",c:88},{id:39,n:"الزمر",c:75},{id:40,n:"غافر",c:85},{id:41,n:"فصلت",c:54},{id:42,n:"الشورى",c:53},{id:43,n:"الزخرف",c:89},{id:44,n:"الدخان",c:59},{id:45,n:"الجاثية",c:37},{id:46,n:"الأحقاف",c:35},{id:47,n:"محمد",c:38},{id:48,n:"الفتح",c:29},{id:49,n:"الحجرات",c:18},{id:50,n:"ق",c:45},{id:51,n:"الذاريات",c:60},{id:52,n:"الطور",c:49},{id:53,n:"النجم",c:62},{id:54,n:"القمر",c:55},{id:55,n:"الرحمن",c:78},{id:56,n:"الواقعة",c:96},{id:57,n:"الحديد",c:29},{id:58,n:"المجادلة",c:22},{id:59,n:"الحشر",c:24},{id:60,n:"الممتحنة",c:13},{id:61,n:"الصف",c:14},{id:62,n:"الجمعة",c:11},{id:63,n:"المنافقون",c:11},{id:64,n:"التغابن",c:18},{id:65,n:"الطلاق",c:12},{id:66,n:"التحريم",c:12},{id:67,n:"الملك",c:30},{id:68,n:"القلم",c:52},{id:69,n:"الحاقة",c:52},{id:70,n:"المعارج",c:44},{id:71,n:"نوح",c:28},{id:72,n:"الجن",c:28},{id:73,n:"المزمل",c:20},{id:74,n:"المدثر",c:56},{id:75,n:"القيامة",c:40},{id:76,n:"الإنسان",c:31},{id:77,n:"المرسلات",c:50},{id:78,n:"النبأ",c:40},{id:79,n:"النازعات",c:46},{id:80,n:"عبس",c:42},{id:81,n:"التكوير",c:29},{id:82,n:"الانفطار",c:19},{id:83,n:"المطففين",c:36},{id:84,n:"الانشقاق",c:25},{id:85,n:"البروج",c:22},{id:86,n:"الطارق",c:17},{id:87,n:"الأعلى",c:19},{id:88,n:"الغاشية",c:26},{id:89,n:"الفجر",c:30},{id:90,n:"البلد",c:20},{id:91,n:"الشمس",c:15},{id:92,n:"الليل",c:21},{id:93,n:"الضحى",c:11},{id:94,n:"الشرح",c:8},{id:95,n:"التين",c:8},{id:96,n:"العلق",c:19},{id:97,n:"القدر",c:5},{id:98,n:"البينة",c:8},{id:99,n:"الزلزلة",c:8},{id:100,n:"العاديات",c:11},{id:101,n:"القارعة",c:11},{id:102,n:"التكاثر",c:8},{id:103,n:"العصر",c:3},{id:104,n:"الهمزة",c:9},{id:105,n:"الفيل",c:5},{id:106,n:"قريش",c:4},{id:107,n:"الماعون",c:7},{id:108,n:"الكوثر",c:3},{id:109,n:"الكافرون",c:6},{id:110,n:"النصر",c:3},{id:111,n:"المسد",c:5},{id:112,n:"الإخلاص",c:4},{id:113,n:"الفلق",c:5},{id:114,n:"الناس",c:6}];
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -29,6 +48,169 @@ export default function SettingsPage() {
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const { canInstall, isInstalled, promptInstall } = usePWAInstall();
   const [appTheme, setAppTheme] = useLocalStorage("app_theme", "emerald");
+
+  // iOS Safari check
+  const isIOS = useMemo(() => {
+    return typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(window.navigator.userAgent) && !(window as any).MSStream;
+  }, []);
+
+  const isStandalone = useMemo(() => {
+    return typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
+  }, []);
+
+  // Offline Text Downloader
+  const [isDownloadingText, setIsDownloadingText] = useState(false);
+  const [progressText, setProgressText] = useState(0);
+  const [currentTextPage, setCurrentTextPage] = useState(0);
+  const cancelTextDownload = useRef(false);
+
+  // Offline Audio Downloader
+  const [selectedReciter, setSelectedReciter] = useState("afasy");
+  const [selectedSurah, setSelectedSurah] = useState("1");
+  const [isDownloadingAudio, setIsDownloadingAudio] = useState(false);
+  const [progressAudio, setProgressAudio] = useState(0);
+  const [currentAudioAyah, setCurrentAudioAyah] = useState(0);
+  const [totalAudioAyahs, setTotalAudioAyahs] = useState(0);
+  const cancelAudioDownload = useRef(false);
+
+  const startDownloadingText = async () => {
+    setIsDownloadingText(true);
+    cancelTextDownload.current = false;
+    setProgressText(0);
+
+    const cleanDisplay = (t: string) => t.replace(/[\u06D6-\u06ED]/g, '');
+    const norm = (t: string) => t.replace(/\uFEFF/g, '');
+    const removeBismillah = (t: string): string => {
+      let s = t.replace(/\uFEFF/g, '').trim();
+      const BISM = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
+      if (s.startsWith(BISM)) {
+        return s.slice(BISM.length).trim();
+      }
+      return s;
+    };
+
+    for (let p = 1; p <= 604; p++) {
+      if (cancelTextDownload.current) {
+        setIsDownloadingText(false);
+        toast({
+          title: "تم إيقاف التنزيل",
+          description: "تم إيقاف تنزيل المصحف والتفسير يدوياً",
+        });
+        return;
+      }
+
+      setCurrentTextPage(p);
+      setProgressText(Math.round((p / 604) * 100));
+
+      try {
+        // Fetch and cache Quran Page
+        const qKey = `quran_page_${p}`;
+        if (!localStorage.getItem(qKey)) {
+          const qResp = await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
+          if (!qResp.ok) throw new Error(`Failed to fetch Quran page ${p}`);
+          const qData = await qResp.json();
+          const qRes = qData.data.ayahs.filter((a: any) => a.numberInSurah > 0).map((a: any) => {
+            let t = a.text;
+            if (a.numberInSurah === 1 && a.surah.number !== 9 && a.surah.number !== 1) {
+              t = removeBismillah(t);
+            }
+            return {
+              num: a.number,
+              nis: a.numberInSurah,
+              sn: a.surah.number,
+              sname: a.surah.name,
+              text: cleanDisplay(t.trim()),
+              orig: norm(a.text),
+              juz: a.juz
+            };
+          });
+          localStorage.setItem(qKey, JSON.stringify(qRes));
+        }
+
+        // Fetch and cache Tafseer Page
+        const tKey = `tafseer_page_ar.muyassar_${p}`;
+        if (!localStorage.getItem(tKey)) {
+          const tResp = await fetch(`https://api.alquran.cloud/v1/page/${p}/ar.muyassar`);
+          if (!tResp.ok) throw new Error(`Failed to fetch Tafseer page ${p}`);
+          const tData = await tResp.json();
+          const tRes = tData.data.ayahs.map((a: any) => ({
+            sn: a.surah.number,
+            nis: a.numberInSurah,
+            text: a.text
+          }));
+          localStorage.setItem(tKey, JSON.stringify(tRes));
+        }
+      } catch (e) {
+        console.error(`Error downloading page ${p}:`, e);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        p--; // Retry current page
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    setIsDownloadingText(false);
+    toast({
+      title: "اكتمل التنزيل!",
+      description: "تم تنزيل المصحف الشريف والتفسير الميسر كاملاً بنجاح",
+    });
+  };
+
+  const startDownloadingAudio = async () => {
+    const surahId = parseInt(selectedSurah);
+    const surahInfo = SURAHS.find(s => s.id === surahId);
+    if (!surahInfo) return;
+
+    setIsDownloadingAudio(true);
+    cancelAudioDownload.current = false;
+    setProgressAudio(0);
+    setTotalAudioAyahs(surahInfo.c);
+
+    const rec = RECITERS.find(r => r.id === selectedReciter) || RECITERS[0];
+    const cache = await caches.open('quran-audio-cache');
+    const pad3 = (n: number) => String(n).padStart(3, '0');
+
+    for (let nis = 1; nis <= surahInfo.c; nis++) {
+      if (cancelAudioDownload.current) {
+        setIsDownloadingAudio(false);
+        toast({
+          title: "تم إيقاف التنزيل",
+          description: "تم إيقاف تنزيل الصوت يدوياً",
+        });
+        return;
+      }
+
+      setCurrentAudioAyah(nis);
+      setProgressAudio(Math.round((nis / surahInfo.c) * 100));
+
+      const url = `${rec.server}/${pad3(surahId)}${pad3(nis)}.mp3`;
+
+      try {
+        const match = await cache.match(url);
+        if (!match) {
+          const response = await fetch(url);
+          if (response.ok) {
+            await cache.put(url, response);
+          } else {
+            throw new Error(`Failed to fetch audio for verse ${nis}`);
+          }
+        }
+      } catch (e) {
+        console.error(`Error downloading audio for surah ${surahId} ayah ${nis}:`, e);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        nis--; // Retry
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    setIsDownloadingAudio(false);
+    toast({
+      title: "اكتمل تنزيل التلاوة!",
+      description: `تم تنزيل سورة ${surahInfo.n} بصوت ${rec.name} بنجاح للتشغيل دون اتصال`,
+    });
+  };
+
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
@@ -404,6 +586,19 @@ export default function SettingsPage() {
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider text-right">الإشعارات</h3>
             </div>
             <div className="bg-card rounded-2xl border border-border overflow-hidden">
+              {isIOS && !isStandalone && (
+                <div className="p-4 bg-amber-500/10 border-b border-border/50 text-right" dir="rtl">
+                  <div className="flex items-start gap-2.5 flex-row-reverse">
+                    <span className="text-amber-600 text-lg">⚠️</span>
+                    <div className="flex-1">
+                      <p className="font-bold text-xs text-amber-600 dark:text-amber-500">تنبيه هام لمستخدمي الآيفون (iOS):</p>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                        لتشغيل إشعارات الأذان وتذكيرات الأذكار على جهازك، يجب أولاً إضافة التطبيق للشاشة الرئيسية (Safari {"->"} زر المشاركة {"->"} إضافة للشاشة الرئيسية) وتشغيله كـ تطبيق Standalone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="p-4 flex items-center justify-between border-b border-border/50 flex-row-reverse">
                 <div className="flex items-center gap-3 flex-row-reverse">
                   <div className="p-2 bg-amber-100 dark:bg-amber-900/20 text-amber-600 rounded-lg">
@@ -582,10 +777,138 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                 </>
-              )}
+               )}
             </div>
           </section>
         )}
+
+        {/* Offline Downloader Section */}
+        <section>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 px-2 text-right">التشغيل دون اتصال بالإنترنت</h3>
+          <div className="bg-card rounded-2xl border border-border overflow-hidden divide-y divide-border/50">
+            
+            {/* Mushaf & Tafseer Text Downloader Card */}
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-3 flex-row-reverse">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 rounded-lg">
+                  <Download className="w-5 h-5" />
+                </div>
+                <div className="text-right flex-1">
+                  <p className="font-medium text-sm">تحميل المصحف والتفسير كاملاً</p>
+                  <p className="text-xs text-muted-foreground">تنزيل صفحات المصحف الشريف الـ 604 والتفسير الميسر للقراءة دون إنترنت (~2.5 ميجابايت)</p>
+                </div>
+              </div>
+
+              {isDownloadingText ? (
+                <div className="space-y-2 text-right" dir="rtl">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">جاري تنزيل صفحة {currentTextPage} من 604...</span>
+                    <span className="font-bold text-primary">{progressText}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300 rounded-full" 
+                      style={{ width: `${progressText}%` }}
+                    />
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => cancelTextDownload.current = true}
+                  >
+                    إيقاف مؤقت
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  onClick={startDownloadingText} 
+                  className="w-full gap-2 flex items-center justify-center animate-pulse"
+                  variant="outline"
+                >
+                  <Download className="w-4 h-4" />
+                  بدء تحميل صفحات المصحف والتفسير
+                </Button>
+              )}
+            </div>
+
+            {/* Recitation Audio Downloader Card */}
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-3 flex-row-reverse">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 rounded-lg">
+                  <Volume2 className="w-5 h-5" />
+                </div>
+                <div className="text-right flex-1">
+                  <p className="font-medium text-sm">تحميل التلاوات الصوتية للسور</p>
+                  <p className="text-xs text-muted-foreground">اختر القارئ والسورة لتحميل التلاوة العذبة وتشغيلها دون اتصال بالإنترنت</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3" dir="rtl">
+                <div className="space-y-1 text-right">
+                  <label className="text-xs text-muted-foreground">القارئ</label>
+                  <Select value={selectedReciter} onValueChange={setSelectedReciter}>
+                    <SelectTrigger className="w-full text-right" data-testid="select-reciter-download">
+                      <SelectValue placeholder="اختر القارئ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RECITERS.map(r => (
+                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1 text-right">
+                  <label className="text-xs text-muted-foreground">السورة</label>
+                  <Select value={selectedSurah} onValueChange={setSelectedSurah}>
+                    <SelectTrigger className="w-full text-right" data-testid="select-surah-download">
+                      <SelectValue placeholder="اختر السورة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SURAHS.map(s => (
+                        <SelectItem key={s.id} value={s.id.toString()}>{s.n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {isDownloadingAudio ? (
+                <div className="space-y-2 text-right" dir="rtl">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">جاري تنزيل الآية {currentAudioAyah} من {totalAudioAyahs}...</span>
+                    <span className="font-bold text-primary">{progressAudio}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300 rounded-full" 
+                      style={{ width: `${progressAudio}%` }}
+                    />
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => cancelAudioDownload.current = true}
+                  >
+                    إيقاف التحميل
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  onClick={startDownloadingAudio} 
+                  className="w-full gap-2 flex items-center justify-center"
+                >
+                  <Download className="w-4 h-4" />
+                  تحميل السورة المختارة
+                </Button>
+              )}
+            </div>
+
+          </div>
+        </section>
+
 
         <AnimatePresence>
           {hasUnsavedChanges && (

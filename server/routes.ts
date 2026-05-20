@@ -213,6 +213,33 @@ export async function registerRoutes(
                 return res.status(400).json({ error: "معامل البحث مطلوب" });
             }
 
+            // Clean copy-pasted symbols, calligraphic characters, brackets, punctuation
+            const cleanQueryForSearch = (text: string): string => {
+                if (!text) return "";
+                return text
+                    .replace(/[\(\)\[\]\{\}«»"'`.,\/#!$%\^&\*;:{}=\-_~?؟]/g, " ")
+                    .replace(/[\uFDFA\uFDFB\u0610\u0611\u0612\u0613]/g, " ") // ﷺ, ؓ, etc.
+                    .replace(/\s+/g, " ")
+                    .trim();
+            };
+
+            const getFallbackQuery = (text: string): string => {
+                const ARABIC_STOP_WORDS = new Set([
+                    "من", "عن", "ان", "في", "على", "لا", "ما", "الى", "ثم", "انه", "كان", 
+                    "قال", "الله", "رسول", "صلي", "عليه", "وسلم", "يا", "ايها", "قد", "لقد",
+                    "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
+                ]);
+                const words = text.split(/\s+/).filter(w => w.length >= 2 && !ARABIC_STOP_WORDS.has(w));
+                if (words.length <= 4) return text;
+                const sortedWords = [...words].sort((a, b) => b.length - a.length);
+                return sortedWords.slice(0, 4).join(" ");
+            };
+
+            const cleanedSearchKey = cleanQueryForSearch(searchKey);
+            if (!cleanedSearchKey) {
+                return res.json({ results: [], total: 0 });
+            }
+
             // Translation helpers
             const gradeMap: Record<string, string> = {
                 'sahih': 'صحيح', 'hasan': 'حسن', 'daif': 'ضعيف', 'mawdu': 'موضوع',
@@ -244,7 +271,6 @@ export async function registerRoutes(
             const tlGrade = (g: string) => tl(g, gradeMap) || 'غير محدد';
             const tlField = (v: string) => tl(v, scholarMap);
 
-            let results: any[] = [];
             const HEADERS = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -252,106 +278,133 @@ export async function registerRoutes(
                 'Referer': 'https://dorar.net/',
             };
 
-            // ═══ STRATEGY 1: Dorar JSON API ═══
-            try {
-                const controller1 = new AbortController();
-                const t1 = setTimeout(() => controller1.abort(), 12000);
-                const apiUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(searchKey)}&st=a&xclude=0&page=1`;
-                const r1 = await fetch(apiUrl, { signal: controller1.signal, headers: { ...HEADERS, 'Accept': 'application/json, text/plain, */*' } });
-                clearTimeout(t1);
+            const executeDorarSearch = async (queryStr: string): Promise<any[]> => {
+                let list: any[] = [];
+                // ═══ STRATEGY 1: Dorar JSON API (Parallel Page 1 & Page 2) ═══
+                try {
+                    const controller1 = new AbortController();
+                    const t1 = setTimeout(() => controller1.abort(), 8000);
+                    const apiUrl1 = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(queryStr)}&st=a&xclude=0&page=1`;
+                    const apiUrl2 = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(queryStr)}&st=a&xclude=0&page=2`;
+                    
+                    const [r1, r2] = await Promise.all([
+                        fetch(apiUrl1, { signal: controller1.signal, headers: { ...HEADERS, 'Accept': 'application/json, text/plain, */*' } }).catch(() => null),
+                        fetch(apiUrl2, { signal: controller1.signal, headers: { ...HEADERS, 'Accept': 'application/json, text/plain, */*' } }).catch(() => null)
+                    ]);
+                    clearTimeout(t1);
 
-                if (r1.ok) {
-                    const data = await r1.json();
-                    if (data.ahadith?.result) {
-                        const html = data.ahadith.result;
-                        
-                        // Parse HTML - try div.hadith blocks first
-                        const divRx = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
-                        let m;
-                        while ((m = divRx.exec(html)) !== null && results.length < 50) {
-                            const block = m[1];
-                            const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
-                            const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
-                            const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
-                            const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
-                            const grdM = block.match(/الدرجة?\s*:\s*([^<\n]+)/i);
-                            if (txtM) {
-                                const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
-                                if (text.length > 10) results.push({
-                                    text, narrator: narM ? narM[1].replace(/<[^>]+>/g,'').trim() : '',
-                                    scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
-                                });
+                    const processResponse = async (resp: any) => {
+                        if (!resp || !resp.ok) return [];
+                        const data = await resp.json();
+                        let pageResults: any[] = [];
+                        if (data.ahadith?.result) {
+                            const html = data.ahadith.result;
+                            // Parse HTML - try div.hadith blocks first
+                            const divRx = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+                            let m;
+                            while ((m = divRx.exec(html)) !== null && pageResults.length < 50) {
+                                const block = m[1];
+                                const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
+                                const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
+                                const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
+                                const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                                const grdM = block.match(/الدرجة?\s*:\s*([^<\n]+)/i);
+                                if (txtM) {
+                                    const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
+                                    if (text.length > 10) pageResults.push({
+                                        text, narrator: narM ? narM[1].replace(/<[^>]+>/g,'').trim() : '',
+                                        scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
+                                    });
+                                }
+                            }
+                            
+                            // Fallback: split by الراوي
+                            if (pageResults.length === 0) {
+                                const parts = html.split(/الراوي\s*:\s*/gi);
+                                for (let i = 1; i < parts.length && pageResults.length < 50; i++) {
+                                    const info = parts[i];
+                                    const prev = parts[i-1];
+                                    const chunks = prev.split('>');
+                                    const text = (chunks[chunks.length-1]||'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
+                                    const narM = info.match(/^([^<\n,]+)/);
+                                    const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
+                                    const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                                    const grdM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
+                                    if (text.length > 10) pageResults.push({
+                                        text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
+                                        scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
+                                    });
+                                }
                             }
                         }
-                        
-                        // Fallback: split by الراوي
-                        if (results.length === 0) {
+                        // Structured data fallback
+                        if (pageResults.length === 0 && data.ahadith?.data) {
+                            return (data.ahadith.data||[]).map((h:any) => ({
+                                text: (h.hadith||h.text||'').replace(/<[^>]+>/g,'').trim(),
+                                narrator: (h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim(),
+                                scholar: tlField(h.mohadith||h.scholar||''), source: tlField(h.book||h.source||''),
+                                grade: tlGrade(h.grade||h.hukm||'')
+                            })).filter((h:any) => h.text.length > 5);
+                        }
+                        return pageResults;
+                    };
+
+                    const [res1, res2] = await Promise.all([
+                        processResponse(r1),
+                        processResponse(r2)
+                    ]);
+                    list = [...res1, ...res2];
+                } catch (e: any) { console.log("Dorar JSON API failed:", e.message); }
+
+                // ═══ STRATEGY 2: Dorar HTML Search Page Scraping ═══
+                if (list.length === 0) {
+                    try {
+                        const controller2 = new AbortController();
+                        const t2 = setTimeout(() => controller2.abort(), 8000);
+                        const htmlUrl = `https://dorar.net/hadith/search?q=${encodeURIComponent(queryStr)}&st=a&xclude=0`;
+                        const r2 = await fetch(htmlUrl, { signal: controller2.signal, headers: HEADERS });
+                        clearTimeout(t2);
+
+                        if (r2.ok) {
+                            const html = await r2.text();
+                            // Parse the search results page
                             const parts = html.split(/الراوي\s*:\s*/gi);
-                            for (let i = 1; i < parts.length && results.length < 50; i++) {
+                            for (let i = 1; i < parts.length && list.length < 50; i++) {
                                 const info = parts[i];
                                 const prev = parts[i-1];
+                                
+                                // Extract hadith text - look for the last text node before الراوي
                                 const chunks = prev.split('>');
-                                const text = (chunks[chunks.length-1]||'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
-                                const narM = info.match(/^([^<\n,]+)/);
+                                let text = '';
+                                for (let c = chunks.length - 1; c >= 0; c--) {
+                                    const cleaned = chunks[c].replace(/<[^>]+$/,'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
+                                    if (cleaned.length > 15 && /[\u0600-\u06FF]/.test(cleaned)) { text = cleaned; break; }
+                                }
+                                
+                                const narM = info.match(/^([^<\n,]{2,50})/);
                                 const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
                                 const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
                                 const grdM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
-                                if (text.length > 10) results.push({
+                                
+                                if (text.length > 10) list.push({
                                     text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
                                     scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
                                 });
                             }
                         }
-                    }
-                    // Structured data fallback
-                    if (results.length === 0 && data.ahadith?.data) {
-                        results = (data.ahadith.data||[]).map((h:any) => ({
-                            text: (h.hadith||h.text||'').replace(/<[^>]+>/g,'').trim(),
-                            narrator: (h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim(),
-                            scholar: tlField(h.mohadith||h.scholar||''), source: tlField(h.book||h.source||''),
-                            grade: tlGrade(h.grade||h.hukm||'')
-                        })).filter((h:any) => h.text.length > 5);
-                    }
+                    } catch (e: any) { console.log("Dorar HTML scrape failed:", e.message); }
                 }
-            } catch (e: any) { console.log("Dorar JSON API failed:", e.message); }
+                return list;
+            };
 
-            // ═══ STRATEGY 2: Dorar HTML Search Page Scraping ═══
-            if (results.length === 0) {
-                try {
-                    const controller2 = new AbortController();
-                    const t2 = setTimeout(() => controller2.abort(), 12000);
-                    const htmlUrl = `https://dorar.net/hadith/search?q=${encodeURIComponent(searchKey)}&st=a&xclude=0`;
-                    const r2 = await fetch(htmlUrl, { signal: controller2.signal, headers: HEADERS });
-                    clearTimeout(t2);
+            let results = await executeDorarSearch(cleanedSearchKey);
 
-                    if (r2.ok) {
-                        const html = await r2.text();
-                        // Parse the search results page
-                        const parts = html.split(/الراوي\s*:\s*/gi);
-                        for (let i = 1; i < parts.length && results.length < 50; i++) {
-                            const info = parts[i];
-                            const prev = parts[i-1];
-                            
-                            // Extract hadith text - look for the last text node before الراوي
-                            const chunks = prev.split('>');
-                            let text = '';
-                            for (let c = chunks.length - 1; c >= 0; c--) {
-                                const cleaned = chunks[c].replace(/<[^>]+$/,'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
-                                if (cleaned.length > 15 && /[\u0600-\u06FF]/.test(cleaned)) { text = cleaned; break; }
-                            }
-                            
-                            const narM = info.match(/^([^<\n,]{2,50})/);
-                            const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
-                            const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
-                            const grdM = info.match(/الدرجة?\s*:\s*([^<\n,]+)/i);
-                            
-                            if (text.length > 10) results.push({
-                                text, narrator: narM?narM[1].replace(/<[^>]+>/g,'').trim():'',
-                                scholar: tlField(schM?.[1]||''), source: tlField(srcM?.[1]||''), grade: tlGrade(grdM?.[1]||'')
-                            });
-                        }
-                    }
-                } catch (e: any) { console.log("Dorar HTML scrape failed:", e.message); }
+            // If a long query yields 0 results, run fallback search with top 4 significant keywords
+            const queryWords = cleanedSearchKey.split(/\s+/).filter(w => w.length > 0);
+            if (results.length === 0 && queryWords.length > 4) {
+                const fallbackQuery = getFallbackQuery(cleanedSearchKey);
+                console.log(`Running fallback query search on backend: "${fallbackQuery}"`);
+                results = await executeDorarSearch(fallbackQuery);
             }
 
             // ═══ STRATEGY 3: Sunnah.com API (English but translate) ═══
@@ -359,7 +412,7 @@ export async function registerRoutes(
                 try {
                     const controller3 = new AbortController();
                     const t3 = setTimeout(() => controller3.abort(), 8000);
-                    const sunnahUrl = `https://api.sunnah.com/v1/hadiths?q=${encodeURIComponent(searchKey)}&limit=20`;
+                    const sunnahUrl = `https://api.sunnah.com/v1/hadiths?q=${encodeURIComponent(cleanedSearchKey)}&limit=20`;
                     const r3 = await fetch(sunnahUrl, {
                         signal: controller3.signal,
                         headers: { 'X-API-Key': 'SqD712P3E82xnwOAEOkGd5JZH8s9wRR24TqNFvjk', ...HEADERS }
@@ -374,7 +427,7 @@ export async function registerRoutes(
                                     results.push({
                                         text: arabicBody.replace(/<[^>]+>/g,'').trim(),
                                         narrator: '', scholar: tlField(h.collection?.[0]?.name||''),
-                                        source: tlField(h.collection?.[0]?.name||''), grade: 'غير محدد'
+                                        source: tlField(h.collection?.[0]?.name||''), grade: 'غير مححدد'
                                     });
                                 }
                             }
@@ -400,7 +453,7 @@ export async function registerRoutes(
                 return true;
             });
 
-            console.log(`Hadith search "${searchKey}": ${results.length} results found`);
+            console.log(`Hadith search "${searchKey}" (Cleaned: "${cleanedSearchKey}"): ${results.length} results found`);
             res.json({ results, total: results.length });
         } catch (e: any) {
             console.error("Hadith verify error:", e.message);
