@@ -104,6 +104,32 @@ function calcTrustScore(grade: string, source: string): number {
     return score;
 }
 
+function calcRelevanceScore(
+    text: string,
+    narrator: string,
+    source: string,
+    grade: string,
+    normalizedQuery: string,
+    activeTokens: string[]
+): number {
+    const normalizedText = normalizeArabicText(text);
+    const haystack = normalizeArabicText(`${text} ${narrator} ${source} ${grade}`);
+    
+    if (haystack.includes(normalizedQuery)) {
+        return 1.0;
+    }
+    
+    if (activeTokens.length === 0) return 0.0;
+    
+    let matchCount = 0;
+    for (const token of activeTokens) {
+        if (normalizedText.includes(token)) {
+            matchCount++;
+        }
+    }
+    return matchCount / activeTokens.length;
+}
+
 function decodeGarbledDorarText(text: string): string {
     if (!text) return "";
     if (text.includes("Ø§Ù„") || text.includes("Ø") || text.includes("Ù") || text.includes("æ")) {
@@ -145,7 +171,11 @@ const fetchWithProxy = async (url: string): Promise<string | null> => {
 function cleanQuerySymbols(text: string): string {
     if (!text) return "";
     return text
-        .replace(/[«»"'"()\[\]{}*\-–_+=\/\\|؛،؟?.,:;!]/g, " ")
+        .replace(/[ًٌٍَُِّْـ]/g, "") // Strip Tashkeel (diacritics) first
+        .replace(/[\u0610\u0611\u0612\u0613\u0614\u0615\u0616\u0617\u0618\u0619\u061A]/g, "") // Quranic annotation marks
+        .replace(/[\uFDFA\uFDFB\uFDFC\uFDFD\uFE70-\uFEFF]/g, " ") // ﷺ ﷻ and Arabic presentation forms
+        .replace(/[\u0600-\u0605\u060C\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g, "") // Extended tashkeel & annotation
+        .replace(/[«»"'"`()[\]{}*\-–—_+=\/\\|؛،؟?.,:;!@#$%^&~<>]/g, " ") // Punctuation & symbols
         .replace(/\s+/g, " ")
         .trim();
 }
@@ -380,8 +410,9 @@ export default function HadithVerifyPage() {
         }
 
         const initialDeduped = removeDuplicates(localResults).sort((a, b) => {
-            if (b.trustScore !== a.trustScore) return b.trustScore - a.trustScore;
-            return b.relevanceScore - a.relevanceScore;
+            const scoreA = a.relevanceScore * 1000 + a.trustScore;
+            const scoreB = b.relevanceScore * 1000 + b.trustScore;
+            return scoreB - scoreA;
         });
 
         // 1. Optimistic Local Rendering - Set results immediately
@@ -484,15 +515,26 @@ export default function HadithVerifyPage() {
                 } catch {}
             }
 
-            const finalDeduped = removeDuplicates(merged).map((item) => ({
-                ...item,
-                trustScore: calcTrustScore(item.grade, item.source),
-                relevanceScore: (item as any).relevanceScore ?? 0.0,
-            }));
+            const finalDeduped = removeDuplicates(merged).map((item) => {
+                const relevance = calcRelevanceScore(
+                    item.text,
+                    item.narrator,
+                    item.source,
+                    item.grade,
+                    normalizedQuery,
+                    activeTokens
+                );
+                return {
+                    ...item,
+                    trustScore: calcTrustScore(item.grade, item.source),
+                    relevanceScore: relevance,
+                };
+            });
 
             const finalRanked = finalDeduped.sort((a, b) => {
-                if (b.trustScore !== a.trustScore) return b.trustScore - a.trustScore;
-                return b.relevanceScore - a.relevanceScore;
+                const scoreA = a.relevanceScore * 1000 + a.trustScore;
+                const scoreB = b.relevanceScore * 1000 + b.trustScore;
+                return scoreB - scoreA;
             });
 
             if (finalRanked.length > 0) {

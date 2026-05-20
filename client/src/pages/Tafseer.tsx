@@ -452,176 +452,203 @@ export default function TafseerPage(){
     const SR=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
     if(!SR){alert("المتصفح لا يدعم التعرف على الصوت. استخدم Chrome");return;}
     const r=new SR();
-    r.lang="ar-SA";
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    r.continuous=!isIOS;
+    r.lang="ar-SA"; // Saudi Arabic — closest to Quranic pronunciation
+    r.continuous=true;
     r.interimResults=true;
-    r.maxAlternatives=5;
+    r.maxAlternatives=10; // Maximum alternatives for best accuracy
     
+    // Normalize Arabic text for comparison (strip diacritics, unify letters)
     const normAr = (s:string) => s
-      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'')
-      .replace(/[أإآءٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
-      .replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/لله/g,'لله')
-      .replace(/ال/g,'ال').replace(/\s+/g, ' ').trim();
-
-    // Levenshtein distance for precise similarity
-    const levenshtein = (a:string, b:string):number => {
-      const m=a.length, n=b.length;
-      if(!m) return n; if(!n) return m;
-      const dp:number[][]=Array.from({length:m+1},(_,i)=>Array(n+1).fill(0));
-      for(let i=0;i<=m;i++) dp[i][0]=i;
-      for(let j=0;j<=n;j++) dp[0][j]=j;
-      for(let i=1;i<=m;i++) for(let j=1;j<=n;j++){
-        dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
-      }
-      return dp[m][n];
-    };
-    const wordSim = (a:string, b:string):number => {
-      if(a===b) return 1;
-      const maxLen=Math.max(a.length,b.length);
-      if(maxLen===0) return 1;
-      return 1 - levenshtein(a,b)/maxLen;
+      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF\u06E0\u06E2\u06E3\u06E5\u06E6\u06E8\u06EA\u06EB\u06EC\u06ED\u0640]/g,'')
+      .replace(/[أإآءٱ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/ى/g, 'ي')
+      .replace(/ؤ/g, 'و')
+      .replace(/ئ/g, 'ي')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Calculate word-level similarity with Arabic root awareness
+    const wordSimilarity = (a:string, b:string):number => {
+      if(a === b) return 1;
+      if(a.length < 2 || b.length < 2) return a===b ? 1 : 0;
+      if(a.includes(b) || b.includes(a)) return 0.88;
+      // Check first 4 chars (Arabic root is usually 3 chars)
+      const rootLen = Math.min(4, Math.min(a.length, b.length));
+      if(a.substring(0, rootLen) === b.substring(0, rootLen)) return 0.82;
+      if(a.substring(0, 3) === b.substring(0, 3)) return 0.75;
+      // Char overlap ratio
+      let matches = 0;
+      const shorter = a.length < b.length ? a : b;
+      const longer  = a.length >= b.length ? a : b;
+      for(const c of shorter) { if(longer.includes(c)) matches++; }
+      return matches / longer.length;
     };
     
-    let confirmedIdx = 0;
+    let allTranscripts:string[] = []; // Accumulate all heard words
+    let lastResultCount = 0;
+    let lastCheckedIdx = hifzIdxRef.current;
     
     r.onresult=(e:any)=>{
       if(!pqDataRef.current) return;
       const idx=hifzIdxRef.current; // Always use ref for current index
+      
+      // Auto-reset accumulated variables when the verse advances
+      if (idx !== lastCheckedIdx) {
+        allTranscripts = [];
+        lastResultCount = 0;
+        lastCheckedIdx = idx;
+      }
+      
       const exp=pqDataRef.current[idx]; if(!exp) return;
       if(isAdvancingRef.current) return;
 
-      let interimTranscript = '';
-      for(let i=e.resultIndex; i<e.results.length; i++) {
-        const res=e.results[i];
-        let best=res[0].transcript;
-        if(res.length>1){
-          const expN=normAr(exp.text);
-          let topScore=-1;
-          for(let j=0;j<res.length;j++){
-            const alt=normAr(res[j].transcript);
-            const altWords=alt.split(' ');
-            let sc=0; for(const w of altWords){ if(expN.includes(w)) sc++; }
-            if(sc>topScore){topScore=sc;best=res[j].transcript;}
-          }
-        }
-        if(res.isFinal) finalTranscriptRef.current += best + ' ';
-        else interimTranscript += best + ' ';
-      }
+      // Collect ALL results (not just latest) for better coverage
+      let fullTranscript = '';
+      let newWords:string[] = [];
       
-      const fullText = finalTranscriptRef.current + interimTranscript;
-      hifzTxtRef.current=fullText;
-      setRecTxt(fullText.split(' ').slice(-6).join(' '));
-
-      // Expected words (normalized)
-      const expWords=exp.text.split(' ').map((w:string)=>normAr(w)).filter((w:string)=>w.length>0);
-      // Spoken words (normalized)
-      const spokenWords=normAr(fullText).split(' ').filter((w:string)=>w.length>0);
-      
-      // Sequential matching: for each expected word in order, find matching spoken word
-      let spIdx=0; // pointer into spoken words
-      let newLevels:number[]=[];
-      let pronIssues:string[]=[];
-      let wrongIssues:string[]=[];
-      let seqMatched=0;
-      
-      for(let ei=0;ei<expWords.length;ei++){
-        const target=expWords[ei];
-        if(target.length<1){newLevels.push(1);seqMatched++;continue;}
-        
-        if (spIdx < spokenWords.length) {
-          let found=false;
-          // Search forward in spoken words (allow skipping up to 3 filler words)
-          for(let si=spIdx;si<Math.min(spIdx+4,spokenWords.length);si++){
-            const sim=wordSim(spokenWords[si],target);
-            if(sim>=0.55){
-              found=true;
-              spIdx=si+1;
-              seqMatched++;
-              if(sim>=0.85){
-                newLevels.push(1); // perfect
-              } else {
-                newLevels.push(2); // close but pronunciation issue
-                pronIssues.push(target);
-              }
-              break;
+      for(let i = 0; i < e.results.length; i++) {
+        const result = e.results[i];
+        // Check all alternatives for best match
+        let bestText = result[0].transcript;
+        if(result.length > 1) {
+          // Use the alternative that best matches expected verse
+          const expNorm = normAr(exp.text);
+          let bestScore = 0;
+          for(let j = 0; j < result.length; j++) {
+            const altNorm = normAr(result[j].transcript);
+            const words = altNorm.split(' ').filter((w:string) => w.length > 1);
+            const expWords = expNorm.split(' ').filter((w:string) => w.length > 1);
+            let score = 0;
+            for(const w of words) {
+              if(expWords.some((ew:string) => wordSimilarity(w, ew) > 0.6)) score++;
             }
+            if(score > bestScore) { bestScore = score; bestText = result[j].transcript; }
           }
-          if(!found) {
-             // The user said a word, but it didn't match the target. It's a mistake.
-             newLevels.push(3); // 3 = wrong word
-             wrongIssues.push(target);
-             // don't advance spIdx too fast, let them correct it
-             if (spIdx < spokenWords.length - 2) spIdx++; 
-          }
-        } else {
-          newLevels.push(0); // not matched yet (waiting for user)
         }
+        
+        if(result.isFinal || i >= lastResultCount) {
+          const words = normAr(bestText).split(' ').filter((w:string) => w.length > 1);
+          newWords.push(...words);
+        }
+        fullTranscript += bestText + ' ';
       }
       
-      setWordMatchLevels(newLevels);
-      const ratio=expWords.length>0?seqMatched/expWords.length:0;
-      const missedCount=newLevels.filter(l=>l===0||l===3).length;
-      const pronCount=newLevels.filter(l=>l===2).length;
-      const wrongCount=newLevels.filter(l=>l===3).length;
-      const endingWindow = expWords.slice(Math.max(0, expWords.length - 2));
-      const endingMatched = endingWindow.length > 0 && endingWindow.some((w) => spokenWords.some(sw=>wordSim(sw,w)>0.6));
-
-      if(wrongCount > 0) {
-        setHifzFeedback({type:'wrong_verse', msg:'يوجد خطأ في الكلمة', details:wrongIssues.slice(0,2)});
-        setHifzStatus('wrong');
-      } else if(pronIssues.length>0 && ratio>=0.4) {
-        setHifzFeedback({type:'wrong_pron', msg:'تنبيه في النطق', details:pronIssues.slice(0,2)});
-        setHifzStatus('pron');
-      } else if(ratio>0.15 && ratio<0.85){
-        setHifzFeedback({type:'ok', msg:`يستمع... ${Math.round(ratio*100)}%`});
+      // Add new words to accumulated list
+      if(newWords.length > 0) {
+        allTranscripts.push(...newWords);
       }
+      
+      lastResultCount = e.results.length;
+      hifzTxtRef.current = fullTranscript;
+      setRecTxt(fullTranscript.split(' ').slice(-6).join(' '));
 
-      // Verse completed: stricter rule for real correction
-      if(ratio>=0.90 && missedCount===0 && endingMatched && !isAdvancingRef.current){
-        isAdvancingRef.current=true;
-        const isPerfect=missedCount===0 && pronCount===0 && wrongCount===0;
+      // Compare accumulated words against expected verse
+      const originalWords = exp.text.split(' ');
+      const ew = originalWords.map((w:string) => normAr(w));
+      const spokenWords = allTranscripts.slice(-Math.max(ew.length * 2, 20)); // Use recent window
+      
+      // Word-by-word matching with similarity scoring
+      let matchedWords:string[] = [];
+      let wrongWords:string[] = [];
+      let matchedCount = 0;
+      let newMatchLevels:number[] = [];
+      
+      for(let wi = 0; wi < ew.length; wi++) {
+        const target = ew[wi];
+        if(target.length < 1) { newMatchLevels.push(1); continue; }
+        let bestMatch = 0;
+        let bestWord = '';
         
-        if(isPerfect){
-          setHifzFeedback({type:'ok', msg:`✅ ممتاز! أحسنت — آية ${exp.nis}`}); setHifzStatus('ok');
-        } else if(pronCount>0 && wrongCount===0){
-          setHifzFeedback({type:'wrong_pron', msg:`⚠️ جيد مع ملاحظات — آية ${exp.nis}`, details:pronIssues.slice(0,2)}); setHifzStatus('pron');
+        for(const said of spokenWords) {
+          const sim = wordSimilarity(said, target);
+          if(sim > bestMatch) { bestMatch = sim; bestWord = said; }
+        }
+        
+        if(bestMatch >= 0.7) {
+          matchedCount++;
+          matchedWords.push(target);
+          if(bestMatch < 0.95) {
+            newMatchLevels.push(2);
+            wrongWords.push(`"${target}" ← نطقت "${bestWord}"`);
+          } else {
+            newMatchLevels.push(1);
+          }
         } else {
-          setHifzFeedback({type:'ok', msg:`✅ أحسنت — آية ${exp.nis}`}); setHifzStatus('ok');
+          newMatchLevels.push(0);
+          wrongWords.push(`❌ "${target}"`);
+        }
+      }
+      setWordMatchLevels(newMatchLevels);
+      
+      const validEwCount = ew.filter((w:string)=>w.length>=1).length;
+      const completeRatio = validEwCount > 0 ? matchedCount / validEwCount : 0;
+      
+      // Show real-time feedback on progress
+      if(completeRatio > 0.2 && completeRatio < 0.6) {
+        setHifzFeedback({type:'ok', msg:`⏳ ${Math.round(completeRatio*100)}% من الآية...`});
+      }
+      
+      // Pronunciation errors detected (matched words but with differences)
+      if(wrongWords.length > 0 && completeRatio >= 0.4 && completeRatio < 0.6) {
+        setHifzFeedback({type:'wrong_pron', msg:'⚠️ تحقق من النطق', details:wrongWords.slice(0,3)});
+        setHifzStatus('pron');
+      }
+      
+      // ✅ Verse completed (70% match required — stricter, more accurate)
+      if(completeRatio >= 0.70 && !isAdvancingRef.current) {
+        isAdvancingRef.current = true;
+        
+        const hasErrors = wrongWords.length > 0;
+        const isPerfect = completeRatio >= 0.85 && wrongWords.filter(w=>w.startsWith('❌')).length === 0;
+        
+        if(isPerfect) {
+          setHifzFeedback({type:'ok', msg:'ممتاز! أحسنت ✅'});
+          setHifzStatus('ok');
+        } else if(hasErrors && wrongWords.some(w=>w.startsWith('❌'))) {
+          setHifzFeedback({type:'wrong_verse', msg:'⚠️ صحيح مع ملاحظات', details:wrongWords.filter(w=>w.startsWith('❌')).slice(0,3)});
+          setHifzStatus('pron');
+        } else {
+          setHifzFeedback({type:'ok', msg:'أحسنت ✅'});
+          setHifzStatus('ok');
         }
         
         playLocalSound('ok');
         const k=`${exp.sn}-${exp.nis}`;
-        setHifzRes(prev=>{const n=new Map(prev);n.set(k,isPerfect?'ok':'ok');return n;});
+        setHifzRes(prev=>{const n=new Map(prev);n.set(k, isPerfect ? 'ok' : 'ok');return n;});
         
-        // Show full verse text in word match
-        setWordMatchLevels(expWords.map(() => 1));
-        
-        // Auto-advance after 2 seconds (so user can see the verse)
+        // Auto-advance to next verse
         setTimeout(()=>{
-          confirmedIdx=0;
+          allTranscripts = []; // Reset accumulated words for next verse
+          lastResultCount = 0;
+          
           setHifzIdx(prev=>{
             const next=Math.min(prev+1,(pqDataRef.current?.length||1)-1);
             setTimeout(()=>{
               const el=document.getElementById(`verse-${pqDataRef.current![next].sn}-${pqDataRef.current![next].nis}`);
               if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
-            },200);
-            isAdvancingRef.current=false;
+            }, 200);
+            isAdvancingRef.current = false;
             return next;
           });
-          setHifzFeedback(null); setHifzStatus('none');
-          hifzTxtRef.current=''; setRecTxt(''); setWordMatchLevels([]);
-          finalTranscriptRef.current = ''; // Reset accumulation for the next verse
-          // Restart recognition fresh
-          try{r.stop();}catch{}
-          setTimeout(()=>{try{r.start();}catch{}},250);
-        },2000);
+          setHifzFeedback(null);
+          setHifzStatus('none');
+          hifzTxtRef.current = '';
+          setRecTxt('');
+          setWordMatchLevels([]);
+          
+          // Restart recognition fresh for new verse
+          try { r.stop(); } catch {}
+          setTimeout(() => { try { r.start(); } catch {} }, 300);
+        }, 1500);
       }
     };
 
     r.onerror=(e:any)=>{
-      if(e.error==='no-speech'||e.error==='audio-capture'||e.error==='network'){
-        setTimeout(()=>{try{r.start();}catch{}},500);
+      console.log('Speech error:', e.error);
+      // Auto-restart on non-fatal errors
+      if(e.error === 'no-speech' || e.error === 'audio-capture') {
+        setTimeout(() => { try { r.start(); } catch {} }, 500);
       }
     };
     r.onend=()=>{
@@ -636,6 +663,14 @@ export default function TafseerPage(){
   },[]); // removed hifzIdx and pq.data from deps - we use ref instead
 
   const stopHifz=useCallback(()=>{if(recRef.current){recRef.current.onend=null;try{recRef.current.stop();}catch{}recRef.current=null;}setRecording(false);},[]);
+
+  useEffect(() => {
+    if (hifz) {
+      startHifz();
+    } else {
+      stopHifz();
+    }
+  }, [hifz, startHifz, stopHifz]);
 
   useEffect(() => {
     return () => {
@@ -1011,8 +1046,15 @@ export default function TafseerPage(){
                  color: hifzFeedback.type === 'ok' ? '#4ade80' : hifzFeedback.type === 'wrong_verse' ? '#f87171' : '#f59e0b'
                }}>
             {hifzFeedback.msg}
+            {hifzFeedback.details&&<span className="block text-[10px] opacity-80 mt-0.5">{hifzFeedback.details.join(' • ')}</span>}
           </div>
         )}
+        <div className="flex gap-1.5 mt-1">
+          <button onClick={()=>recording?stopHifz():startHifz()} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 ${recording?"bg-red-500 text-white animate-pulse":"bg-amber-500 text-white"}`}>
+            {recording?<><MicOff className="w-3 h-3"/>إيقاف</>:<><Mic className="w-3 h-3"/>ابدأ</>}</button>
+          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>كشف</button>
+          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>تخطي</button>
+        </div>
       </div>}
 
       {/* ═══ MAIN PAGE CONTAINER ═══ */}

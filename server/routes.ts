@@ -284,24 +284,23 @@ export async function registerRoutes(
             const tlField = (v: string) => tl(v, scholarMap);
 
             const HEADERS = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'ar,en;q=0.9',
-                'Referer': 'https://dorar.net/',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
             };
 
             const executeDorarSearch = async (queryStr: string): Promise<any[]> => {
                 let list: any[] = [];
-                // ═══ STRATEGY 1: Dorar JSON API (Parallel Page 1 & Page 2) ═══
+                // ═══ STRATEGY 1: Dorar JSON API (Parallel Page 1, Page 2 & Page 3) ═══
                 try {
                     const controller1 = new AbortController();
                     const t1 = setTimeout(() => controller1.abort(), 8000);
                     const apiUrl1 = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(queryStr)}&st=a&xclude=0&page=1`;
                     const apiUrl2 = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(queryStr)}&st=a&xclude=0&page=2`;
+                    const apiUrl3 = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(queryStr)}&st=a&xclude=0&page=3`;
                     
-                    const [r1, r2] = await Promise.all([
+                    const [r1, r2, r3] = await Promise.all([
                         fetch(apiUrl1, { signal: controller1.signal, headers: { ...HEADERS, 'Accept': 'application/json, text/plain, */*' } }).catch(() => null),
-                        fetch(apiUrl2, { signal: controller1.signal, headers: { ...HEADERS, 'Accept': 'application/json, text/plain, */*' } }).catch(() => null)
+                        fetch(apiUrl2, { signal: controller1.signal, headers: { ...HEADERS, 'Accept': 'application/json, text/plain, */*' } }).catch(() => null),
+                        fetch(apiUrl3, { signal: controller1.signal, headers: { ...HEADERS, 'Accept': 'application/json, text/plain, */*' } }).catch(() => null)
                     ]);
                     clearTimeout(t1);
 
@@ -371,12 +370,14 @@ export async function registerRoutes(
                         return pageResults;
                     };
 
-                    const [res1, res2] = await Promise.all([
+                    const [res1, res2, res3] = await Promise.all([
                         processResponse(r1),
-                        processResponse(r2)
+                        processResponse(r2),
+                        processResponse(r3)
                     ]);
-                    list = [...res1, ...res2];
+                    list = [...res1, ...res2, ...res3];
                 } catch (e: any) { console.log("Dorar JSON API failed:", e.message); }
+
 
                 // ═══ STRATEGY 2: Dorar HTML Search Page Scraping ═══
                 if (list.length === 0) {
