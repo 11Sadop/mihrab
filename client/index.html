@@ -156,28 +156,7 @@
         href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
         rel="stylesheet">
 
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          let hasUnregistered = false;
-          for(let registration of registrations) {
-            registration.unregister();
-            hasUnregistered = true;
-          }
-          // If we unregistered something, force reload the page to get the new app
-          if (hasUnregistered && !window.location.search.includes('cleared')) {
-            window.location.href = window.location.pathname + '?cleared=true';
-          }
-        });
-      }
-      
-      // Also clear local cache storage
-      if ('caches' in window) {
-        caches.keys().then((names) => {
-          names.forEach(name => caches.delete(name));
-        });
-      }
-    </script>
+
     
   </head>
 
@@ -220,23 +199,7 @@
             }
             return false;
         };
-        // EMERGENCY CLEANUP
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function (regs) {
-                for (let reg of regs) { reg.unregister(); }
-                console.log('Unregistered all SWs');
-            });
-        }
-        if ('caches' in window) {
-            caches.keys().then(function (names) {
-                names.forEach(function (name) {
-                    if (name.indexOf('mihrab-app-v') !== -1 && name !== 'mihrab-app-v75') {
-                        console.log('Deleting cache: ' + name);
-                        caches.delete(name);
-                    }
-                });
-            });
-        }
+
     </script>
     <script type="module" src="/src/main.tsx?v=1776187966226"></script>
 </body>

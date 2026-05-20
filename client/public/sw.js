@@ -1,8 +1,11 @@
-const CACHE_NAME = 'mihrab-app-v70';
+const CACHE_NAME = 'mihrab-app-v76';
 const urlsToCache = [
+    '/',
+    '/index.html',
     '/manifest.json',
     '/icon-192.png',
-    '/icon-512.png'
+    '/icon-512.png',
+    '/KfgqpcHafsUthmanicScript.woff2'
 ];
 
 // ========== INSTALLATION ==========
