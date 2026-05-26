@@ -25,7 +25,7 @@ export default function AdhkarPage() {
 
   return (
     <div className="min-h-screen pb-32 bg-background">
-      <Header title="أذكار المسلم" />
+      <Header title="أذكار المسلم" showBack={true} />
       
       <main className="container max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pt-6 space-y-6">
         {/* Category Tabs */}

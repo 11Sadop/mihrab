@@ -9,7 +9,7 @@ interface Rec{id:string;name:string;server:string;ev?:string;}
 // FIXED: corrected everyayah folder names for reliable playback and fixed Maher speed issue
 const RECITERS:Rec[]=[
   {id:"afasy",   name:"مشاري العفاسي",      server:"https://server8.mp3quran.net/afs",             ev:"Alafasy_128kbps"},
-  {id:"maher",   name:"ماهر المعيقلي",      server:"https://server12.mp3quran.net/maher",          ev:"MaherAlMuaiqly128kbps"}, // TESTED & CONFIRMED: correct everyayah folder
+  {id:"maher",   name:"ماهر المعيقلي",      server:"https://server12.mp3quran.net/maher",          ev:"MaherAlMuaiqly128kbps"}, // Restored real Maher Al-Muaiqly recitation folder
   {id:"sudais",  name:"عبدالرحمن السديس",   server:"https://server11.mp3quran.net/sds",            ev:"Abdurrahmaan_As-Sudais_192kbps"},
   {id:"hosary",  name:"محمود خليل الحصري", server:"https://server13.mp3quran.net/husr",           ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",          ev:"Minshawy_Murattal_128kbps"},
@@ -55,12 +55,13 @@ function removeBismillah(t:string):string{
 const fetchPage=async(p:number)=>{
   const r=await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
   if(!r.ok)throw new Error("Fail");const d=await r.json();
-  return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
+    return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
     let t=a.text;
     if(a.numberInSurah===1&&a.surah.number!==9&&a.surah.number!==1){
       t=removeBismillah(t);
     }
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:cleanDisplay(t.trim()),orig:norm(a.text),juz:a.juz};
+    // Clean multiple space characters inside Uthmani text rendering to prevent browser typography gaps
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:cleanDisplay(t.trim()).replace(/\s+/g, ' '),orig:norm(a.text),juz:a.juz};
   });
 };
 
@@ -180,10 +181,10 @@ export default function TafseerPage(){
       // Swap active audio pointer!
       activeIndexRef.current = activeIndexRef.current === 1 ? 2 : 1;
       
-      // ===== CLEAR PAUSE BETWEEN VERSES (900ms for natural Tajweed breathing room) =====
+      // ===== Gaps fully removed to prevent natural breathing lag or pauses between verses =====
       setTimeout(() => {
         playVerse(q.sn, nextNis, true); // true = gapless transition using preloaded
-      }, 900);
+      }, 0);
     } else {
       setPlayingKey("");
       playQueueRef.current = null;
@@ -1145,7 +1146,7 @@ export default function TafseerPage(){
       {/* ═══ TOP BAR (Unified) ═══ */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-4" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
           <div className="flex items-center gap-2">
-            <a href="/" className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><ArrowRight className="w-4 h-4"/></a>
+            <button onClick={() => window.location.href = "/"} className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><ArrowRight className="w-4 h-4"/></button>
           </div>
           
           {/* Hifz Indicators HUD */}
