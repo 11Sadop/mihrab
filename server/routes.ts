@@ -428,14 +428,16 @@ export async function registerRoutes(
                 return list;
             };
 
-            // ═══ LOCAL DATABASE SEARCH (Primary Strategy) ═══
+            // ═══ COMBINED LOCAL DATABASE AND ONLINE DORAR SEARCH (Run concurrently for richness) ═══
             let results: any[] = [];
+            const localResults: any[] = [];
+            
+            // 1. Run local Postgres search
             try {
                 const { bukhariHadiths, muslimHadiths, verificationHadiths } = await import('../shared/schema');
                 const { db } = await import('./db');
                 const { ilike, and, sql } = await import('drizzle-orm');
 
-                // PostgreSQL-level Arabic diacritics stripping & letter unification helper
                 const pgNormalizeText = (col: any) => {
                     return sql`translate(
                         regexp_replace(${col}, '[ًٌٍَُِّْٰـ]', '', 'g'),
@@ -452,21 +454,22 @@ export async function registerRoutes(
                     "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
                 ]);
 
+                // Filter keywords strictly to ensure perfect keyword relevance to query
                 const keywords = cleanedSearchKey.split(/\s+/)
                     .map((w: string) => normalizeAr(w))
-                    .filter((w: string) => w.length >= 3 && !LOCAL_STOP_WORDS.has(w));
+                    .filter((w: string) => w.length >= 2 && !LOCAL_STOP_WORDS.has(w));
 
                 if (keywords.length > 0) {
                     const buildConditions = (textCol: any) => and(...keywords.map((kw: string) => ilike(pgNormalizeText(textCol), `%${kw}%`)));
 
                     const [bkResults, muResults, vhResults] = await Promise.all([
-                        db.select().from(bukhariHadiths).where(buildConditions(bukhariHadiths.text)).limit(20),
-                        db.select().from(muslimHadiths).where(buildConditions(muslimHadiths.text)).limit(20),
-                        db.select().from(verificationHadiths).where(buildConditions(verificationHadiths.text)).limit(20)
+                        db.select().from(bukhariHadiths).where(buildConditions(bukhariHadiths.text)).limit(15),
+                        db.select().from(muslimHadiths).where(buildConditions(muslimHadiths.text)).limit(15),
+                        db.select().from(verificationHadiths).where(buildConditions(verificationHadiths.text)).limit(15)
                     ]);
 
                     for (const h of bkResults) {
-                        results.push({
+                        localResults.push({
                             text: h.text,
                             narrator: '',
                             scholar: 'البخاري',
@@ -475,7 +478,7 @@ export async function registerRoutes(
                         });
                     }
                     for (const h of muResults) {
-                        results.push({
+                        localResults.push({
                             text: h.text,
                             narrator: '',
                             scholar: 'مسلم',
@@ -484,32 +487,35 @@ export async function registerRoutes(
                         });
                     }
                     for (const h of vhResults) {
-                        results.push({
+                        localResults.push({
                             text: h.text,
                             narrator: h.narrator || '',
-                            scholar: '',
+                            scholar: h.scholar || 'غير محدد',
                             source: h.source || '',
                             grade: h.status || 'غير محدد'
                         });
                     }
-                    console.log(`Local DB search: ${results.length} results (Bukhari: ${bkResults.length}, Muslim: ${muResults.length}, Verification: ${vhResults.length})`);
                 }
             } catch (e: any) {
                 console.log("Local DB search failed:", e.message);
             }
 
-            // ═══ EXTERNAL API FALLBACK (only if local search returned 0 results) ═══
-            if (results.length === 0) {
-                results = await executeDorarSearch(cleanedSearchKey);
-
-                // If a long query yields 0 results, run fallback search with top 4 significant keywords
+            // 2. Fetch from Dorar Al-Sunniya immediately (if online) and combine with local results
+            let onlineResults: any[] = [];
+            try {
+                onlineResults = await executeDorarSearch(cleanedSearchKey);
+                // Fallback search with top keywords if Dorar yielded 0 for long query
                 const queryWords = cleanedSearchKey.split(/\s+/).filter(w => w.length > 0);
-                if (results.length === 0 && queryWords.length > 4) {
+                if (onlineResults.length === 0 && queryWords.length > 4) {
                     const fallbackQuery = getFallbackQuery(cleanedSearchKey);
-                    console.log(`Running fallback query search on backend: "${fallbackQuery}"`);
-                    results = await executeDorarSearch(fallbackQuery);
+                    onlineResults = await executeDorarSearch(fallbackQuery);
                 }
+            } catch (e: any) {
+                console.log("Online Dorar search failed:", e.message);
             }
+
+            // Combine both local and online results
+            results = [...localResults, ...onlineResults];
 
             // ═══ STRATEGY 3: Sunnah.com API (English but translate) ═══
             if (results.length === 0) {

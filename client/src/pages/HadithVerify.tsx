@@ -131,8 +131,20 @@ function calcRelevanceScore(
     const normalizedText = normalizeArabicText(text);
     const haystack = normalizeArabicText(`${text} ${narrator} ${source} ${grade}`);
     
+    // Strict exact full phrase match yields highest score
     if (haystack.includes(normalizedQuery)) {
-        return 1.0;
+        return 5.0;
+    }
+    
+    // Check if at least 2 consecutive words from query match
+    const words = normalizedQuery.split(' ').filter(w => w.length >= 3);
+    if (words.length >= 2) {
+        for (let i = 0; i < words.length - 1; i++) {
+            const bigram = `${words[i]} ${words[i+1]}`;
+            if (normalizedText.includes(bigram)) {
+                return 3.0;
+            }
+        }
     }
     
     if (activeTokens.length === 0) return 0.0;
@@ -143,7 +155,10 @@ function calcRelevanceScore(
             matchCount++;
         }
     }
-    return matchCount / activeTokens.length;
+    
+    // Penalize disjoint token matching to prevent unrelated mixing results
+    const ratio = matchCount / activeTokens.length;
+    return ratio >= 0.5 ? ratio : 0.0;
 }
 
 function decodeGarbledDorarText(text: string): string {

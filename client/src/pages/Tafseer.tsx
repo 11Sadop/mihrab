@@ -196,8 +196,12 @@ export default function TafseerPage(){
   handleEndedRef.current = handleEnded;
 
 
-  // Helper: build audio URL — everyayah CDN primary (fastest/cached), mp3quran primary fallback
+  // Helper: build audio URL — mp3quran primary for normal sound speed (Maher, Sudais), everyayah as fallback
   const buildUrl = (rec: Rec, sn: number, nis: number) => {
+    // If الشيخ ماهر المعيقلي or السديس, use their high-quality unmodified official server directly for natural unaltered pitch
+    if (rec.id === "maher" || rec.id === "sudais") {
+      return `${rec.server}/${pad3(sn)}${pad3(nis)}.mp3`;
+    }
     if (rec.ev) {
       return `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nis)}.mp3`;
     }
@@ -766,6 +770,11 @@ export default function TafseerPage(){
       lastResultCount = e.results.length;
       hifzTxtRef.current = fullTranscript;
       setRecTxt(fullTranscript.split(' ').slice(-6).join(' '));
+      
+      // FIX: Push newly heard words into the allTranscripts accumulator
+      if (newWords.length > 0) {
+        allTranscripts.push(...newWords);
+      }
 
       // Compare accumulated words against expected verse
       const originalWords = exp.text.split(' ');
