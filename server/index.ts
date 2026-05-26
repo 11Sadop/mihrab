@@ -62,12 +62,29 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
+  // Periodic background check for prayer notifications (runs every 10 minutes)
+  // This solves iOS/PWA notification suspensions when completely closed
+  const startBackgroundPrayerProcessor = async () => {
+    try {
+      const { processPrayerNotifications } = await import("./cron-handler");
+      console.log("Running background prayer notifications processor...");
+      await processPrayerNotifications();
+    } catch (e) {
+      console.error("Error running background prayer notifications processor:", e);
+    }
+  };
+  
+  // Run once immediately on startup
+  startBackgroundPrayerProcessor();
+  // Schedule to run every 10 minutes
+  setInterval(startBackgroundPrayerProcessor, 10 * 60 * 1000);
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error("Express Error Handler:", err);
   });
 
   // importantly only setup vite in development and after
@@ -89,7 +106,6 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);

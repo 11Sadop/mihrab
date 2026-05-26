@@ -192,8 +192,8 @@ export async function registerRoutes(
         }
     });
 
-    // Cron endpoint for prayer notifications
-    app.get("/api/cron/process-prayers", async (req, res) => {
+    // Cron endpoint for prayer notifications (supports both old and new paths)
+    const cronHandler = async (req: any, res: any) => {
         try {
             await processPrayerNotifications();
             res.json({ success: true, message: "Prayer notifications processed" });
@@ -201,7 +201,9 @@ export async function registerRoutes(
             console.error('Error processing prayers:', e);
             res.status(500).json({ error: e.message });
         }
-    });
+    };
+    app.get("/api/cron/process-prayers", cronHandler);
+    app.get("/api/cron/prayer-notifications", cronHandler);
 
     // Hadith Verification via Dorar Al-Sunniya API
     app.get("/api/hadith/verify", async (req, res) => {
@@ -310,51 +312,53 @@ export async function registerRoutes(
                         let pageResults: any[] = [];
                         if (data.ahadith?.result) {
                             const html = decodeGarbledText(data.ahadith.result);
-                            const divRx = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
-                            let m;
-                            while ((m = divRx.exec(html)) !== null && pageResults.length < 50) {
-                                const block = m[1];
-                                const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
-                                const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
-                                const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
-                                const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
-                                let grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
+                            // 1. split-by-narrator first (primary)
+                            const parts = html.split(/الراوي\s*:\s*/gi);
+                            for (let i = 1; i < parts.length && pageResults.length < 50; i++) {
+                                const info = parts[i];
+                                const prev = parts[i-1];
+                                const chunks = prev.split('>');
+                                const text = (chunks[chunks.length-1]||'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
+                                const narM = info.match(/^([^<\n,]+)/);
+                                const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
+                                const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                                let grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
                                 if (!grdM) {
-                                    grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
+                                    grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
                                 }
-                                if (txtM) {
-                                    const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
-                                    if (text.length > 10) pageResults.push({
-                                        text: decodeGarbledText(text), 
-                                        narrator: decodeGarbledText(narM ? narM[1].replace(/<[^>]+>/g,'').trim() : ''),
-                                        scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
-                                        source: tlField(decodeGarbledText(srcM?.[1]||'')), 
-                                        grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
-                                    });
-                                }
+                                if (text.length > 10) pageResults.push({
+                                    text: decodeGarbledText(text), 
+                                    narrator: decodeGarbledText(narM?narM[1].replace(/<[^>]+>/g,'').trim():''),
+                                    scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
+                                    source: tlField(decodeGarbledText(srcM?.[1]||'')), 
+                                    grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
+                                });
                             }
                             
+                            // 2. Fallback to divRx if split-by-narrator yields no results
                             if (pageResults.length === 0) {
-                                const parts = html.split(/الراوي\s*:\s*/gi);
-                                for (let i = 1; i < parts.length && pageResults.length < 50; i++) {
-                                    const info = parts[i];
-                                    const prev = parts[i-1];
-                                    const chunks = prev.split('>');
-                                    const text = (chunks[chunks.length-1]||'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
-                                    const narM = info.match(/^([^<\n,]+)/);
-                                    const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
-                                    const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
-                                    let grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
+                                const divRx = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+                                let m;
+                                while ((m = divRx.exec(html)) !== null && pageResults.length < 50) {
+                                    const block = m[1];
+                                    const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
+                                    const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
+                                    const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
+                                    const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                                    let grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
                                     if (!grdM) {
-                                        grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
+                                        grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
                                     }
-                                    if (text.length > 10) pageResults.push({
-                                        text: decodeGarbledText(text), 
-                                        narrator: decodeGarbledText(narM?narM[1].replace(/<[^>]+>/g,'').trim():''),
-                                        scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
-                                        source: tlField(decodeGarbledText(srcM?.[1]||'')), 
-                                        grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
-                                    });
+                                    if (txtM) {
+                                        const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
+                                        if (text.length > 10) pageResults.push({
+                                            text: decodeGarbledText(text), 
+                                            narrator: decodeGarbledText(narM ? narM[1].replace(/<[^>]+>/g,'').trim() : ''),
+                                            scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
+                                            source: tlField(decodeGarbledText(srcM?.[1]||'')), 
+                                            grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -424,14 +428,87 @@ export async function registerRoutes(
                 return list;
             };
 
-            let results = await executeDorarSearch(cleanedSearchKey);
+            // ═══ LOCAL DATABASE SEARCH (Primary Strategy) ═══
+            let results: any[] = [];
+            try {
+                const { bukhariHadiths, muslimHadiths, verificationHadiths } = await import('../shared/schema');
+                const { db } = await import('./db');
+                const { ilike, and, sql } = await import('drizzle-orm');
 
-            // If a long query yields 0 results, run fallback search with top 4 significant keywords
-            const queryWords = cleanedSearchKey.split(/\s+/).filter(w => w.length > 0);
-            if (results.length === 0 && queryWords.length > 4) {
-                const fallbackQuery = getFallbackQuery(cleanedSearchKey);
-                console.log(`Running fallback query search on backend: "${fallbackQuery}"`);
-                results = await executeDorarSearch(fallbackQuery);
+                // PostgreSQL-level Arabic diacritics stripping & letter unification helper
+                const pgNormalizeText = (col: any) => {
+                    return sql`translate(
+                        regexp_replace(${col}, '[ًٌٍَُِّْٰـ]', '', 'g'),
+                        'أإآءٱةى',
+                        'aaaaاهي'
+                    )`;
+                };
+
+                const normalizeAr = (s: string) => s.replace(/[ًٌٍَُِّْـ]/g, '').replace(/[إأآءٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
+
+                const LOCAL_STOP_WORDS = new Set([
+                    "من", "عن", "ان", "في", "على", "لا", "ما", "الى", "ثم", "انه", "كان",
+                    "قال", "الله", "رسول", "صلي", "عليه", "وسلم", "يا", "ايها", "قد", "لقد",
+                    "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
+                ]);
+
+                const keywords = cleanedSearchKey.split(/\s+/)
+                    .map((w: string) => normalizeAr(w))
+                    .filter((w: string) => w.length >= 3 && !LOCAL_STOP_WORDS.has(w));
+
+                if (keywords.length > 0) {
+                    const buildConditions = (textCol: any) => and(...keywords.map((kw: string) => ilike(pgNormalizeText(textCol), `%${kw}%`)));
+
+                    const [bkResults, muResults, vhResults] = await Promise.all([
+                        db.select().from(bukhariHadiths).where(buildConditions(bukhariHadiths.text)).limit(20),
+                        db.select().from(muslimHadiths).where(buildConditions(muslimHadiths.text)).limit(20),
+                        db.select().from(verificationHadiths).where(buildConditions(verificationHadiths.text)).limit(20)
+                    ]);
+
+                    for (const h of bkResults) {
+                        results.push({
+                            text: h.text,
+                            narrator: '',
+                            scholar: 'البخاري',
+                            source: `صحيح البخاري - ${h.bookName || ''}`,
+                            grade: 'صحيح'
+                        });
+                    }
+                    for (const h of muResults) {
+                        results.push({
+                            text: h.text,
+                            narrator: '',
+                            scholar: 'مسلم',
+                            source: `صحيح مسلم - ${h.bookName || ''}`,
+                            grade: 'صحيح'
+                        });
+                    }
+                    for (const h of vhResults) {
+                        results.push({
+                            text: h.text,
+                            narrator: h.narrator || '',
+                            scholar: '',
+                            source: h.source || '',
+                            grade: h.status || 'غير محدد'
+                        });
+                    }
+                    console.log(`Local DB search: ${results.length} results (Bukhari: ${bkResults.length}, Muslim: ${muResults.length}, Verification: ${vhResults.length})`);
+                }
+            } catch (e: any) {
+                console.log("Local DB search failed:", e.message);
+            }
+
+            // ═══ EXTERNAL API FALLBACK (only if local search returned 0 results) ═══
+            if (results.length === 0) {
+                results = await executeDorarSearch(cleanedSearchKey);
+
+                // If a long query yields 0 results, run fallback search with top 4 significant keywords
+                const queryWords = cleanedSearchKey.split(/\s+/).filter(w => w.length > 0);
+                if (results.length === 0 && queryWords.length > 4) {
+                    const fallbackQuery = getFallbackQuery(cleanedSearchKey);
+                    console.log(`Running fallback query search on backend: "${fallbackQuery}"`);
+                    results = await executeDorarSearch(fallbackQuery);
+                }
             }
 
             // ═══ STRATEGY 3: Sunnah.com API (English but translate) ═══
@@ -487,6 +564,172 @@ export async function registerRoutes(
         } catch (e: any) {
             console.error("Hadith verify error:", e.message);
             res.json({ results: [], total: 0 });
+        }
+    });
+
+    // Hadith Explanation Endpoint
+    app.get("/api/hadith/explain", async (req, res) => {
+        try {
+            const hadithText = req.query.q as string;
+            if (!hadithText) {
+                return res.status(400).json({ error: "الحديث المطلوب شرحه مفقود" });
+            }
+
+            const normalize = (s: string) => s
+                .replace(/[ًٌٍَُِّْـ]/g, "")
+                .replace(/[إأآءٱ]/g, "ا")
+                .replace(/ة/g, "ه")
+                .replace(/ى/g, "ي")
+                .replace(/[\s]+/g, " ")
+                .trim()
+                .toLowerCase();
+
+            const cleanQuery = hadithText
+                .replace(/[ًٌٍَُِّْـ]/g, "")
+                .replace(/[\uFDFA\uFDFB\u0610\u0611\u0612\u0613]/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            const normQuery = normalize(cleanQuery);
+
+            // ═══ STRATEGY 1: Search local verificationHadiths table ═══
+            try {
+                const { verificationHadiths } = await import('../shared/schema');
+                const { db } = await import('./db');
+                const { ilike, or } = await import('drizzle-orm');
+                const allVH = await db.select().from(verificationHadiths);
+                
+                let bestMatch: any = null;
+                let bestScore = 0;
+                
+                for (const vh of allVH) {
+                    const normText = normalize(vh.text);
+                    const queryWords = normQuery.split(' ').filter((w: string) => w.length >= 3);
+                    let matched = 0;
+                    for (const qw of queryWords) {
+                        if (normText.includes(qw)) matched++;
+                    }
+                    const score = queryWords.length > 0 ? matched / queryWords.length : 0;
+                    if (score > bestScore && score >= 0.35) {
+                        bestScore = score;
+                        bestMatch = vh;
+                    }
+                }
+
+                if (bestMatch?.explanation && bestMatch.explanation.length > 30) {
+                    return res.json({
+                        explanation: bestMatch.explanation,
+                        source: bestMatch.source || '',
+                        grade: bestMatch.status || '',
+                        narrator: bestMatch.narrator || ''
+                    });
+                }
+            } catch (e) {
+                console.log("verificationHadiths search failed:", e);
+            }
+
+            // ═══ STRATEGY 2: Search Bukhari & Muslim local DB for matching hadith (keyword-based) ═══
+            try {
+                const { bukhariHadiths, muslimHadiths } = await import('../shared/schema');
+                const { db } = await import('./db');
+                const { ilike, and } = await import('drizzle-orm');
+
+                // Extract keywords for individual ILIKE conditions
+                const searchKeywords = cleanQuery.split(' ')
+                    .filter((w: string) => w.length >= 3);
+
+                if (searchKeywords.length > 0) {
+                    const buildExplainConditions = (textCol: any) => and(...searchKeywords.map((kw: string) => ilike(textCol, `%${kw}%`)));
+
+                    const [bk, mu] = await Promise.all([
+                        db.select().from(bukhariHadiths).where(buildExplainConditions(bukhariHadiths.text)).limit(1),
+                        db.select().from(muslimHadiths).where(buildExplainConditions(muslimHadiths.text)).limit(1)
+                    ]);
+
+                    const match = bk[0] || mu[0];
+                    if (match) {
+                        const isBukhari = !!bk[0];
+                        const imamName = isBukhari ? 'البخاري' : 'مسلم';
+                        const collectionName = isBukhari ? 'صحيح البخاري' : 'صحيح مسلم';
+                        const sourceName = `${collectionName} - ${match.bookName || ''}`;
+                        const explanation = `📚 المصدر: ${collectionName}
+📖 الكتاب: ${match.bookName || 'غير محدد'}
+🔢 رقم الحديث: ${match.hadithNumber || 'غير محدد'}
+✅ الحكم: صحيح
+
+هذا الحديث رواه الإمام ${imamName} في كتابه "${collectionName}" في "${match.bookName || ''}" (حديث رقم ${match.hadithNumber || ''}).
+
+الحديث من أصح الأحاديث وأوثقها، إذ ورد في ${collectionName}، وهو من أصح كتب الحديث عند أهل السنة والجماعة.
+
+📜 نص الحديث الكامل:
+${match.text}`;
+                        return res.json({ explanation, source: sourceName, grade: 'صحيح' });
+                    }
+                }
+            } catch (e) {
+                console.log("Local hadith DB search failed:", e);
+            }
+
+            // ═══ STRATEGY 3: Try sunnah.com API for context ═══
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 6000);
+                const searchWords = cleanQuery.split(' ').filter((w: string) => w.length >= 3).slice(0, 5).join(' ');
+                
+                const sunnahRes = await fetch(
+                    `https://api.sunnah.com/v1/hadiths?q=${encodeURIComponent(searchWords)}&limit=3`,
+                    {
+                        signal: controller.signal,
+                        headers: { 'X-API-Key': 'SqD712P3E82xnwOAEOkGd5JZH8s9wRR24TqNFvjk' }
+                    }
+                );
+                clearTimeout(timeout);
+
+                if (sunnahRes.ok) {
+                    const data = await sunnahRes.json();
+                    if (data.data?.length > 0) {
+                        const h = data.data[0];
+                        const arabicHadith = h.hadith?.find((t: any) => t.lang === 'ar');
+                        const englishHadith = h.hadith?.find((t: any) => t.lang === 'en');
+                        const collectionName = h.collection?.[0]?.name || '';
+                        const chapter = arabicHadith?.chapterNumber ? `الباب ${arabicHadith.chapterNumber}` : '';
+                        const chapterTitle = arabicHadith?.chapterTitle || '';
+
+                        if (collectionName || chapter) {
+                            const explanation = [
+                                collectionName ? `📚 المصدر: ${collectionName}` : '',
+                                chapterTitle ? `📖 الباب: ${chapterTitle}` : '',
+                                chapter ? `🔢 ${chapter}` : '',
+                                '',
+                                englishHadith?.body ? `📝 الترجمة الإنجليزية:\n${englishHadith.body.substring(0, 400)}...` : '',
+                            ].filter(Boolean).join('\n');
+
+                            if (explanation.trim().length > 20) {
+                                return res.json({ explanation: explanation.trim() });
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log("Sunnah.com API failed:", e);
+            }
+
+            // ═══ STRATEGY 4: Return a structured informational response ═══
+            return res.json({
+                explanation: `هذا الحديث غير متوفر شرحه التفصيلي في قاعدة بياناتنا حالياً.
+
+للاطلاع على شرح مفصل، يُنصح بـ:
+• زيارة موقع الدرر السنية: dorar.net
+• الرجوع إلى كتب شروح الحديث مثل فتح الباري لابن حجر، أو شرح النووي لصحيح مسلم
+• استخدام تطبيق "موسوعة الحديث" للبحث في الشروح
+
+نص الحديث الذي تبحث عنه:
+"${hadithText.substring(0, 200)}${hadithText.length > 200 ? '...' : ''}"`
+            });
+
+        } catch (e: any) {
+            console.error("Hadith explanation error:", e.message);
+            res.status(500).json({ error: e.message });
         }
     });
 

@@ -1,8 +1,13 @@
 import admin from 'firebase-admin';
 
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-    : undefined;
+let serviceAccount: any = undefined;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } catch (e) {
+        console.warn("Warning: FIREBASE_SERVICE_ACCOUNT is not a valid JSON string. Push notifications are disabled.");
+    }
+}
 
 if (!admin.apps.length && serviceAccount) {
     admin.initializeApp({

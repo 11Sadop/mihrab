@@ -103,11 +103,44 @@ self.addEventListener('fetch', (event) => {
     if (!url.protocol.startsWith('http')) return;
 
     if (url.pathname.startsWith('/api/')) {
+        const staticApiPaths = [
+            '/api/quran/surahs',
+            '/api/quran/reciters',
+            '/api/adhkar',
+            '/api/duas',
+            '/api/benefits/daily',
+            '/api/hadith/daily',
+            '/api/hadith/protection'
+        ];
+        const isStaticApi = staticApiPaths.some(path => url.pathname.startsWith(path));
+        
+        if (isStaticApi) {
+            event.respondWith(
+                caches.open(CACHE_NAME).then((cache) => {
+                    return cache.match(event.request).then((cachedResponse) => {
+                        const fetchPromise = fetch(event.request).then((networkResponse) => {
+                            if (networkResponse.ok) {
+                                cache.put(event.request, networkResponse.clone());
+                            }
+                            return networkResponse;
+                        }).catch(() => null);
+                        return cachedResponse || fetchPromise || new Response(JSON.stringify({ error: 'Offline cache mismatch' }), {
+                            status: 503,
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    });
+                })
+            );
+            return;
+        }
+
         event.respondWith(
             fetch(event.request).catch(() => {
-                return new Response(JSON.stringify({ error: 'Network error' }), {
-                    status: 503,
-                    headers: { 'Content-Type': 'application/json' }
+                return caches.match(event.request).then((cachedResponse) => {
+                    return cachedResponse || new Response(JSON.stringify({ error: 'Network error' }), {
+                        status: 503,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                 });
             })
         );

@@ -72,9 +72,23 @@ if ('serviceWorker' in navigator && isProduction) {
             // Send cached prayer times to SW on startup
             sendCachedPrayerTimesToSW();
 
-            // ===== FIX: Removed updatefound listener completely =====
-            // The browser handles updates automatically.
-            // Users will get new content on next visit without annoying popups.
+            // ===== Drive periodic notification checks from client =====
+            // Since setInterval in SW is unreliable (fires on every restart),
+            // we send CHECK_NOW from the client every 60 seconds instead.
+            // This only runs while the app is open - periodicSync handles background.
+            const sendCheckNow = () => {
+                if (!('Notification' in window) || Notification.permission !== 'granted') return;
+                try {
+                    const sw = registration.active || navigator.serviceWorker.controller;
+                    if (sw) sw.postMessage({ type: 'CHECK_NOW' });
+                } catch (e) { /* ignore */ }
+            };
+
+            // Check once on startup (after a short delay for SW to initialize)
+            setTimeout(sendCheckNow, 3000);
+
+            // Check every 60 seconds while app is open
+            setInterval(sendCheckNow, 60 * 1000);
 
         }).catch((error) => {
             console.log('SW registration failed:', error);

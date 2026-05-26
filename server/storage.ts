@@ -136,6 +136,40 @@ export class DatabaseStorage implements IStorage {
     }
 
     async seedData(): Promise<void> {
+        // Sync sequences for all tables with serial primary keys to avoid duplicate key violations
+        try {
+            const tables = [
+                'site_stats',
+                'page_visits',
+                'adhkar',
+                'daily_ward',
+                'duas',
+                'hadiths',
+                'benefits',
+                'quran_surahs',
+                'reciters',
+                'bukhari_hadiths',
+                'muslim_hadiths',
+                'verification_hadiths'
+            ];
+            for (const table of tables) {
+                try {
+                    await db.execute(sql.raw(`
+                        SELECT setval(
+                            pg_get_serial_sequence('${table}', 'id'),
+                            COALESCE((SELECT MAX(id) FROM ${table}), 0) + 1,
+                            false
+                        );
+                    `));
+                } catch (e: any) {
+                    // Ignore if sequence doesn't exist or table has no 'id' column
+                }
+            }
+            console.log("Database sequences synchronized successfully.");
+        } catch (error: any) {
+            console.error("Error synchronizing database sequences:", error.message);
+        }
+
         const existingHadiths = await db.select().from(hadiths).limit(1);
         if (existingHadiths.length === 0) {
             // Data seeding logic (abbreviated for brevity as it's static data)
@@ -144,23 +178,33 @@ export class DatabaseStorage implements IStorage {
     }
 
     async incrementVisitors(): Promise<number> {
-        const today = new Date().toISOString().split('T')[0];
-        await db.insert(siteStats)
-            .values({ key: `visitors_${today}`, value: 1 })
-            .onConflictDoUpdate({
-                target: siteStats.key,
-                set: { value: sql`${siteStats.value} + 1` }
-            });
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            await db.insert(siteStats)
+                .values({ key: `visitors_${today}`, value: 1 })
+                .onConflictDoUpdate({
+                    target: siteStats.key,
+                    set: { value: sql`${siteStats.value} + 1` }
+                });
 
-        const total = await db.insert(siteStats)
-            .values({ key: 'total_visitors', value: 1 })
-            .onConflictDoUpdate({
-                target: siteStats.key,
-                set: { value: sql`${siteStats.value} + 1` }
-            })
-            .returning({ value: siteStats.value });
+            const total = await db.insert(siteStats)
+                .values({ key: 'total_visitors', value: 1 })
+                .onConflictDoUpdate({
+                    target: siteStats.key,
+                    set: { value: sql`${siteStats.value} + 1` }
+                })
+                .returning({ value: siteStats.value });
 
-        return total[0].value;
+            return total[0]?.value || 0;
+        } catch (error: any) {
+            console.error("Error incrementing visitors:", error);
+            // Return a safe fallback count from the database if possible
+            try {
+                return await this.getVisitorCount();
+            } catch (innerError) {
+                return 0;
+            }
+        }
     }
 
     async getVisitorCount(): Promise<number> {
@@ -228,12 +272,26 @@ export class DatabaseStorage implements IStorage {
 
         const data = await query.limit(limit).offset(offset);
 
-        // Get total count separately (simplified)
+        // Get real total count from database
+        let totalCount = 0;
+        try {
+            if (bookNumber) {
+                const countResult = await db.select({ count: sql<number>`count(*)` }).from(bukhariHadiths).where(eq(bukhariHadiths.bookNumber, bookNumber)) as any;
+                totalCount = Number(countResult[0]?.count || 0);
+            } else if (search) {
+                const countResult = await db.select({ count: sql<number>`count(*)` }).from(bukhariHadiths).where(ilike(bukhariHadiths.text, `%${search}%`)) as any;
+                totalCount = Number(countResult[0]?.count || 0);
+            } else {
+                const countResult = await db.select({ count: sql<number>`count(*)` }).from(bukhariHadiths) as any;
+                totalCount = Number(countResult[0]?.count || 0);
+            }
+        } catch { totalCount = data.length; }
+
         const books = await this.getBukhariBooks();
 
         return {
             hadiths: data,
-            total: 1000, // Placeholder
+            total: totalCount || data.length,
             books
         };
     }
@@ -251,11 +309,27 @@ export class DatabaseStorage implements IStorage {
         }
 
         const data = await query.limit(limit).offset(offset);
+
+        // Get real total count from database
+        let totalCount = 0;
+        try {
+            if (bookNumber) {
+                const countResult = await db.select({ count: sql<number>`count(*)` }).from(muslimHadiths).where(eq(muslimHadiths.bookNumber, bookNumber)) as any;
+                totalCount = Number(countResult[0]?.count || 0);
+            } else if (search) {
+                const countResult = await db.select({ count: sql<number>`count(*)` }).from(muslimHadiths).where(ilike(muslimHadiths.text, `%${search}%`)) as any;
+                totalCount = Number(countResult[0]?.count || 0);
+            } else {
+                const countResult = await db.select({ count: sql<number>`count(*)` }).from(muslimHadiths) as any;
+                totalCount = Number(countResult[0]?.count || 0);
+            }
+        } catch { totalCount = data.length; }
+
         const books = await this.getMuslimBooks();
 
         return {
             hadiths: data,
-            total: 1000, // Placeholder
+            total: totalCount || data.length,
             books
         };
     }

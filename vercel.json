@@ -66,8 +66,8 @@
       ],
       "crons": [
                 {
-                              "path": "/api/cron/prayer-notifications",
-                              "schedule": "0 0 * * *"
+                              "path": "/api/cron/process-prayers",
+                              "schedule": "*/10 * * * *"
                 }
       ],
       "functions": {

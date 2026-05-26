@@ -70,6 +70,7 @@ interface HadithResult {
     scholar: string;
     source: string;
     grade: string;
+    explanation?: string;
 }
 
 interface RankedHadithResult extends HadithResult {
@@ -78,12 +79,14 @@ interface RankedHadithResult extends HadithResult {
 }
 
 function normalizeArabicText(text: string): string {
+    if (!text) return "";
     return text
         .toLowerCase()
-        .replace(/[إأآا]/g, "ا")
-        .replace(/ى/g, "ي")
+        .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF-\u06E8\u06EA-\u06ED\u0640]/g, "")
+        .replace(/[أإآٱء]/g, "ا")
         .replace(/ة/g, "ه")
-        .replace(/[ًٌٍَُِّْـ]/g, "")
+        .replace(/[ىئ]/g, "ي")
+        .replace(/ؤ/g, "و")
         .replace(/[^\u0600-\u06FF\s]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
@@ -102,6 +105,19 @@ function calcTrustScore(grade: string, source: string): number {
     if (grade.includes("حسن")) score += 30;
     if (grade.includes("ضعيف") || grade.includes("موضوع")) score -= 20;
     return score;
+}
+
+function deduceScholar(item: any): string {
+    const src = (item.source || "").toLowerCase();
+    if (src.includes("بخاري") || src.includes("bukhari")) return "البخاري";
+    if (src.includes("مسلم") || src.includes("muslim")) return "مسلم";
+    if (src.includes("ترمذي") || src.includes("tirmidhi")) return "الترمذي";
+    if (src.includes("نسائي") || src.includes("nasai")) return "النسائي";
+    if (src.includes("ابن ماجه") || src.includes("ibn majah")) return "ابن ماجه";
+    if (src.includes("أبو داود") || src.includes("abu dawud")) return "أبو داود";
+    if (src.includes("أحمد") || src.includes("ahmad")) return "أحمد (في المسند)";
+    if (src.includes("الألباني") || src.includes("albani")) return "الألباني";
+    return "غير محدد";
 }
 
 function calcRelevanceScore(
@@ -212,6 +228,41 @@ export default function HadithVerifyPage() {
     const [filterSahih, setFilterSahih] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     const [generatingIdx, setGeneratingIdx] = useState<number|null>(null);
+    const [explanations, setExplanations] = useState<Record<number, string>>({});
+    const [explationLoadings, setExplanationLoadings] = useState<Record<number, boolean>>({});
+    const [expandedIdxs, setExpandedIdxs] = useState<Record<number, boolean>>({});
+
+    const toggleExplanation = async (idx: number, hadith: HadithResult) => {
+        if (expandedIdxs[idx]) {
+            setExpandedIdxs(prev => ({ ...prev, [idx]: false }));
+            return;
+        }
+        
+        setExpandedIdxs(prev => ({ ...prev, [idx]: true }));
+        
+        if (explanations[idx] || hadith.explanation) {
+            return;
+        }
+        
+        setExplanationLoadings(prev => ({ ...prev, [idx]: true }));
+        try {
+            const res = await fetch(`/api/hadith/explain?q=${encodeURIComponent(hadith.text)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.explanation) {
+                    setExplanations(prev => ({ ...prev, [idx]: data.explanation }));
+                } else {
+                    setExplanations(prev => ({ ...prev, [idx]: "لم يتم العثور على شرح للحديث." }));
+                }
+            } else {
+                setExplanations(prev => ({ ...prev, [idx]: "حدث خطأ أثناء جلب الشرح." }));
+            }
+        } catch {
+            setExplanations(prev => ({ ...prev, [idx]: "حدث خطأ أثناء الاتصال بالخادم." }));
+        } finally {
+            setExplanationLoadings(prev => ({ ...prev, [idx]: false }));
+        }
+    };
 
     const shareHadithText = async (hadith: HadithResult) => {
         const text = `${hadith.text}\n\n📚 ${hadith.source || ''}\n⚖️ الدرجة: ${hadith.grade}\n\nمن تطبيق محراب 🕌\nhttps://mihrabapp.com/hadith-verify`;
@@ -284,55 +335,56 @@ export default function HadithVerifyPage() {
         const parseDorarHtml = (html: string): HadithResult[] => {
             const parsed: HadithResult[] = [];
             
-            // Strategy 1: Look for hadith divs
-            const divRx = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
-            let m;
-            while ((m = divRx.exec(html)) !== null && parsed.length < 50) {
-                const block = m[1];
-                const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
-                const narratorM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
-                const scholarM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
-                const sourceM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
-                let gradeM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
+            // Strategy 1: Split by الراوي (Primary)
+            const parts = html.split(/الراوي\s*:\s*/gi);
+            for (let i = 1; i < parts.length && parsed.length < 50; i++) {
+                const info = parts[i];
+                const prev = parts[i-1];
+                const chunks = prev.split('>');
+                const text = (chunks[chunks.length-1]||'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
+                const narratorM = info.match(/^([^<\n,]{2,60})/);
+                const scholarM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
+                const sourceM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                let gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
                 if (!gradeM) {
-                    gradeM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
+                    gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
                 }
-                if (txtM) {
-                    const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
-                    if (text.length > 10) parsed.push({
-                        text, 
-                        narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
-                        scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                        source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                        grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||'')
-                    });
+                if (text.length > 10) parsed.push({
+                    text, 
+                    narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
+                    scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                    source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                    grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||'')
+                });
+            }
+            
+            // Strategy 2: Fallback to divRx if Split-by-narrator yields no results
+            if (parsed.length === 0) {
+                const divRx = /<div[^>]*class="[^"]*hadith[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+                let m;
+                while ((m = divRx.exec(html)) !== null && parsed.length < 50) {
+                    const block = m[1];
+                    const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
+                    const narratorM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
+                    const scholarM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
+                    const sourceM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                    let gradeM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
+                    if (!gradeM) {
+                        gradeM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
+                    }
+                    if (txtM) {
+                        const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
+                        if (text.length > 10) parsed.push({
+                            text, 
+                            narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
+                            scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                            source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                            grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||'')
+                        });
+                    }
                 }
             }
             
-            // Strategy 2: Split by الراوي
-            if (parsed.length === 0) {
-                const parts = html.split(/الراوي\s*:\s*/gi);
-                for (let i = 1; i < parts.length && parsed.length < 50; i++) {
-                    const info = parts[i];
-                    const prev = parts[i-1];
-                    const chunks = prev.split('>');
-                    const text = (chunks[chunks.length-1]||'').replace(/<[^>]+>/g,'').replace(/&[^;]+;/g,' ').trim();
-                    const narratorM = info.match(/^([^<\n,]{2,60})/);
-                    const scholarM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
-                    const sourceM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
-                    let gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
-                    if (!gradeM) {
-                        gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
-                    }
-                    if (text.length > 10) parsed.push({
-                        text, 
-                        narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
-                        scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                        source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                        grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||'')
-                    });
-                }
-            }
             return parsed;
         };
 
@@ -340,9 +392,10 @@ export default function HadithVerifyPage() {
             ...hadithDatabase.map((item) => ({
                 text: item.text,
                 narrator: item.rawi || "",
-                scholar: item.explanation || "",
+                scholar: deduceScholar(item),
                 source: translateField(item.source || "قاعدة بيانات محلية"),
                 grade: translateGrade(item.status || ""),
+                explanation: item.explanation || "",
             })),
             ...sahihBukhariHadiths.map((item) => ({
                 text: item.text,
@@ -394,8 +447,15 @@ export default function HadithVerifyPage() {
                     }
                 }
                 overlapRatio = matchCount / activeTokens.length;
-                if (overlapRatio >= 0.40) {
-                    isMatch = true;
+                const wordCount = query.trim().split(/\s+/).length;
+                if (wordCount <= 2) {
+                    if (overlapRatio >= 0.50) {
+                        isMatch = true;
+                    }
+                } else {
+                    if (overlapRatio >= 0.40) {
+                        isMatch = true;
+                    }
                 }
             }
 
@@ -726,23 +786,43 @@ export default function HadithVerifyPage() {
 
                                     {/* Details */}
                                     <div className="border-t border-border pt-3 space-y-1 text-xs text-muted-foreground">
-                                        {hadith.narrator && (
-                                            <p>
-                                                <span className="font-medium">الراوي:</span>{" "}
-                                                {hadith.narrator}
-                                            </p>
-                                        )}
-                                        {hadith.scholar && (
-                                            <p>
-                                                <span className="font-medium">المحدث:</span>{" "}
-                                                {hadith.scholar}
-                                            </p>
-                                        )}
-                                        {hadith.source && (
-                                            <p>
-                                                <span className="font-medium">المصدر:</span>{" "}
-                                                {hadith.source}
-                                            </p>
+                                        <p>
+                                            <span className="font-medium">الراوي:</span>{" "}
+                                            {hadith.narrator || "غير محدد"}
+                                        </p>
+                                        <p>
+                                            <span className="font-medium">المحدث:</span>{" "}
+                                            {hadith.scholar || "غير محدد"}
+                                        </p>
+                                        <p>
+                                            <span className="font-medium">المصدر:</span>{" "}
+                                            {hadith.source || "غير محدد"}
+                                        </p>
+                                    </div>
+
+                                    {/* Collapsible Explanation Block */}
+                                    <div className="border-t border-dashed border-border pt-2 mt-2">
+                                        <button
+                                            onClick={() => toggleExplanation(index, hadith)}
+                                            className="w-full flex items-center justify-between text-xs font-semibold py-1 px-2 rounded bg-secondary/50 text-primary hover:bg-secondary transition-all"
+                                        >
+                                            <span>شرح الحديث الشريف</span>
+                                            <span className="text-[10px]">{expandedIdxs[index] ? "▲" : "▼"}</span>
+                                        </button>
+                                        
+                                        {expandedIdxs[index] && (
+                                            <div className="mt-2 p-3 bg-secondary/30 rounded-lg text-xs leading-relaxed text-foreground text-right border border-border/50 animate-in fade-in slide-in-from-top-1 duration-200" dir="rtl">
+                                                {hadith.explanation ? (
+                                                    hadith.explanation
+                                                ) : explationLoadings[index] ? (
+                                                    <div className="flex items-center gap-2 justify-center py-2 text-muted-foreground">
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        <span>جاري تحميل شرح الحديث من الدرر السنية...</span>
+                                                    </div>
+                                                ) : (
+                                                    explanations[index] || "لا يوجد شرح متوفر."
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                     {/* Share buttons */}

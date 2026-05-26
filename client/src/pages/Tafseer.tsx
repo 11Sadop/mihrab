@@ -6,21 +6,24 @@ import { Loader2, Search, X, Play, Pause, SkipForward, SkipBack, Mic, MicOff, Ch
 import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
-// FIXED: corrected everyayah folder names for reliable playback
+// FIXED: corrected everyayah folder names for reliable playback and fixed Maher speed issue
 const RECITERS:Rec[]=[
   {id:"afasy",   name:"مشاري العفاسي",      server:"https://server8.mp3quran.net/afs",             ev:"Alafasy_128kbps"},
-  {id:"maher",   name:"ماهر المعيقلي",      server:"https://server12.mp3quran.net/maher",          ev:"Maher_AlMuaiqly_128kbps"},
-  {id:"sudais",  name:"عبدالرحمن السديس",   server:"https://server11.mp3quran.net/sds",            ev:"AbdurRahmaanAs-Sudais_192kbps"},
+  {id:"maher",   name:"ماهر المعيقلي",      server:"https://server12.mp3quran.net/maher",          ev:"MaherAlMuaiqly128kbps"}, // TESTED & CONFIRMED: correct everyayah folder
+  {id:"sudais",  name:"عبدالرحمن السديس",   server:"https://server11.mp3quran.net/sds",            ev:"Abdurrahmaan_As-Sudais_192kbps"},
   {id:"hosary",  name:"محمود خليل الحصري", server:"https://server13.mp3quran.net/husr",           ev:"Husary_128kbps"},
   {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",          ev:"Minshawy_Murattal_128kbps"},
   {id:"basit",   name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",           ev:"Abdul_Basit_Murattal_192kbps"},
-  {id:"dosari",  name:"ياسر الدوسري",       server:"https://server11.mp3quran.net/yasser",         ev:"Yasser_Ad-Dussary_128kbps"},
-  {id:"ghamdi",  name:"سعد الغامدي",        server:"https://server7.mp3quran.net/s_gmd",          ev:"Sa_d_al-Ghaamidi_128kbps"},
-  {id:"shuraym", name:"سعود الشريم",        server:"https://server7.mp3quran.net/shur",           ev:"Sa_ood_ash-Shuraym_128kbps"},
+  {id:"dosari",  name:"ياسر الدوسري",       server:"https://server11.mp3quran.net/yasser",         ev:"Yasser_Ad-Dussary_128kbps"}, // Fixed folder name
+  {id:"ghamdi",  name:"سعد الغامدي",        server:"https://server7.mp3quran.net/s_gmd",          ev:"Ghamadi_40kbps"}, // Fixed folder name
+  {id:"shuraym", name:"سعود الشريم",        server:"https://server7.mp3quran.net/shur",           ev:"Saood_ash-Shuraym_128kbps"}, // Fixed folder name
   {id:"ajamy",   name:"أحمد العجمي",        server:"https://server10.mp3quran.net/ajm",           ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
   {id:"ayyoub",  name:"محمد أيوب",          server:"https://server8.mp3quran.net/ayyub",          ev:"Muhammad_Ayyoub_128kbps"},
-  {id:"juhany",  name:"عبدالله الجهني",     server:"https://server11.mp3quran.net/jhn",           ev:"Abdullah_Juhany_128kbps"},
+  {id:"juhany",  name:"عبدالله الجهني",     server:"https://server11.mp3quran.net/jhn",           ev:"Abdullaah_3awwaad_Al-Juhaynee_128kbps"}, // Fixed folder name
   {id:"tablawi", name:"محمد الطبلاوي",      server:"https://server6.mp3quran.net/tablawi",        ev:"Mohammad_al_Tablaway_128kbps"},
+  {id:"shatri",  name:"أبو بكر الشاطري",    server:"https://server11.mp3quran.net/shatri",         ev:"Abu_Bakr_Ash-Shaatree_128kbps"},
+  {id:"huthaify",name:"علي الحذيفي",        server:"https://server9.mp3quran.net/hthfi",           ev:"Hudhaify_128kbps"},
+  {id:"abbad",   name:"فارس عباد",          server:"https://server8.mp3quran.net/frs_a",           ev:"Fares_Abbad_64kbps"},
 ]
 
 const SURAHS=[{id:1,n:"الفاتحة",c:7},{id:2,n:"البقرة",c:286},{id:3,n:"آل عمران",c:200},{id:4,n:"النساء",c:176},{id:5,n:"المائدة",c:120},{id:6,n:"الأنعام",c:165},{id:7,n:"الأعراف",c:206},{id:8,n:"الأنفال",c:75},{id:9,n:"التوبة",c:129},{id:10,n:"يونس",c:109},{id:11,n:"هود",c:123},{id:12,n:"يوسف",c:111},{id:13,n:"الرعد",c:43},{id:14,n:"إبراهيم",c:52},{id:15,n:"الحجر",c:99},{id:16,n:"النحل",c:128},{id:17,n:"الإسراء",c:111},{id:18,n:"الكهف",c:110},{id:19,n:"مريم",c:98},{id:20,n:"طه",c:135},{id:21,n:"الأنبياء",c:112},{id:22,n:"الحج",c:78},{id:23,n:"المؤمنون",c:118},{id:24,n:"النور",c:64},{id:25,n:"الفرقان",c:77},{id:26,n:"الشعراء",c:227},{id:27,n:"النمل",c:93},{id:28,n:"القصص",c:88},{id:29,n:"العنكبوت",c:69},{id:30,n:"الروم",c:60},{id:31,n:"لقمان",c:34},{id:32,n:"السجدة",c:30},{id:33,n:"الأحزاب",c:73},{id:34,n:"سبأ",c:54},{id:35,n:"فاطر",c:45},{id:36,n:"يس",c:83},{id:37,n:"الصافات",c:182},{id:38,n:"ص",c:88},{id:39,n:"الزمر",c:75},{id:40,n:"غافر",c:85},{id:41,n:"فصلت",c:54},{id:42,n:"الشورى",c:53},{id:43,n:"الزخرف",c:89},{id:44,n:"الدخان",c:59},{id:45,n:"الجاثية",c:37},{id:46,n:"الأحقاف",c:35},{id:47,n:"محمد",c:38},{id:48,n:"الفتح",c:29},{id:49,n:"الحجرات",c:18},{id:50,n:"ق",c:45},{id:51,n:"الذاريات",c:60},{id:52,n:"الطور",c:49},{id:53,n:"النجم",c:62},{id:54,n:"القمر",c:55},{id:55,n:"الرحمن",c:78},{id:56,n:"الواقعة",c:96},{id:57,n:"الحديد",c:29},{id:58,n:"المجادلة",c:22},{id:59,n:"الحشر",c:24},{id:60,n:"الممتحنة",c:13},{id:61,n:"الصف",c:14},{id:62,n:"الجمعة",c:11},{id:63,n:"المنافقون",c:11},{id:64,n:"التغابن",c:18},{id:65,n:"الطلاق",c:12},{id:66,n:"التحريم",c:12},{id:67,n:"الملك",c:30},{id:68,n:"القلم",c:52},{id:69,n:"الحاقة",c:52},{id:70,n:"المعارج",c:44},{id:71,n:"نوح",c:28},{id:72,n:"الجن",c:28},{id:73,n:"المزمل",c:20},{id:74,n:"المدثر",c:56},{id:75,n:"القيامة",c:40},{id:76,n:"الإنسان",c:31},{id:77,n:"المرسلات",c:50},{id:78,n:"النبأ",c:40},{id:79,n:"النازعات",c:46},{id:80,n:"عبس",c:42},{id:81,n:"التكوير",c:29},{id:82,n:"الانفطار",c:19},{id:83,n:"المطففين",c:36},{id:84,n:"الانشقاق",c:25},{id:85,n:"البروج",c:22},{id:86,n:"الطارق",c:17},{id:87,n:"الأعلى",c:19},{id:88,n:"الغاشية",c:26},{id:89,n:"الفجر",c:30},{id:90,n:"البلد",c:20},{id:91,n:"الشمس",c:15},{id:92,n:"الليل",c:21},{id:93,n:"الضحى",c:11},{id:94,n:"الشرح",c:8},{id:95,n:"التين",c:8},{id:96,n:"العلق",c:19},{id:97,n:"القدر",c:5},{id:98,n:"البينة",c:8},{id:99,n:"الزلزلة",c:8},{id:100,n:"العاديات",c:11},{id:101,n:"القارعة",c:11},{id:102,n:"التكاثر",c:8},{id:103,n:"العصر",c:3},{id:104,n:"الهمزة",c:9},{id:105,n:"الفيل",c:5},{id:106,n:"قريش",c:4},{id:107,n:"الماعون",c:7},{id:108,n:"الكوثر",c:3},{id:109,n:"الكافرون",c:6},{id:110,n:"النصر",c:3},{id:111,n:"المسد",c:5},{id:112,n:"الإخلاص",c:4},{id:113,n:"الفلق",c:5},{id:114,n:"الناس",c:6}];
@@ -82,7 +85,13 @@ const TAFSEER_SOURCES=[
 ];
 
 export default function TafseerPage(){
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audio1Ref = useRef<HTMLAudioElement | null>(null);
+  const audio2Ref = useRef<HTMLAudioElement | null>(null);
+  const activeIndexRef = useRef<number>(1);
+  
+  const getActiveAudio = () => activeIndexRef.current === 1 ? audio1Ref.current : audio2Ref.current;
+  const getInactiveAudio = () => activeIndexRef.current === 1 ? audio2Ref.current : audio1Ref.current;
+
   const nextPreloadedKey = useRef<string>("");
   // Refs for event handlers to avoid stale closures
   const handleEndedRef = useRef<()=>void>(()=>{});
@@ -92,36 +101,62 @@ export default function TafseerPage(){
   const [isBuffering, setIsBuffering] = useState(false);
 
   useEffect(() => {
-    const a = new Audio();
-    audioRef.current = a;
+    const a1 = new Audio();
+    const a2 = new Audio();
+    audio1Ref.current = a1;
+    audio2Ref.current = a2;
     
-    // Use wrapper functions that call refs - so handlers always use latest version
-    const onEnded = () => handleEndedRef.current();
-    const onTimeUpdate = () => handleTimeUpdateRef.current();
-    const onError = () => handleErrRef.current();
-    const onWaiting = () => setIsBuffering(true);
-    const onPlaying = () => setIsBuffering(false);
-    const onCanPlay = () => setIsBuffering(false);
-    const onStalled = () => setIsBuffering(true);
+    const onEnded = (e: Event) => {
+      if (e.target !== getActiveAudio()) return;
+      handleEndedRef.current();
+    };
+    const onTimeUpdate = (e: Event) => {
+      if (e.target !== getActiveAudio()) return;
+      handleTimeUpdateRef.current();
+    };
+    const onError = (e: Event) => {
+      if (e.target !== getActiveAudio()) return;
+      handleErrRef.current();
+    };
+    const onWaiting = (e: Event) => {
+      if (e.target !== getActiveAudio()) return;
+      setIsBuffering(true);
+    };
+    const onPlaying = (e: Event) => {
+      if (e.target !== getActiveAudio()) return;
+      setIsBuffering(false);
+    };
+    const onCanPlay = (e: Event) => {
+      if (e.target !== getActiveAudio()) return;
+      setIsBuffering(false);
+    };
+    const onStalled = (e: Event) => {
+      if (e.target !== getActiveAudio()) return;
+      setIsBuffering(true);
+    };
     
-    a.addEventListener('ended', onEnded);
-    a.addEventListener('timeupdate', onTimeUpdate);
-    a.addEventListener('error', onError);
-    a.addEventListener('waiting', onWaiting);
-    a.addEventListener('playing', onPlaying);
-    a.addEventListener('canplay', onCanPlay);
-    a.addEventListener('stalled', onStalled);
-    a.preload = 'auto';
+    [a1, a2].forEach(a => {
+      a.addEventListener('ended', onEnded);
+      a.addEventListener('timeupdate', onTimeUpdate);
+      a.addEventListener('error', onError);
+      a.addEventListener('waiting', onWaiting);
+      a.addEventListener('playing', onPlaying);
+      a.addEventListener('canplay', onCanPlay);
+      a.addEventListener('stalled', onStalled);
+      a.preload = 'auto';
+    });
 
     return () => {
-      a.pause();
-      a.removeEventListener('ended', onEnded);
-      a.removeEventListener('timeupdate', onTimeUpdate);
-      a.removeEventListener('error', onError);
-      a.removeEventListener('waiting', onWaiting);
-      a.removeEventListener('playing', onPlaying);
-      a.removeEventListener('canplay', onCanPlay);
-      a.removeEventListener('stalled', onStalled);
+      [a1, a2].forEach(a => {
+        a.pause();
+        a.removeEventListener('ended', onEnded);
+        a.removeEventListener('timeupdate', onTimeUpdate);
+        a.removeEventListener('error', onError);
+        a.removeEventListener('waiting', onWaiting);
+        a.removeEventListener('playing', onPlaying);
+        a.removeEventListener('canplay', onCanPlay);
+        a.removeEventListener('stalled', onStalled);
+      });
     };
   }, []);
 
@@ -133,15 +168,22 @@ export default function TafseerPage(){
     new Audio(urls[type]).play().catch(()=>{});
   };
 
-  const currentAudio = () => audioRef.current;
-  const bufferAudio = () => null;
+  const currentAudio = () => getActiveAudio();
+  const bufferAudio = () => getInactiveAudio();
 
   const handleEnded = () => {
     const q = playQueueRef.current;
     if (q && q.nis < q.maxNis) {
       const nextNis = q.nis + 1;
       playQueueRef.current = { ...q, nis: nextNis };
-      playVerse(q.sn, nextNis);
+      
+      // Swap active audio pointer!
+      activeIndexRef.current = activeIndexRef.current === 1 ? 2 : 1;
+      
+      // ===== CLEAR PAUSE BETWEEN VERSES (900ms for natural Tajweed breathing room) =====
+      setTimeout(() => {
+        playVerse(q.sn, nextNis, true); // true = gapless transition using preloaded
+      }, 900);
     } else {
       setPlayingKey("");
       playQueueRef.current = null;
@@ -151,6 +193,7 @@ export default function TafseerPage(){
   };
   // Keep ref updated so event listener always calls latest version
   handleEndedRef.current = handleEnded;
+
 
   // Helper: build audio URL — everyayah CDN primary (fastest/cached), mp3quran primary fallback
   const buildUrl = (rec: Rec, sn: number, nis: number) => {
@@ -162,7 +205,7 @@ export default function TafseerPage(){
 
 
   const handleTimeUpdate = () => {
-    const a = audioRef.current;
+    const a = getActiveAudio();
     if (!a) return;
     
     // Scrub bar
@@ -244,8 +287,63 @@ export default function TafseerPage(){
   const [hifz,setHifz]=useState(false);
   const [recording,setRecording]=useState(false);
   const [hifzIdx,setHifzIdx]=useState(0);
+  
+  const playedErrorIndices = useRef<Set<number>>(new Set());
+  const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+
+  const startQuranDownload = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    setDownloadSuccess(false);
+    setDownloadProgress(0);
+
+    try {
+      const cache = await caches.open('mihrab-app-v77');
+      const totalPages = 604;
+      const batchSize = 15;
+
+      for (let start = 1; start <= totalPages; start += batchSize) {
+        const end = Math.min(start + batchSize - 1, totalPages);
+        const promises = [];
+
+        for (let p = start; p <= end; p++) {
+          const url = `https://api.alquran.cloud/v1/page/${p}/quran-uthmani`;
+          promises.push(
+            fetch(url)
+              .then(async (res) => {
+                if (res.ok) {
+                  await cache.put(url, res.clone());
+                  setDownloadProgress((prev) => prev + 1);
+                } else {
+                  throw new Error(`Page ${p} failed`);
+                }
+              })
+              .catch((err) => {
+                console.error(`Failed page download: ${p}`, err);
+              })
+          );
+        }
+
+        await Promise.all(promises);
+        await new Promise((resolve) => setTimeout(resolve, 80));
+      }
+      setDownloadSuccess(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   // Keep ref in sync with state so recognition handler always has latest value
-  useEffect(()=>{hifzIdxRef.current=hifzIdx;},[hifzIdx]);
+  useEffect(()=>{
+    hifzIdxRef.current=hifzIdx;
+    setWordMatchLevels([]);
+    playedErrorIndices.current.clear();
+  },[hifzIdx]);
+  
   const [hifzRes,setHifzRes]=useState<Map<string,"ok"|"err">>(new Map());
   const [recTxt,setRecTxt]=useState("");
   const [wordMatchLevels,setWordMatchLevels]=useState<number[]>([]);
@@ -296,6 +394,7 @@ export default function TafseerPage(){
     setWordMatchLevels([]);
     finalTranscriptRef.current = '';
     hifzTxtRef.current = '';
+    playedErrorIndices.current.clear();
   };
 
   const searchTimeout=useRef<any>(null);
@@ -332,7 +431,7 @@ export default function TafseerPage(){
     }
   };
 
-  const playVerse=(sn:number,nis:number)=>{
+  const playVerse=(sn:number,nis:number,isGaplessTransition:boolean=false)=>{
     const rec=getReciter();
     const a=currentAudio();
     if(!a)return;
@@ -350,11 +449,35 @@ export default function TafseerPage(){
       navigator.mediaSession.setActionHandler('nexttrack',()=>skipNext());
     }
 
-    const url = buildUrl(rec, sn, nis);
     setIsBuffering(true);
-    a.src=url;
-    a.load();
-    a.play().then(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}).catch(()=>{});
+    const url = buildUrl(rec, sn, nis);
+    
+    if (isGaplessTransition) {
+      if (a.src !== url) {
+        a.src = url;
+        a.load();
+      }
+      a.play().then(()=>{
+        setIsBuffering(false);
+        if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';
+      }).catch(()=>{
+        handleErr();
+      });
+    } else {
+      const inactive = getInactiveAudio();
+      if (inactive) {
+        inactive.pause();
+        inactive.currentTime = 0;
+        inactive.src = "";
+      }
+      nextPreloadedKey.current = "";
+      
+      a.src = url;
+      a.load();
+      a.play().then(()=>{
+        if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';
+      }).catch(()=>{});
+    }
     
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     ensureVerseVisible(sn,nis);
@@ -363,12 +486,14 @@ export default function TafseerPage(){
   const playSurahFrom=(sn:number,startNis:number)=>{
     const maxNis=SURAHS.find(s=>s.id===sn)?.c||1;
     playQueueRef.current={sn,nis:startNis,maxNis};
-    playVerse(sn,startNis);
+    playVerse(sn,startNis,false);
   };
 
   const stopAudio=()=>{
-    audioRef.current?.pause();
-    if(audioRef.current){audioRef.current.currentTime=0;}
+    audio1Ref.current?.pause();
+    if(audio1Ref.current){audio1Ref.current.currentTime=0;}
+    audio2Ref.current?.pause();
+    if(audio2Ref.current){audio2Ref.current.currentTime=0;}
     nextPreloadedKey.current='';
     setIsPlaying(false);setPlayingKey("");setPlayingSn(0);playQueueRef.current=null;
     setIsBuffering(false);
@@ -468,21 +593,54 @@ export default function TafseerPage(){
       .replace(/\s+/g, ' ')
       .trim();
     
-    // Calculate word-level similarity with Arabic root awareness
-    const wordSimilarity = (a:string, b:string):number => {
-      if(a === b) return 1;
-      if(a.length < 2 || b.length < 2) return a===b ? 1 : 0;
-      if(a.includes(b) || b.includes(a)) return 0.88;
-      // Check first 4 chars (Arabic root is usually 3 chars)
-      const rootLen = Math.min(4, Math.min(a.length, b.length));
-      if(a.substring(0, rootLen) === b.substring(0, rootLen)) return 0.82;
-      if(a.substring(0, 3) === b.substring(0, 3)) return 0.75;
-      // Char overlap ratio
-      let matches = 0;
-      const shorter = a.length < b.length ? a : b;
-      const longer  = a.length >= b.length ? a : b;
-      for(const c of shorter) { if(longer.includes(c)) matches++; }
-      return matches / longer.length;
+    // Strip prefixes (و، ف، ب، ل، ك) for flexible speech recognition matching
+    const cleanWord = (w: string): string => {
+      let cleaned = normAr(w);
+      if (cleaned.length > 3) {
+        const prefixes = ['و', 'ف', 'ب', 'ل', 'ك'];
+        if (prefixes.includes(cleaned[0])) {
+          cleaned = cleaned.substring(1);
+        }
+      }
+      return cleaned;
+    };
+
+    // Calculate standard Levenshtein distance
+    const getLevenshteinDistance = (a: string, b: string): number => {
+      const matrix: number[][] = [];
+      for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+      }
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1, // substitution
+              matrix[i][j - 1] + 1,     // insertion
+              matrix[i - 1][j] + 1      // deletion
+            );
+          }
+        }
+      }
+      return matrix[b.length][a.length];
+    };
+
+    // Calculate word-level similarity based on Levenshtein distance
+    const wordSimilarity = (a: string, b: string): number => {
+      const cleanA = cleanWord(a);
+      const cleanB = cleanWord(b);
+      
+      if (cleanA === cleanB) return 1.0;
+      if (cleanA.length === 0 || cleanB.length === 0) return 0.0;
+      
+      const dist = getLevenshteinDistance(cleanA, cleanB);
+      const maxLen = Math.max(cleanA.length, cleanB.length);
+      return 1.0 - (dist / maxLen);
     };
     
     let allTranscripts:string[] = []; // Accumulate all heard words
@@ -512,7 +670,6 @@ export default function TafseerPage(){
         // Check all alternatives for best match
         let bestText = result[0].transcript;
         if(result.length > 1) {
-          // Use the alternative that best matches expected verse
           const expNorm = normAr(exp.text);
           let bestScore = 0;
           for(let j = 0; j < result.length; j++) {
@@ -533,100 +690,197 @@ export default function TafseerPage(){
         }
         fullTranscript += bestText + ' ';
       }
-      
-      // Add new words to accumulated list
-      if(newWords.length > 0) {
-        allTranscripts.push(...newWords);
+
+      // ═══ CHECK FOR "قد قريتها" COMMAND (go back to previous verse) ═══
+      const fullNorm = normAr(fullTranscript.trim());
+      const GO_BACK_PHRASES = ['قد قريتها', 'قريتها', 'قد قراتها', 'قراتها', 'قرأتها', 'قد قرأتها'];
+      const wantsGoBack = GO_BACK_PHRASES.some(phrase => fullNorm.includes(normAr(phrase)));
+      if (wantsGoBack && !isAdvancingRef.current) {
+        isAdvancingRef.current = true;
+        allTranscripts = [];
+        lastResultCount = 0;
+        setHifzFeedback({type: 'ok', msg: '↩️ رجعنا للآية السابقة'});
+        setHifzStatus('ok');
+        setHifzIdx(prev => {
+          const prevIdx = Math.max(0, prev - 1);
+          setTimeout(() => {
+            const el = document.getElementById(`verse-${pqDataRef.current![prevIdx].sn}-${pqDataRef.current![prevIdx].nis}`);
+            if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'});
+          }, 200);
+          isAdvancingRef.current = false;
+          return prevIdx;
+        });
+        setWordMatchLevels([]);
+        hifzTxtRef.current = '';
+        setRecTxt('');
+        try { r.stop(); } catch {}
+        setTimeout(() => { try { r.start(); } catch {} }, 300);
+        return;
       }
       
+      // ═══ SMART JUMP: detect if spoken text matches a DIFFERENT verse anywhere on the page ═══
+      // Use case: "اذا قرأت اية قرأتها قبل يرجع لك" - even if 60 verses away
+      if (!isAdvancingRef.current && newWords.length >= 3 && pqDataRef.current) {
+        const currentIdx = hifzIdxRef.current;
+        let jumpTargetIdx = -1;
+        let bestJumpScore = 0;
+
+        for (let vi = 0; vi < pqDataRef.current.length; vi++) {
+          if (vi === currentIdx || vi === currentIdx + 1) continue; // Skip current and normal next
+          const v = pqDataRef.current[vi];
+          const verseWords = normAr(v.text).split(' ').filter((w: string) => w.length >= 2);
+          const spokenFiltered = newWords.filter((w: string) => w.length >= 2);
+          if (spokenFiltered.length < 2) continue;
+
+          let matched = 0;
+          for (const sw of spokenFiltered) {
+            if (verseWords.some((vw: string) => wordSimilarity(sw, vw) >= 0.75)) matched++;
+          }
+          const score = matched / Math.max(spokenFiltered.length, 1);
+
+          if (score >= 0.60 && matched >= 3 && score > bestJumpScore) {
+            bestJumpScore = score;
+            jumpTargetIdx = vi;
+          }
+        }
+
+        if (jumpTargetIdx !== -1) {
+          isAdvancingRef.current = true;
+          allTranscripts = [];
+          lastResultCount = 0;
+          const jumpVerse = pqDataRef.current[jumpTargetIdx];
+          const direction = jumpTargetIdx < currentIdx ? '↩️ رجعنا للآية' : '⏩ تخطينا للآية';
+          setHifzFeedback({type: 'ok', msg: `${direction} (${jumpVerse.nis})`});
+          setHifzStatus('ok');
+          setHifzIdx(jumpTargetIdx);
+          setWordMatchLevels([]);
+          hifzTxtRef.current = '';
+          setRecTxt('');
+          try { r.stop(); } catch {}
+          setTimeout(() => { try { r.start(); } catch {} }, 300);
+          return;
+        }
+      }
+
       lastResultCount = e.results.length;
       hifzTxtRef.current = fullTranscript;
       setRecTxt(fullTranscript.split(' ').slice(-6).join(' '));
 
       // Compare accumulated words against expected verse
       const originalWords = exp.text.split(' ');
-      const ew = originalWords.map((w:string) => normAr(w));
+      const ew = originalWords.map((w: string) => normAr(w));
       const spokenWords = allTranscripts.slice(-Math.max(ew.length * 2, 20)); // Use recent window
-      
-      // Word-by-word matching with similarity scoring
-      let matchedWords:string[] = [];
-      let wrongWords:string[] = [];
+
+      const newMatchLevels = new Array(ew.length).fill(0);
+      let expPtr = 0;
+      let wrongWords: string[] = [];
       let matchedCount = 0;
-      let newMatchLevels:number[] = [];
-      
-      for(let wi = 0; wi < ew.length; wi++) {
-        const target = ew[wi];
-        if(target.length < 1) { newMatchLevels.push(1); continue; }
-        let bestMatch = 0;
-        let bestWord = '';
-        
-        for(const said of spokenWords) {
-          const sim = wordSimilarity(said, target);
-          if(sim > bestMatch) { bestMatch = sim; bestWord = said; }
-        }
-        
-        if(bestMatch >= 0.7) {
-          matchedCount++;
-          matchedWords.push(target);
-          if(bestMatch < 0.95) {
-            newMatchLevels.push(2);
-            wrongWords.push(`"${target}" ← نطقت "${bestWord}"`);
-          } else {
-            newMatchLevels.push(1);
+
+      for (let i = 0; i < spokenWords.length && expPtr < ew.length; i++) {
+        const said = spokenWords[i];
+        if (said.length < 2) continue;
+
+        // Try matching against expPtr, expPtr+1, expPtr+2
+        const sim0 = wordSimilarity(said, ew[expPtr]);
+        const sim1 = expPtr + 1 < ew.length ? wordSimilarity(said, ew[expPtr + 1]) : 0;
+        const sim2 = expPtr + 2 < ew.length ? wordSimilarity(said, ew[expPtr + 2]) : 0;
+
+        if (sim0 >= 0.65) {
+          // sim0 >= 0.75 = perfectly correct (green), 0.65-0.75 = minor error (amber)
+          newMatchLevels[expPtr] = sim0 < 0.75 ? 2 : 1;
+          if (sim0 < 0.75) {
+            wrongWords.push(`⚠️ "${originalWords[expPtr]}" (نطقت: "${said}")`);
           }
-        } else {
-          newMatchLevels.push(0);
-          wrongWords.push(`❌ "${target}"`);
+          matchedCount++;
+          expPtr++;
+        }
+        else if (sim1 >= 0.65) {
+          // Skipped 1 word
+          newMatchLevels[expPtr] = 3; // Red
+          newMatchLevels[expPtr + 1] = 1; // Green
+          wrongWords.push(`❌ نسيت كلمة "${originalWords[expPtr]}"`);
+          if (!playedErrorIndices.current.has(expPtr)) {
+            playLocalSound('error');
+            playedErrorIndices.current.add(expPtr);
+          }
+          matchedCount += 2;
+          expPtr += 2;
+        }
+        else if (sim2 >= 0.65) {
+          // Skipped 2 words
+          newMatchLevels[expPtr] = 3; // Red
+          newMatchLevels[expPtr + 1] = 3; // Red
+          newMatchLevels[expPtr + 2] = 1; // Green
+          wrongWords.push(`❌ نسيت "${originalWords[expPtr]} ${originalWords[expPtr+1]}"`);
+          if (!playedErrorIndices.current.has(expPtr)) {
+            playLocalSound('error');
+            playedErrorIndices.current.add(expPtr);
+          }
+          if (!playedErrorIndices.current.has(expPtr + 1)) {
+            playedErrorIndices.current.add(expPtr + 1);
+          }
+          matchedCount += 3;
+          expPtr += 3;
+        }
+        else {
+          // No match in window: treat as a mispronunciation of expPtr to prevent getting stuck
+          newMatchLevels[expPtr] = 3; // Red (wrong)
+          wrongWords.push(`❌ خطأ في نطق "${originalWords[expPtr]}" (نطقت: "${said}")`);
+          if (!playedErrorIndices.current.has(expPtr)) {
+            playLocalSound('error');
+            playedErrorIndices.current.add(expPtr);
+          }
+          expPtr++; // ADVANCE POINTER TO PREVENT GETTING STUCK
         }
       }
+      
       setWordMatchLevels(newMatchLevels);
       
       const validEwCount = ew.filter((w:string)=>w.length>=1).length;
       const completeRatio = validEwCount > 0 ? matchedCount / validEwCount : 0;
       
-      // Show real-time feedback on progress
-      if(completeRatio > 0.2 && completeRatio < 0.6) {
-        setHifzFeedback({type:'ok', msg:`⏳ ${Math.round(completeRatio*100)}% من الآية...`});
-      }
-      
-      // Pronunciation errors detected (matched words but with differences)
-      if(wrongWords.length > 0 && completeRatio >= 0.4 && completeRatio < 0.6) {
-        setHifzFeedback({type:'wrong_pron', msg:'⚠️ تحقق من النطق', details:wrongWords.slice(0,3)});
+      // Show real-time feedback on progress or errors
+      if (wrongWords.length > 0) {
+        const lastErr = wrongWords[wrongWords.length - 1];
+        setHifzFeedback({type: 'wrong_pron', msg: lastErr});
         setHifzStatus('pron');
+      } else if (completeRatio > 0) {
+        setHifzFeedback({type: 'ok', msg: `⏳ ${Math.round(completeRatio*100)}% من الآية...`});
+        setHifzStatus('none');
       }
       
-      // ✅ Verse completed (70% match required — stricter, more accurate)
-      if(completeRatio >= 0.70 && !isAdvancingRef.current) {
+      // ✅ Verse completed (65% match or reached the end)
+      if ((completeRatio >= 0.65 || expPtr >= ew.length) && !isAdvancingRef.current) {
         isAdvancingRef.current = true;
         
-        const hasErrors = wrongWords.length > 0;
-        const isPerfect = completeRatio >= 0.85 && wrongWords.filter(w=>w.startsWith('❌')).length === 0;
+        const hasErrors = wrongWords.filter(w => w.startsWith('❌')).length > 0;
+        const isPerfect = completeRatio >= 0.75 && wrongWords.filter(w=>w.startsWith('❌')).length === 0;
         
-        if(isPerfect) {
-          setHifzFeedback({type:'ok', msg:'ممتاز! أحسنت ✅'});
+        if (isPerfect) {
+          setHifzFeedback({type: 'ok', msg: 'ممتاز! أحسنت ✅'});
           setHifzStatus('ok');
-        } else if(hasErrors && wrongWords.some(w=>w.startsWith('❌'))) {
-          setHifzFeedback({type:'wrong_verse', msg:'⚠️ صحيح مع ملاحظات', details:wrongWords.filter(w=>w.startsWith('❌')).slice(0,3)});
+        } else if (hasErrors) {
+          setHifzFeedback({type: 'wrong_verse', msg: '⚠️ صحيح مع ملاحظات', details: wrongWords.slice(0, 3)});
           setHifzStatus('pron');
         } else {
-          setHifzFeedback({type:'ok', msg:'أحسنت ✅'});
+          setHifzFeedback({type: 'ok', msg: 'أحسنت ✅'});
           setHifzStatus('ok');
         }
         
         playLocalSound('ok');
-        const k=`${exp.sn}-${exp.nis}`;
-        setHifzRes(prev=>{const n=new Map(prev);n.set(k, isPerfect ? 'ok' : 'ok');return n;});
+        const k = `${exp.sn}-${exp.nis}`;
+        setHifzRes(prev => { const n = new Map(prev); n.set(k, isPerfect ? 'ok' : 'err'); return n; });
         
         // Auto-advance to next verse
-        setTimeout(()=>{
-          allTranscripts = []; // Reset accumulated words for next verse
+        setTimeout(() => {
+          allTranscripts = [];
           lastResultCount = 0;
           
-          setHifzIdx(prev=>{
-            const next=Math.min(prev+1,(pqDataRef.current?.length||1)-1);
-            setTimeout(()=>{
-              const el=document.getElementById(`verse-${pqDataRef.current![next].sn}-${pqDataRef.current![next].nis}`);
-              if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+          setHifzIdx(prev => {
+            const next = Math.min(prev + 1, (pqDataRef.current?.length || 1) - 1);
+            setTimeout(() => {
+              const el = document.getElementById(`verse-${pqDataRef.current![next].sn}-${pqDataRef.current![next].nis}`);
+              if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'});
             }, 200);
             isAdvancingRef.current = false;
             return next;
@@ -637,10 +891,9 @@ export default function TafseerPage(){
           setRecTxt('');
           setWordMatchLevels([]);
           
-          // Restart recognition fresh for new verse
           try { r.stop(); } catch {}
           setTimeout(() => { try { r.start(); } catch {} }, 300);
-        }, 1500);
+        }, 400);
       }
     };
 
@@ -942,6 +1195,33 @@ export default function TafseerPage(){
                 style={{background:v.bg}}/>
             ))}
           </div>
+
+          <div className="mt-6 border-t border-border pt-4" dir="rtl">
+            <h4 className="text-sm font-bold mb-1 text-foreground">تحميل المصحف للقراءة بدون إنترنت</h4>
+            <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+              قم بتحميل جميع صفحات المصحف الشريف الـ 604 إلى ذاكرة المتصفح لتتمكن من قراءتها وتصفحها كاملةً بدون اتصال بالإنترنت في أي وقت.
+            </p>
+            {downloading ? (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-bold text-primary">
+                  <span>جاري تحميل صفحات المصحف...</span>
+                  <span>{Math.round((downloadProgress / 604) * 100)}%</span>
+                </div>
+                <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                  <div className="bg-primary h-full transition-all duration-150" style={{width: `${(downloadProgress / 604) * 100}%`}} />
+                </div>
+                <span className="text-[10px] text-muted-foreground block text-left">صفحة {downloadProgress} من 604</span>
+              </div>
+            ) : downloadSuccess ? (
+              <div className="p-2.5 bg-green-500/10 text-green-600 rounded-xl text-xs font-bold text-center border border-green-500/25">
+                ✓ تم تحميل المصحف كاملاً بنجاح! جاهز للقراءة دون إنترنت.
+              </div>
+            ) : (
+              <button onClick={startQuranDownload} className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 hover:opacity-95 transition-opacity">
+                تحميل المصحف كاملاً (1.5 ميجابايت)
+              </button>
+            )}
+          </div>
         </div>
       </div>}
 
@@ -1076,28 +1356,145 @@ export default function TafseerPage(){
                   <div className="flex justify-between items-center mb-6 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
                     <span>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
                     <span>الْجُزْءُ {juzForPage(pg).toLocaleString('ar-EG')}</span>
-                  </div>
+                  </div>                  {/* Modern Minimalist Surah Header (Ayah App style) */}
+                  {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center w-full">
+                    {/* ═══ Premium Islamic Cartouche — Unified Surah Header ═══ */}
+                    <div className="relative w-full max-w-[450px] mx-auto">
+                      <svg viewBox="0 0 450 100" xmlns="http://www.w3.org/2000/svg" className="w-full" preserveAspectRatio="xMidYMid meet" style={{overflow:'visible'}}>
+                        <defs>
+                          {/* Gold gradient fills */}
+                          <linearGradient id={`gold-h-${g.sn}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#c9a84c" stopOpacity="0.1"/>
+                            <stop offset="25%" stopColor="#d4af37" stopOpacity="0.35"/>
+                            <stop offset="50%" stopColor="#f0d878" stopOpacity="0.45"/>
+                            <stop offset="75%" stopColor="#d4af37" stopOpacity="0.35"/>
+                            <stop offset="100%" stopColor="#c9a84c" stopOpacity="0.1"/>
+                          </linearGradient>
+                          <linearGradient id={`gold-stroke-${g.sn}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#b8942e" stopOpacity="0.3"/>
+                            <stop offset="20%" stopColor="#d4af37" stopOpacity="0.85"/>
+                            <stop offset="50%" stopColor="#f0d878" stopOpacity="1"/>
+                            <stop offset="80%" stopColor="#d4af37" stopOpacity="0.85"/>
+                            <stop offset="100%" stopColor="#b8942e" stopOpacity="0.3"/>
+                          </linearGradient>
+                          <linearGradient id={`gold-v-${g.sn}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#d4af37" stopOpacity="0.9"/>
+                            <stop offset="50%" stopColor="#f0d878" stopOpacity="1"/>
+                            <stop offset="100%" stopColor="#d4af37" stopOpacity="0.9"/>
+                          </linearGradient>
+                          <radialGradient id={`gold-glow-${g.sn}`} cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stopColor="#f0d878" stopOpacity="0.12"/>
+                            <stop offset="100%" stopColor="#d4af37" stopOpacity="0"/>
+                          </radialGradient>
+                        </defs>
 
-                  {/* Ornate Surah Frame (Only for verse 1) */}
-                  {g.ayahs[0].nis===1&&<div className="text-center my-6 flex justify-center scale-100">
-                    <div className="relative px-16 py-4 min-w-[280px] max-w-[360px] flex items-center justify-center">
-                      <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/60" viewBox="0 0 400 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M 40 10 L 180 10 L 200 2 L 220 10 L 360 10 C 380 10, 395 22, 395 40 C 395 58, 380 70, 360 70 L 220 70 L 200 78 L 180 70 L 40 70 C 20 70, 5 58, 5 40 C 5 22, 20 10, 40 10 Z" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.03" />
-                        <path d="M 45 14 L 183 14 L 200 7 L 217 14 L 355 14 C 372 14, 387 24, 387 40 C 387 56, 372 66, 355 66 L 217 66 L 200 73 L 183 66 L 45 66 C 28 66, 13 56, 13 40 C 13 24, 28 14, 45 14 Z" stroke="currentColor" strokeWidth="0.8" strokeDasharray="3,3" />
-                        <path d="M 13 40 C 22 28, 35 40, 20 40 M 13 40 C 22 52, 35 40, 20 40" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                        <circle cx="25" cy="40" r="2.5" fill="currentColor" />
-                        <path d="M 387 40 C 378 28, 365 40, 380 40 M 387 40 C 378 52, 365 40, 380 40" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                        <circle cx="375" cy="40" r="2.5" fill="currentColor" />
-                        <path d="M 8 40 L 2 40 M 5 35 L 5 45" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M 392 40 L 398 40 M 395 35 L 395 45" stroke="currentColor" strokeWidth="1.5" />
-                        <circle cx="200" cy="7" r="1.5" fill="currentColor" />
-                        <circle cx="200" cy="73" r="1.5" fill="currentColor" />
+                        {/* Subtle inner glow */}
+                        <ellipse cx="225" cy="50" rx="180" ry="35" fill={`url(#gold-glow-${g.sn})`}/>
+
+                        {/* ── Main Cartouche Frame (Mosque arch / pointed-end shape) ── */}
+                        <path d={`M 60,16 L 170,16 Q 180,16 185,10 L 195,4 Q 200,1 205,1 L 245,1 Q 250,1 255,4 L 265,10 Q 270,16 280,16 L 390,16
+                          Q 405,16 415,22 Q 425,28 425,40 L 425,60
+                          Q 425,72 415,78 Q 405,84 390,84 L 280,84 Q 270,84 265,90 L 255,96 Q 250,99 245,99 L 205,99 Q 200,99 195,96 L 185,90 Q 180,84 170,84 L 60,84
+                          Q 45,84 35,78 Q 25,72 25,60 L 25,40
+                          Q 25,28 35,22 Q 45,16 60,16 Z`}
+                          fill={`url(#gold-h-${g.sn})`}
+                          stroke={`url(#gold-stroke-${g.sn})`}
+                          strokeWidth="1.5"
+                        />
+                        {/* Inner border trace */}
+                        <path d={`M 64,21 L 172,21 Q 181,21 186,15.5 L 196,9.5 Q 200,7 205,7 L 245,7 Q 250,7 254,9.5 L 264,15.5 Q 269,21 278,21 L 386,21
+                          Q 399,21 408,26 Q 417,31 419,42 L 419,58
+                          Q 417,69 408,74 Q 399,79 386,79 L 278,79 Q 269,79 264,84.5 L 254,90.5 Q 250,93 245,93 L 205,93 Q 200,93 196,90.5 L 186,84.5 Q 181,79 172,79 L 64,79
+                          Q 51,79 42,74 Q 33,69 31,58 L 31,42
+                          Q 33,31 42,26 Q 51,21 64,21 Z`}
+                          fill="none"
+                          stroke={`url(#gold-stroke-${g.sn})`}
+                          strokeWidth="0.6"
+                          opacity="0.5"
+                        />
+
+                        {/* ── Decorative corner arabesque flourishes ── */}
+                        {/* Top-left corner */}
+                        <g opacity="0.7">
+                          <path d="M 38,28 Q 32,34 38,40 Q 44,34 38,28 Z" fill={`url(#gold-v-${g.sn})`} opacity="0.6"/>
+                          <circle cx="38" cy="34" r="1.5" fill="#d4af37" opacity="0.8"/>
+                          <path d="M 30,34 Q 38,26 46,34" fill="none" stroke="#d4af37" strokeWidth="0.5" opacity="0.4"/>
+                        </g>
+                        {/* Top-right corner */}
+                        <g opacity="0.7">
+                          <path d="M 412,28 Q 406,34 412,40 Q 418,34 412,28 Z" fill={`url(#gold-v-${g.sn})`} opacity="0.6"/>
+                          <circle cx="412" cy="34" r="1.5" fill="#d4af37" opacity="0.8"/>
+                          <path d="M 404,34 Q 412,26 420,34" fill="none" stroke="#d4af37" strokeWidth="0.5" opacity="0.4"/>
+                        </g>
+                        {/* Bottom-left corner */}
+                        <g opacity="0.7">
+                          <path d="M 38,60 Q 32,66 38,72 Q 44,66 38,60 Z" fill={`url(#gold-v-${g.sn})`} opacity="0.6"/>
+                          <circle cx="38" cy="66" r="1.5" fill="#d4af37" opacity="0.8"/>
+                          <path d="M 30,66 Q 38,74 46,66" fill="none" stroke="#d4af37" strokeWidth="0.5" opacity="0.4"/>
+                        </g>
+                        {/* Bottom-right corner */}
+                        <g opacity="0.7">
+                          <path d="M 412,60 Q 406,66 412,72 Q 418,66 412,60 Z" fill={`url(#gold-v-${g.sn})`} opacity="0.6"/>
+                          <circle cx="412" cy="66" r="1.5" fill="#d4af37" opacity="0.8"/>
+                          <path d="M 404,66 Q 412,74 420,66" fill="none" stroke="#d4af37" strokeWidth="0.5" opacity="0.4"/>
+                        </g>
+
+                        {/* ── Side ornamental diamonds ── */}
+                        <polygon points="25,50 30,44 35,50 30,56" fill="#d4af37" opacity="0.55"/>
+                        <polygon points="425,50 420,44 415,50 420,56" fill="#d4af37" opacity="0.55"/>
+
+                        {/* ── Top & Bottom center pointed arch ornaments ── */}
+                        {/* Top center */}
+                        <path d="M 215,3 L 220,0 L 225,3 L 230,0 L 235,3" fill="none" stroke="#d4af37" strokeWidth="0.8" opacity="0.6"/>
+                        {/* Bottom center */}
+                        <path d="M 215,97 L 220,100 L 225,97 L 230,100 L 235,97" fill="none" stroke="#d4af37" strokeWidth="0.8" opacity="0.6"/>
+
+                        {/* ── Interlocking arch pattern along top edge ── */}
+                        <g opacity="0.3">
+                          <path d="M 80,21 Q 90,14 100,21" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 100,21 Q 110,14 120,21" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 120,21 Q 130,14 140,21" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 140,21 Q 150,14 160,21" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 290,21 Q 300,14 310,21" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 310,21 Q 320,14 330,21" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 330,21 Q 340,14 350,21" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 350,21 Q 360,14 370,21" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                        </g>
+
+                        {/* ── Interlocking arch pattern along bottom edge ── */}
+                        <g opacity="0.3">
+                          <path d="M 80,79 Q 90,86 100,79" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 100,79 Q 110,86 120,79" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 120,79 Q 130,86 140,79" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 140,79 Q 150,86 160,79" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 290,79 Q 300,86 310,79" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 310,79 Q 320,86 330,79" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 330,79 Q 340,86 350,79" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                          <path d="M 350,79 Q 360,86 370,79" fill="none" stroke="#d4af37" strokeWidth="0.7"/>
+                        </g>
+
+                        {/* ── Decorative horizontal lines extending from cartouche ── */}
+                        <line x1="8" y1="50" x2="24" y2="50" stroke="#d4af37" strokeWidth="0.8" opacity="0.4"/>
+                        <line x1="426" y1="50" x2="442" y2="50" stroke="#d4af37" strokeWidth="0.8" opacity="0.4"/>
+                        {/* Small end dots */}
+                        <circle cx="7" cy="50" r="1.5" fill="#d4af37" opacity="0.5"/>
+                        <circle cx="443" cy="50" r="1.5" fill="#d4af37" opacity="0.5"/>
+
+                        {/* ── Inner side floral accents ── */}
+                        <g opacity="0.35">
+                          <path d="M 55,42 Q 50,50 55,58" fill="none" stroke="#d4af37" strokeWidth="0.6"/>
+                          <path d="M 52,45 Q 48,50 52,55" fill="none" stroke="#d4af37" strokeWidth="0.6"/>
+                          <path d="M 395,42 Q 400,50 395,58" fill="none" stroke="#d4af37" strokeWidth="0.6"/>
+                          <path d="M 398,45 Q 402,50 398,55" fill="none" stroke="#d4af37" strokeWidth="0.6"/>
+                        </g>
                       </svg>
-                      <span className="font-quran relative z-10 flex items-center gap-2 pt-1" style={{fontSize:'clamp(19px, 4.6vw, 24px)', color:colors.text, fontWeight:'normal'}}>
-                        <span className="text-amber-500/80 dark:text-amber-400/70 text-base">⚜️</span>
-                        سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}
-                        <span className="text-amber-500/80 dark:text-amber-400/70 text-base">⚜️</span>
-                      </span>
+
+                      {/* ── Surah Name Overlay (HTML for proper Arabic rendering) ── */}
+                      <div className="absolute inset-0 flex items-center justify-center" style={{paddingBottom:'1px'}}>
+                        <span className="font-quran text-2xl md:text-3xl font-bold tracking-wide" style={{color: colors.text, textShadow: '0 1px 3px rgba(0,0,0,0.06)'}}>
+                          {g.sname.replace(/^سُورَةُ\s*/,'')}
+                        </span>
+                      </div>
                     </div>
                   </div>}
                   
@@ -1121,14 +1518,19 @@ export default function TafseerPage(){
                             height: '2.2em',
                             verticalAlign: 'middle'
                           }}>
-                          <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="16" cy="16" r="12" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.04" />
-                            <circle cx="16" cy="16" r="9.5" stroke="currentColor" strokeWidth="0.8" strokeDasharray="1.5,1.5" />
-                            <path d="M16 2 L18 5 L16 7 L14 5 Z M16 30 L18 27 L16 25 L14 27 Z M2 16 L5 18 L7 16 L5 14 Z M30 16 L27 18 L25 16 L27 14 Z" fill="currentColor" />
-                            <circle cx="7" cy="7" r="1" fill="currentColor" />
-                            <circle cx="25" cy="7" r="1" fill="currentColor" />
-                            <circle cx="7" cy="25" r="1" fill="currentColor" />
-                            <circle cx="25" cy="25" r="1" fill="currentColor" />
+                          {/* Ornate Circle Ayah Number — Premium style */}
+                          <svg className="absolute inset-0 w-full h-full text-amber-600/60 dark:text-amber-500/50 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            {/* Outer dashed circle */}
+                            <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="0.6" strokeDasharray="2,2" />
+                            {/* Main ornate circle */}
+                            <circle cx="16" cy="16" r="11" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.04" />
+                            {/* Inner accent circle */}
+                            <circle cx="16" cy="16" r="8.5" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1.5,1.5" />
+                            {/* 4 small decorative dots at cardinal points */}
+                            <circle cx="16" cy="3.5" r="1" fill="currentColor" opacity="0.5" />
+                            <circle cx="16" cy="28.5" r="1" fill="currentColor" opacity="0.5" />
+                            <circle cx="3.5" cy="16" r="1" fill="currentColor" opacity="0.5" />
+                            <circle cx="28.5" cy="16" r="1" fill="currentColor" opacity="0.5" />
                           </svg>
                           <span className="relative z-10 font-bold" style={{
                             fontSize: '0.45em',
@@ -1161,7 +1563,7 @@ export default function TafseerPage(){
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;
                       const isP=playingKey===k;const isSel=selVerse?.sn===g.sn&&selVerse?.nis===a.nis;
-
+ 
                       if(cur){
                          const words = a.text.split(" ");
                          return <span key={k} className="inline" data-v="1" id={`verse-${g.sn}-${a.nis}`} 
@@ -1184,14 +1586,14 @@ export default function TafseerPage(){
                             })}
                             <span className="inline-flex items-center justify-center mx-1 opacity-50 relative" data-v="1"
                                 style={{width:'2em',height:'2em', verticalAlign:'middle'}}>
-                                <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <circle cx="16" cy="16" r="12" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.04" />
-                                  <circle cx="16" cy="16" r="9.5" stroke="currentColor" strokeWidth="0.8" strokeDasharray="1.5,1.5" />
-                                  <path d="M16 2 L18 5 L16 7 L14 5 Z M16 30 L18 27 L16 25 L14 27 Z M2 16 L5 18 L7 16 L5 14 Z M30 16 L27 18 L25 16 L27 14 Z" fill="currentColor" />
-                                  <circle cx="7" cy="7" r="1" fill="currentColor" />
-                                  <circle cx="25" cy="7" r="1" fill="currentColor" />
-                                  <circle cx="7" cy="25" r="1" fill="currentColor" />
-                                  <circle cx="25" cy="25" r="1" fill="currentColor" />
+                                <svg className="absolute inset-0 w-full h-full text-amber-600/60 dark:text-amber-500/50 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="0.6" strokeDasharray="2,2" />
+                                  <circle cx="16" cy="16" r="11" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.04" />
+                                  <circle cx="16" cy="16" r="8.5" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1.5,1.5" />
+                                  <circle cx="16" cy="3.5" r="1" fill="currentColor" opacity="0.5" />
+                                  <circle cx="16" cy="28.5" r="1" fill="currentColor" opacity="0.5" />
+                                  <circle cx="3.5" cy="16" r="1" fill="currentColor" opacity="0.5" />
+                                  <circle cx="28.5" cy="16" r="1" fill="currentColor" opacity="0.5" />
                                 </svg>
                                 <span className="relative z-10 font-bold" style={{
                                   fontSize: '0.45em',
@@ -1205,19 +1607,22 @@ export default function TafseerPage(){
                             </span>
                          </span>;
                       }
-
+ 
                       return<span key={k} className="inline" data-v="1" id={`verse-${g.sn}-${a.nis}`}>
                         <span onClick={e=>{e.stopPropagation();if(!hifz){setSelVerse({sn:g.sn,nis:a.nis,text:a.orig});setShowOptions(true);}}}
                           className="transition-all duration-300 rounded cursor-pointer"
                           style={{
-                            color:hidden?'transparent':isP?'#16a34a':hr==='err'?'#f87171':colors.text,
+                            color:isP?'#16a34a':hr==='err'?'#f87171':colors.text,
+                            opacity:hidden?0.08:1,
+                            filter:hidden?'blur(3.5px)':'none',
+                            userSelect:hidden?'none':'auto',
+                            pointerEvents:hidden?'none':'auto',
                             background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                             padding:(isP||isSel)?'2px 8px':'0',borderRadius:(isP||isSel)?'8px':'0',
                             WebkitBoxDecorationBreak:'clone',boxDecorationBreak:'clone'
                           }}>
                           {a.text}
                         </span>
-                        {/* Beautiful Traditional Gold End-of-Verse Ornament SVG with Arabic number */}
                         <span className="inline-flex items-center justify-center mx-1 relative" data-v="1"
                           style={{
                             width: '2em',
@@ -1225,14 +1630,19 @@ export default function TafseerPage(){
                             opacity: hidden ? 0 : 1,
                             verticalAlign: 'middle'
                           }}>
-                          <svg className="absolute inset-0 w-full h-full text-amber-600/80 dark:text-amber-500/70 transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="16" cy="16" r="12" stroke={isP ? '#16a34a' : 'currentColor'} strokeWidth="1.2" fill={isP ? '#16a34a' : 'currentColor'} fillOpacity="0.04" />
-                            <circle cx="16" cy="16" r="9.5" stroke={isP ? '#16a34a' : 'currentColor'} strokeWidth="0.8" strokeDasharray="1.5,1.5" />
-                            <path d="M16 2 L18 5 L16 7 L14 5 Z M16 30 L18 27 L16 25 L14 27 Z M2 16 L5 18 L7 16 L5 14 Z M30 16 L27 18 L25 16 L27 14 Z" fill={isP ? '#16a34a' : 'currentColor'} />
-                            <circle cx="7" cy="7" r="1" fill={isP ? '#16a34a' : 'currentColor'} />
-                            <circle cx="25" cy="7" r="1" fill={isP ? '#16a34a' : 'currentColor'} />
-                            <circle cx="7" cy="25" r="1" fill={isP ? '#16a34a' : 'currentColor'} />
-                            <circle cx="25" cy="25" r="1" fill={isP ? '#16a34a' : 'currentColor'} />
+                          <svg className="absolute inset-0 w-full h-full transition-colors" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"
+                            style={{color: isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : undefined}}>
+                            {/* Outer dashed ring */}
+                            <circle cx="16" cy="16" r="14" stroke={isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : 'currentColor'} strokeWidth="0.6" strokeDasharray="2,2" className={isP || bookmarks.has(k) ? '' : 'text-amber-600/60 dark:text-amber-500/50'} />
+                            {/* Main circle */}
+                            <circle cx="16" cy="16" r="11" stroke={isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : 'currentColor'} strokeWidth="1" fill={isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : 'currentColor'} fillOpacity={isP ? 0.15 : bookmarks.has(k) ? 0.1 : 0.04} className={isP || bookmarks.has(k) ? '' : 'text-amber-600/60 dark:text-amber-500/50'} />
+                            {/* Inner dashed circle */}
+                            <circle cx="16" cy="16" r="8.5" stroke={isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : 'currentColor'} strokeWidth="0.5" strokeDasharray="1.5,1.5" className={isP || bookmarks.has(k) ? '' : 'text-amber-600/60 dark:text-amber-500/50'} />
+                            {/* Cardinal dots */}
+                            <circle cx="16" cy="3.5" r="1" fill={isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : 'currentColor'} opacity="0.6" className={isP || bookmarks.has(k) ? '' : 'text-amber-600/60 dark:text-amber-500/50'} />
+                            <circle cx="16" cy="28.5" r="1" fill={isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : 'currentColor'} opacity="0.6" className={isP || bookmarks.has(k) ? '' : 'text-amber-600/60 dark:text-amber-500/50'} />
+                            <circle cx="3.5" cy="16" r="1" fill={isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : 'currentColor'} opacity="0.6" className={isP || bookmarks.has(k) ? '' : 'text-amber-600/60 dark:text-amber-500/50'} />
+                            <circle cx="28.5" cy="16" r="1" fill={isP ? '#16a34a' : bookmarks.has(k) ? '#ec4899' : 'currentColor'} opacity="0.6" className={isP || bookmarks.has(k) ? '' : 'text-amber-600/60 dark:text-amber-500/50'} />
                           </svg>
                           <span className="relative z-10 font-bold" style={{
                             fontSize: '0.45em',
@@ -1256,12 +1666,27 @@ export default function TafseerPage(){
             <div className="mt-6 mb-12 flex flex-col items-center gap-8">
                 <div className="flex justify-center items-center opacity-80">
                     <div className="relative flex items-center justify-center" style={{width:'50px', height:'50px'}}>
-                      {/* Decorative ornate border for page number */}
+                      {/* Modern Minimalist Page Number Rub el Hizb Badge */}
+                      {/* Premium Ornate Page Number Circle */}
                       <svg className="absolute inset-0 w-full h-full text-amber-600/60 dark:text-amber-500/50" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M50 2 L80 15 L95 45 L80 85 L50 98 L20 85 L5 45 L20 15 Z" stroke="currentColor" strokeWidth="2.5" />
-                        <path d="M50 8 L75 20 L88 45 L75 80 L50 92 L25 80 L12 45 L25 20 Z" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3"/>
+                        {/* Outermost dashed ring */}
+                        <circle cx="50" cy="50" r="47" stroke="currentColor" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.5" />
+                        {/* Main circle */}
+                        <circle cx="50" cy="50" r="41" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.03" />
+                        {/* Inner decorative circle */}
+                        <circle cx="50" cy="50" r="34" stroke="currentColor" strokeWidth="0.8" strokeDasharray="2,3" opacity="0.6" />
+                        {/* 4 decorative petal ornaments */}
+                        <ellipse cx="50" cy="7" rx="3" ry="5" fill="currentColor" opacity="0.5" />
+                        <ellipse cx="50" cy="93" rx="3" ry="5" fill="currentColor" opacity="0.5" />
+                        <ellipse cx="7" cy="50" rx="5" ry="3" fill="currentColor" opacity="0.5" />
+                        <ellipse cx="93" cy="50" rx="5" ry="3" fill="currentColor" opacity="0.5" />
+                        {/* Diagonal ornament dots */}
+                        <circle cx="22" cy="22" r="2" fill="currentColor" opacity="0.35" />
+                        <circle cx="78" cy="22" r="2" fill="currentColor" opacity="0.35" />
+                        <circle cx="22" cy="78" r="2" fill="currentColor" opacity="0.35" />
+                        <circle cx="78" cy="78" r="2" fill="currentColor" opacity="0.35" />
                       </svg>
-                      <span className="text-sm font-bold relative z-10 pt-1" style={{color:colors.text, fontFamily:'Arial, sans-serif'}}>{pg.toLocaleString('ar-EG')}</span>
+                      <span className="text-sm font-bold relative z-10 pt-1" style={{color:colors.text, fontFamily:'Tajawal, sans-serif'}}>{pg.toLocaleString('ar-EG')}</span>
                     </div>
                 </div>
                 {/* Desktop Navigation Buttons — highly visible */}
@@ -1292,7 +1717,14 @@ export default function TafseerPage(){
       {/* ═══ BOTTOM PLAYER ═══ */}
       {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card/90 backdrop-blur-md border-t border-border shadow-[0_-4px_25px_rgba(0,0,0,0.15)]" style={{paddingBottom:'env(safe-area-inset-bottom,6px)'}}>
         <div className="w-full px-6 mb-1 mt-1">
-          <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" className="w-full h-1 bg-emerald-500/10 accent-emerald-500 rounded-full appearance-none cursor-pointer"/>
+          <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" className="w-full h-1 bg-emerald-500/10 accent-emerald-500 rounded-full appearance-none cursor-pointer"
+            onChange={(e) => {
+              const a = getActiveAudio();
+              if (a && a.duration && isFinite(a.duration)) {
+                a.currentTime = (Number(e.target.value) / 100) * a.duration;
+              }
+            }}
+          />
         </div>
         <div className="flex items-center justify-between px-5 pt-1 pb-1 flex-row-reverse">
           <div className="flex items-center gap-1.5 min-w-0">
