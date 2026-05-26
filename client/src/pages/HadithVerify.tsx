@@ -136,17 +136,6 @@ function calcRelevanceScore(
         return 5.0;
     }
     
-    // Check if at least 2 consecutive words from query match
-    const words = normalizedQuery.split(' ').filter(w => w.length >= 3);
-    if (words.length >= 2) {
-        for (let i = 0; i < words.length - 1; i++) {
-            const bigram = `${words[i]} ${words[i+1]}`;
-            if (normalizedText.includes(bigram)) {
-                return 3.0;
-            }
-        }
-    }
-    
     if (activeTokens.length === 0) return 0.0;
     
     let matchCount = 0;
@@ -156,9 +145,8 @@ function calcRelevanceScore(
         }
     }
     
-    // Penalize disjoint token matching to prevent unrelated mixing results
-    const ratio = matchCount / activeTokens.length;
-    return ratio >= 0.5 ? ratio : 0.0;
+    // Standard keyword match percentage (high inclusivity)
+    return matchCount / activeTokens.length;
 }
 
 function decodeGarbledDorarText(text: string): string {
@@ -468,17 +456,13 @@ export default function HadithVerifyPage() {
                         isMatch = true;
                     }
                 } else {
-                    // Strictly require at least 65% token overlap for multi-word queries to drop mixed up results like 'bana al-islam'
-                    if (overlapRatio >= 0.65) {
+                    if (overlapRatio >= 0.40) {
                         isMatch = true;
                     }
                 }
             }
 
             if (!isMatch) continue;
-            // Additional strict check: drop if calculated relevance score is 0
-            const rel = calcRelevanceScore(item.text, item.narrator, item.source, item.grade, normalizedQuery, activeTokens);
-            if (rel === 0) continue;
             if (filterSahih && !isTrustedGrade(item.grade)) continue;
 
             localResults.push({
@@ -608,7 +592,7 @@ export default function HadithVerifyPage() {
                     trustScore: calcTrustScore(item.grade, item.source),
                     relevanceScore: relevance,
                 };
-            }).filter(item => item.relevanceScore > 0); // Strictly filter out irrelevant disjoint words
+            });
 
             const finalRanked = finalDeduped.sort((a, b) => {
                 const scoreA = a.relevanceScore * 1000 + a.trustScore;
