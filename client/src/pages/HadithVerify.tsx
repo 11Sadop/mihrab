@@ -453,7 +453,7 @@ export default function HadithVerifyPage() {
             let overlapRatio = 0.0;
             
             if (isMatch) {
-                overlapRatio = 1.0;
+                overlapRatio = 5.0;
             } else if (activeTokens.length > 0) {
                 let matchCount = 0;
                 for (const token of activeTokens) {
@@ -468,13 +468,17 @@ export default function HadithVerifyPage() {
                         isMatch = true;
                     }
                 } else {
-                    if (overlapRatio >= 0.40) {
+                    // Strictly require at least 65% token overlap for multi-word queries to drop mixed up results like 'bana al-islam'
+                    if (overlapRatio >= 0.65) {
                         isMatch = true;
                     }
                 }
             }
 
             if (!isMatch) continue;
+            // Additional strict check: drop if calculated relevance score is 0
+            const rel = calcRelevanceScore(item.text, item.narrator, item.source, item.grade, normalizedQuery, activeTokens);
+            if (rel === 0) continue;
             if (filterSahih && !isTrustedGrade(item.grade)) continue;
 
             localResults.push({
@@ -604,7 +608,7 @@ export default function HadithVerifyPage() {
                     trustScore: calcTrustScore(item.grade, item.source),
                     relevanceScore: relevance,
                 };
-            });
+            }).filter(item => item.relevanceScore > 0); // Strictly filter out irrelevant disjoint words
 
             const finalRanked = finalDeduped.sort((a, b) => {
                 const scoreA = a.relevanceScore * 1000 + a.trustScore;
