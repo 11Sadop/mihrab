@@ -5,7 +5,7 @@ import { Heart } from "lucide-react";
 export default function Support() {
   return (
     <div className="min-h-screen pb-32 bg-background">
-      <Header title="دعم التطبيق" />
+      <Header title="دعم التطبيق" showBack={true} />
       
       <main className="container max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         <Card className="p-6 text-center">

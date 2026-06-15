@@ -70,23 +70,86 @@ export function getNextPrayer(timings: PrayerTimesData['timings']) {
   const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
   const now = new Date();
   const currentTime = now.getHours() * 60 + now.getMinutes();
+  
+  const IQAMA_OFFSETS: Record<string, number> = {
+    Fajr: 20,
+    Dhuhr: 15,
+    Asr: 15,
+    Maghrib: 10,
+    Isha: 15
+  };
+
+  // Find if we are currently in an Iqamah window for any prayer today
+  let activeIqamaPrayer: string | null = null;
+  let activeIqamaRemaining: number | null = null;
 
   for (const prayer of prayers) {
     const normalized = normalizeTime(timings[prayer]);
     const [hours, minutes] = normalized.split(':').map(Number);
     if (isNaN(hours) || isNaN(minutes)) continue;
-    const prayerTime = hours * 60 + minutes;
-    
-    if (prayerTime > currentTime) {
-      return { name: prayerNamesArabic[prayer] || prayer, time: formatTo12Hour(timings[prayer]), diff: prayerTime - currentTime };
+    const adhanTime = hours * 60 + minutes;
+    const iqamaTime = adhanTime + (IQAMA_OFFSETS[prayer] || 15);
+
+    if (currentTime >= adhanTime && currentTime < iqamaTime) {
+      activeIqamaPrayer = prayer;
+      activeIqamaRemaining = iqamaTime - currentTime;
+      break;
     }
   }
 
-  // If no prayer left today, next is Fajr tomorrow
-  const fajrNormalized = normalizeTime(timings['Fajr']);
-  const [fajrHours, fajrMinutes] = fajrNormalized.split(':').map(Number);
-  const fajrTime = (isNaN(fajrHours) || isNaN(fajrMinutes)) ? 0 : fajrHours * 60 + fajrMinutes;
-  return { name: prayerNamesArabic['Fajr'], time: formatTo12Hour(timings['Fajr']), diff: (24 * 60 + fajrTime) - currentTime };
+  // Find next Adhan today
+  let nextAdhanPrayer: string | null = null;
+  let nextAdhanRemaining: number | null = null;
+  let nextAdhanFormatted: string = '';
+
+  for (const prayer of prayers) {
+    const normalized = normalizeTime(timings[prayer]);
+    const [hours, minutes] = normalized.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) continue;
+    const adhanTime = hours * 60 + minutes;
+
+    if (adhanTime > currentTime) {
+      nextAdhanPrayer = prayer;
+      nextAdhanRemaining = adhanTime - currentTime;
+      nextAdhanFormatted = formatTo12Hour(timings[prayer]);
+      break;
+    }
+  }
+
+  // If no more Adhan today, the next is Fajr tomorrow
+  if (!nextAdhanPrayer) {
+    const fajrNormalized = normalizeTime(timings['Fajr']);
+    const [fajrHours, fajrMinutes] = fajrNormalized.split(':').map(Number);
+    const fajrTime = (isNaN(fajrHours) || isNaN(fajrMinutes)) ? 0 : fajrHours * 60 + fajrMinutes;
+    nextAdhanPrayer = 'Fajr';
+    nextAdhanRemaining = (24 * 60 + fajrTime) - currentTime;
+    nextAdhanFormatted = formatTo12Hour(timings['Fajr']);
+  }
+
+  // Next Iqamah calculation:
+  // If we have an active Iqamah window right now, the next Iqamah is that one.
+  // Otherwise, the next Iqamah is the one associated with the next Adhan.
+  let nextIqamaPrayer = activeIqamaPrayer || nextAdhanPrayer;
+  let nextIqamaRemaining = 0;
+  
+  if (activeIqamaPrayer && activeIqamaRemaining !== null) {
+    nextIqamaRemaining = activeIqamaRemaining;
+  } else {
+    const offset = IQAMA_OFFSETS[nextAdhanPrayer] || 15;
+    nextIqamaRemaining = nextAdhanRemaining + offset;
+  }
+
+  return {
+    name: prayerNamesArabic[nextAdhanPrayer] || nextAdhanPrayer,
+    time: nextAdhanFormatted,
+    diff: nextAdhanRemaining,
+    
+    iqamaName: prayerNamesArabic[nextIqamaPrayer] || nextIqamaPrayer,
+    iqamaDiff: nextIqamaRemaining,
+    
+    isAfterAdhan: !!activeIqamaPrayer,
+    activeIqamaPrayer: activeIqamaPrayer ? prayerNamesArabic[activeIqamaPrayer] : null
+  };
 }
 
 export function usePrayerTimes() {

@@ -12,7 +12,7 @@ export function useAdhkar(category?: string) {
 
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch adhkar");
-      return api.adhkar.list.responses[200].parse(await res.json());
+      return await res.json();
     },
   });
 }
@@ -28,7 +28,7 @@ export function useDuas(category?: string) {
 
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch duas");
-      return api.duas.list.responses[200].parse(await res.json());
+      return await res.json();
     },
   });
 }
@@ -46,7 +46,7 @@ export function useDailyHadith() {
     queryFn: async () => {
       const res = await fetch(api.hadith.daily.path);
       if (!res.ok) throw new Error("Failed to fetch daily hadith");
-      return api.hadith.daily.responses[200].parse(await res.json());
+      return await res.json();
     },
     staleTime: msUntilMidnight, // يتحدث تلقائي عند منتصف الليل
     gcTime: 1000 * 60 * 60 * 24,

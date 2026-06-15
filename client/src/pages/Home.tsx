@@ -45,34 +45,53 @@ export default function Home() {
 
   usePrayerNotifications(prayerData?.timings || null, prayerData?.date?.hijri);
 
-  // Live countdown to next prayer
+  // Live countdown to next Adhan and Iqamah
   const [countdown, setCountdown] = useState('');
+  const [iqamaCountdown, setIqamaCountdown] = useState('');
   const [countdownStarted, setCountdownStarted] = useState<number | null>(null);
   const [initialDiffMinutes, setInitialDiffMinutes] = useState<number | null>(null);
+  const [initialIqamaDiffMinutes, setInitialIqamaDiffMinutes] = useState<number | null>(null);
 
   useEffect(() => {
     if (!nextPrayer) return;
-    // Store when we started counting and the initial diff
     setCountdownStarted(Date.now());
     setInitialDiffMinutes(nextPrayer.diff);
-  }, [nextPrayer?.name, nextPrayer?.diff]);
+    setInitialIqamaDiffMinutes(nextPrayer.iqamaDiff);
+  }, [nextPrayer?.name, nextPrayer?.diff, nextPrayer?.iqamaDiff]);
 
   useEffect(() => {
-    if (countdownStarted === null || initialDiffMinutes === null) return;
+    if (countdownStarted === null || initialDiffMinutes === null || initialIqamaDiffMinutes === null) return;
     const update = () => {
       const elapsedMs = Date.now() - countdownStarted;
+      
+      // 1. Adhan Countdown
       const totalRemainingMs = (initialDiffMinutes * 60 * 1000) - elapsedMs;
-      if (totalRemainingMs <= 0) { setCountdown('حان الوقت'); return; }
-      const hrs = Math.floor(totalRemainingMs / 3600000);
-      const mins = Math.floor((totalRemainingMs % 3600000) / 60000);
-      const secs = Math.floor((totalRemainingMs % 60000) / 1000);
-      if (hrs > 0) setCountdown(`${hrs}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`);
-      else setCountdown(`${mins}:${secs.toString().padStart(2,'0')}`);
+      if (totalRemainingMs <= 0) {
+        setCountdown('حان وقته');
+      } else {
+        const hrs = Math.floor(totalRemainingMs / 3600000);
+        const mins = Math.floor((totalRemainingMs % 3600000) / 60000);
+        const secs = Math.floor((totalRemainingMs % 60000) / 1000);
+        if (hrs > 0) setCountdown(`${hrs}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`);
+        else setCountdown(`${mins}:${secs.toString().padStart(2,'0')}`);
+      }
+
+      // 2. Iqamah Countdown
+      const totalIqamaRemainingMs = (initialIqamaDiffMinutes * 60 * 1000) - elapsedMs;
+      if (totalIqamaRemainingMs <= 0) {
+        setIqamaCountdown('أُقيمت');
+      } else {
+        const hrs = Math.floor(totalIqamaRemainingMs / 3600000);
+        const mins = Math.floor((totalIqamaRemainingMs % 3600000) / 60000);
+        const secs = Math.floor((totalIqamaRemainingMs % 60000) / 1000);
+        if (hrs > 0) setIqamaCountdown(`${hrs}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`);
+        else setIqamaCountdown(`${mins}:${secs.toString().padStart(2,'0')}`);
+      }
     };
     update();
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
-  }, [countdownStarted, initialDiffMinutes]);
+  }, [countdownStarted, initialDiffMinutes, initialIqamaDiffMinutes]);
 
   const handleShareHadith = async () => {
     if (!dailyHadith) return;
@@ -114,15 +133,26 @@ export default function Home() {
             <>
               <div className="flex flex-col items-center mb-4">
                 <span className="bg-white/10 px-4 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-emerald-100 backdrop-blur-md border border-white/5 mb-2">محراب رفيقك الإسلامي</span>
-                <p className="text-emerald-50/70 font-medium text-xs sm:text-sm">الصلاة القادمة</p>
+                <p className="text-emerald-50/70 font-medium text-xs sm:text-sm">
+                  {nextPrayer.isAfterAdhan ? `متبقي على إقامة (${nextPrayer.activeIqamaPrayer})` : 'الصلاة القادمة'}
+                </p>
               </div>
               <h2 className="text-5xl sm:text-6xl font-black font-display tracking-tight text-white mb-2">{nextPrayer.name}</h2>
               <div className="text-4xl sm:text-5xl font-mono font-bold text-emerald-50" dir="ltr">{nextPrayer.time}</div>
-              {countdown && (
-                <div className="mt-3 bg-white/10 backdrop-blur-sm rounded-full px-5 py-2 inline-flex items-center gap-2 border border-white/10">
-                  <span className="text-emerald-200 text-sm font-bold">⏱ متبقي {countdown}</span>
-                </div>
-              )}
+              
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
+                {countdown && (
+                  <div className="bg-white/10 backdrop-blur-sm rounded-full px-5 py-2 inline-flex items-center gap-2 border border-white/10">
+                    <span className="text-emerald-200 text-xs sm:text-sm font-bold">⏱ الأذان خلال {countdown}</span>
+                  </div>
+                )}
+                
+                {iqamaCountdown && (
+                  <div className="bg-emerald-500/30 backdrop-blur-sm rounded-full px-5 py-2 inline-flex items-center gap-2 border border-emerald-400/20">
+                    <span className="text-emerald-100 text-xs sm:text-sm font-bold">🕌 الإقامة خلال {iqamaCountdown}</span>
+                  </div>
+                )}
+              </div>
 
               {prayerData?.date?.hijri && (
                 <div className="mt-6 pt-4 border-t border-white/5 text-xs text-white/50 font-bold flex items-center justify-center gap-2">

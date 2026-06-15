@@ -94,10 +94,13 @@ export class DatabaseStorage implements IStorage {
         const seed = (dayOfYear + year * 365) % count;
 
         if (refresh) {
-            // When refreshing, pick a different hadith using current time as randomizer
-            const randomOffset = Math.floor(Date.now() / 1000) % count;
-            // Make sure we get a different one by adding an offset
-            const newIndex = (seed + randomOffset + 1) % count;
+            // Pick a random index that strictly excludes the daily seed index
+            let newIndex = seed;
+            if (count > 1) {
+                while (newIndex === seed) {
+                    newIndex = Math.floor(Math.random() * count);
+                }
+            }
             return allHadiths[newIndex];
         }
 

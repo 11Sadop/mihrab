@@ -383,7 +383,7 @@ export default function TasbeehPage() {
 
   return (
     <div className="min-h-screen pb-32 bg-background flex flex-col">
-      <Header title="المسبحة" />
+      <Header title="المسبحة" showBack={true} />
       
       <main className="flex-1 flex flex-col p-4">
         

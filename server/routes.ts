@@ -565,6 +565,63 @@ export async function registerRoutes(
                 return true;
             });
 
+            // Sort results by similarity overlap and source reliability
+            const getHadithWeight = (r: any): number => {
+                const text = (r.text || '').replace(/[ًٌٍَُِّْـ]/g, ""); // Clean tashkeel
+                const query = cleanedSearchKey;
+
+                let score = 0;
+
+                // 1. Exact sub-phrase match (highest priority)
+                if (text.includes(query)) {
+                    score += 500;
+                } else {
+                    // Keyword match ratio
+                    const queryWords = query.split(/\s+/).filter(w => w.length >= 2);
+                    let matchCount = 0;
+                    for (const qw of queryWords) {
+                        if (text.includes(qw)) matchCount++;
+                    }
+                    if (queryWords.length > 0) {
+                        score += (matchCount / queryWords.length) * 200;
+                    }
+                }
+
+                // 2. Source reliability weighting
+                const source = (r.source || '').toLowerCase();
+                const scholar = (r.scholar || '').toLowerCase();
+                const grade = (r.grade || '').toLowerCase();
+
+                if (source.includes('بخاري') || scholar.includes('بخاري') || source.includes('bukhari') || scholar.includes('bukhari')) {
+                    score += 100;
+                } else if (source.includes('مسلم') || scholar.includes('muslim')) {
+                    score += 95;
+                } else {
+                    const isSahihHasan = grade.includes('صحيح') || grade.includes('حسن') || grade.includes('sahih') || grade.includes('hasan');
+                    const isTrustedScholar = scholar.includes('ترمذي') || scholar.includes('tirmidhi') ||
+                                             scholar.includes('داود') || scholar.includes('dawud') ||
+                                             scholar.includes('نسائي') || scholar.includes('nasai') ||
+                                             scholar.includes('ماجه') || scholar.includes('majah') ||
+                                             scholar.includes('أحمد') || scholar.includes('ahmad') ||
+                                             scholar.includes('ألباني') || scholar.includes('albani');
+                    if (isSahihHasan && isTrustedScholar) {
+                        score += 85;
+                    } else if (isSahihHasan) {
+                        score += 75;
+                    } else if (grade.includes('ضعيف') || grade.includes('weak') || grade.includes('منكر') || grade.includes('munkar')) {
+                        score += 20;
+                    } else if (grade.includes('موضوع') || grade.includes('fabricated') || grade.includes('باطل')) {
+                        score += 10;
+                    } else {
+                        score += 50;
+                    }
+                }
+
+                return score;
+            };
+
+            results.sort((a: any, b: any) => getHadithWeight(b) - getHadithWeight(a));
+
             console.log(`Hadith search "${searchKey}" (Cleaned: "${cleanedSearchKey}"): ${results.length} results found`);
             res.json({ results, total: results.length });
         } catch (e: any) {

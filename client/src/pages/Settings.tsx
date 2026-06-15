@@ -426,7 +426,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen pb-32 bg-background">
-      <Header title="الإعدادات" />
+      <Header title="الإعدادات" showBack={true} />
 
       <main className="container max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
 

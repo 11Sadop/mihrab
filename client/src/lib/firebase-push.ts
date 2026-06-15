@@ -198,6 +198,7 @@ export function initializeFirebaseMessaging(): void {
         // Setup foreground messaging if already permitted
         if ('Notification' in window && Notification.permission === 'granted') {
             setupForegroundMessaging();
+            requestNotificationPermission().catch(err => console.log('Token auto-refresh failed:', err));
         }
     } catch (error) {
         console.error('Firebase messaging initialization error:', error);
