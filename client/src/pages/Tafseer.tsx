@@ -26,6 +26,34 @@ const PS:Record<number,number>={1:1,2:2,3:50,4:77,5:106,6:128,7:151,8:177,9:187,
 const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9,182:10,201:11,222:12,242:13,262:14,282:15,302:16,322:17,342:18,362:19,382:20,402:21,422:22,442:23,462:24,482:25,502:26,522:27,542:28,562:29,582:30};
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
+function areWordsSimilar(w1: string, w2: string): boolean {
+  if (w1 === w2) return true;
+  if (w1.length <= 3 || w2.length <= 3) {
+    return false;
+  }
+  const len1 = w1.length;
+  const len2 = w2.length;
+  if (Math.abs(len1 - len2) > 1) return false;
+  let dist = 0;
+  let i = 0, j = 0;
+  while (i < len1 && j < len2) {
+    if (w1[i] !== w2[j]) {
+      dist++;
+      if (dist > 1) return false;
+      if (len1 > len2) {
+        i++;
+      } else if (len2 > len1) {
+        j++;
+      } else {
+        i++; j++;
+      }
+    } else {
+      i++; j++;
+    }
+  }
+  return true;
+}
+
 // Normalize text - keep ALL marks for display except zero-width spaces and spacing gaps
 const norm=(t:string)=>t.replace(/\uFEFF/g,'')
   .replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'')
@@ -260,6 +288,14 @@ export default function TafseerPage(){
   const recRef=useRef<any>(null);
   const txRef=useRef(0);
   const recordingRef = useRef(false);
+  const lastMatchedIdxRef = useRef(-1);
+  const matchedIndicesRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    lastMatchedIdxRef.current = -1;
+    matchedIndicesRef.current = new Set();
+    setHifzMatchedIndices(new Set());
+  }, [hifzIdx]);
   
   useEffect(()=>{pgRef.current=pg;},[pg]);
   useEffect(()=>{recIdRef.current=recId;},[recId]);
@@ -282,7 +318,14 @@ export default function TafseerPage(){
     if(d>50&&pg>1){setPg(p=>p-1);resetHifz();}
     else if(d<-50&&pg<604){setPg(p=>p+1);resetHifz();}
   },[pg]);
-  const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");setHifzMatchedIndices(new Set());};
+  const resetHifz=()=>{
+    setHifzIdx(0);
+    setHifzRes(new Map());
+    setRecTxt("");
+    lastMatchedIdxRef.current = -1;
+    matchedIndicesRef.current = new Set();
+    setHifzMatchedIndices(new Set());
+  };
 
   const searchTimeout=useRef<any>(null);
   const handleSearch=(val:string)=>{
@@ -454,20 +497,27 @@ export default function TafseerPage(){
       // Real-time word-by-word matching sequence
       const ewClean = ew.map(w => w.replace(/^[وفبل]/, ''));
       const swClean = sw.map(w => w.replace(/^[وفبل]/, ''));
-      let targetIdx = 0;
-      const matched = new Set<number>();
+      
+      let targetIdx = lastMatchedIdxRef.current + 1;
+      const currentMatches = new Set(matchedIndicesRef.current);
+      
       for (const spoken of swClean) {
         for (let i = targetIdx; i < Math.min(targetIdx + 3, ewClean.length); i++) {
-          if (spoken === ewClean[i] || spoken.includes(ewClean[i]) || ewClean[i].includes(spoken)) {
-            matched.add(i);
+          if (areWordsSimilar(spoken, ewClean[i])) {
+            currentMatches.add(i);
             targetIdx = i + 1;
             break;
           }
         }
       }
-      setHifzMatchedIndices(matched);
+      
+      if (targetIdx > lastMatchedIdxRef.current + 1) {
+        lastMatchedIdxRef.current = targetIdx - 1;
+        matchedIndicesRef.current = currentMatches;
+        setHifzMatchedIndices(currentMatches);
+      }
 
-      const matchedCount = matched.size;
+      const matchedCount = matchedIndicesRef.current.size;
       const completeRatio = ew.length > 0 ? matchedCount / ew.length : 0;
       
       if(completeRatio >= 0.75 && !isAdvancingRef.current){
@@ -489,22 +539,16 @@ export default function TafseerPage(){
           setHifzFeedback(null);
           hifzTxtRef.current = '';
           setRecTxt('');
+          lastMatchedIdxRef.current = -1;
+          matchedIndicesRef.current = new Set();
           setHifzMatchedIndices(new Set());
         }, 1200);
       }
     };
 
-    // Safe error recovery: Restart speech recognition on error or termination if recording is active
+    // Safe error recovery: Restart speech recognition on termination if recording is active
     r.onerror=(err: any)=>{
       console.warn("Speech recognition error:", err);
-      if(recordingRef.current) {
-        try { r.stop(); } catch {}
-        setTimeout(() => {
-          if (recordingRef.current) {
-            try { r.start(); } catch {}
-          }
-        }, 300);
-      }
     };
     r.onend=()=>{
       if(recordingRef.current) {
@@ -526,6 +570,7 @@ export default function TafseerPage(){
     setRecording(false);
     if(recRef.current){
       recRef.current.onend=null;
+      recRef.current.onerror=null;
       try{recRef.current.stop();}catch{}
       recRef.current=null;
     }

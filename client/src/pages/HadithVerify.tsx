@@ -666,13 +666,11 @@ export default function HadithVerifyPage() {
                 return scoreB - scoreA;
             });
 
-            if (finalRanked.length > 0) {
-                setResults(finalRanked.slice(0, 80));
-                setError("");
+            setResults(finalRanked.slice(0, 80));
+            if (finalRanked.length === 0) {
+                setError("لم يتم العثور على نتائج. تأكد من اتصالك بالإنترنت وجرب كلمات مختلفة.");
             } else {
-                if (initialDeduped.length === 0) {
-                    setError("لم يتم العثور على نتائج. تأكد من اتصالك بالإنترنت وجرب كلمات مختلفة.");
-                }
+                setError("");
             }
             setLoading(false);
         })();
