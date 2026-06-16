@@ -326,12 +326,16 @@ export async function registerRoutes(
                                 if (!grdM) {
                                     grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
                                 }
+                                const sharhUrlM = info.match(/href="([^"]*sharh\/[^"]*)"/i) || prev.match(/href="([^"]*sharh\/[^"]*)"/i) || info.match(/href="([^"]*\/h\/[^"]*)"/i) || prev.match(/href="([^"]*\/h\/[^"]*)"/i);
+                                const sharhUrl = sharhUrlM ? sharhUrlM[1] : undefined;
+
                                 if (text.length > 10) pageResults.push({
                                     text: decodeGarbledText(text), 
                                     narrator: decodeGarbledText(narM?narM[1].replace(/<[^>]+>/g,'').trim():''),
                                     scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
                                     source: tlField(decodeGarbledText(srcM?.[1]||'')), 
-                                    grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
+                                    grade: tlGrade(decodeGarbledText(grdM?.[1]||'')),
+                                    sharhUrl
                                 });
                             }
                             
@@ -351,12 +355,15 @@ export async function registerRoutes(
                                     }
                                     if (txtM) {
                                         const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
+                                        const sharhUrlM = block.match(/href="([^"]*sharh\/[^"]*)"/i) || block.match(/href="([^"]*\/h\/[^"]*)"/i);
+                                        const sharhUrl = sharhUrlM ? sharhUrlM[1] : undefined;
                                         if (text.length > 10) pageResults.push({
                                             text: decodeGarbledText(text), 
                                             narrator: decodeGarbledText(narM ? narM[1].replace(/<[^>]+>/g,'').trim() : ''),
                                             scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
                                             source: tlField(decodeGarbledText(srcM?.[1]||'')), 
-                                            grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
+                                            grade: tlGrade(decodeGarbledText(grdM?.[1]||'')),
+                                            sharhUrl
                                         });
                                     }
                                 }
@@ -368,7 +375,8 @@ export async function registerRoutes(
                                 narrator: decodeGarbledText((h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim()),
                                 scholar: tlField(decodeGarbledText(h.mohadith||h.scholar||'')), 
                                 source: tlField(decodeGarbledText(h.book||h.source||'')),
-                                grade: tlGrade(decodeGarbledText(h.grade||h.hukm||''))
+                                grade: tlGrade(decodeGarbledText(h.grade||h.hukm||'')),
+                                sharhUrl: h.sharh_url || h.sharhUrl || (h.id ? `/hadith/sharh/${h.id}` : undefined)
                             })).filter((h:any) => h.text.length > 5);
                         }
                         return pageResults;
@@ -414,12 +422,16 @@ export async function registerRoutes(
                                     grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
                                 }
                                 
+                                const sharhUrlM = info.match(/href="([^"]*sharh\/[^"]*)"/i) || prev.match(/href="([^"]*sharh\/[^"]*)"/i) || info.match(/href="([^"]*\/h\/[^"]*)"/i) || prev.match(/href="([^"]*\/h\/[^"]*)"/i);
+                                const sharhUrl = sharhUrlM ? sharhUrlM[1] : undefined;
+
                                 if (text.length > 10) list.push({
                                     text: decodeGarbledText(text), 
                                     narrator: decodeGarbledText(narM?narM[1].replace(/<[^>]+>/g,'').trim():''),
                                     scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
                                     source: tlField(decodeGarbledText(srcM?.[1]||'')), 
-                                    grade: tlGrade(decodeGarbledText(grdM?.[1]||''))
+                                    grade: tlGrade(decodeGarbledText(grdM?.[1]||'')),
+                                    sharhUrl
                                 });
                             }
                         }
@@ -548,6 +560,51 @@ export async function registerRoutes(
                 } catch (e: any) { console.log("Sunnah API failed:", e.message); }
             }
 
+            // Apply strict overlap filtering to prevent disjoint results
+            const LOCAL_STOP_WORDS_SET = new Set([
+                "من", "عن", "ان", "في", "على", "لا", "ما", "الى", "ثم", "انه", "كان",
+                "قال", "الله", "رسول", "صلي", "عليه", "وسلم", "يا", "ايها", "قد", "لقد",
+                "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
+            ]);
+            const normalizeAr = (s: string) => s
+                .replace(/[ًٌٍَُِّْـ]/g, '')
+                .replace(/[إأآءٱ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            const cleanQueryWords = cleanedSearchKey.split(/\s+/)
+                .map(w => normalizeAr(w))
+                .filter(w => w.length >= 2 && !LOCAL_STOP_WORDS_SET.has(w));
+
+            const backupQueryWords = cleanedSearchKey.split(/\s+/)
+                .map(w => normalizeAr(w))
+                .filter(w => w.length >= 2);
+
+            const activeQueryWords = cleanQueryWords.length > 0 ? cleanQueryWords : backupQueryWords;
+
+            results = results.filter((r: any) => {
+                const textNorm = normalizeAr(r.text || '');
+                const queryNorm = normalizeAr(cleanedSearchKey);
+                
+                if (textNorm.includes(queryNorm)) {
+                    return true; // Exact phrase match is always preserved
+                }
+                
+                if (activeQueryWords.length === 0) return true;
+                
+                let matchCount = 0;
+                for (const qw of activeQueryWords) {
+                    if (textNorm.includes(qw)) {
+                        matchCount++;
+                    }
+                }
+                
+                const ratio = matchCount / activeQueryWords.length;
+                return ratio >= 0.50; // Require at least 50% word overlap
+            });
+
             // Apply grade filter
             if (gradeFilter === 'sahih') {
                 results = results.filter((r: any) => {
@@ -659,13 +716,29 @@ export async function registerRoutes(
             try {
                 const { verificationHadiths } = await import('../shared/schema');
                 const { db } = await import('./db');
-                const { ilike, or } = await import('drizzle-orm');
-                const allVH = await db.select().from(verificationHadiths);
+                const { ilike, and, sql } = await import('drizzle-orm');
+                
+                const searchWords = cleanQuery.split(' ')
+                    .map(w => normalize(w))
+                    .filter((w: string) => w.length >= 3);
+                
+                let vhResults: any[] = [];
+                if (searchWords.length > 0) {
+                    const pgNormalizeText = (col: any) => {
+                        return sql`translate(
+                            regexp_replace(${col}, '[ًٌٍَُِّْٰـ]', '', 'g'),
+                            'أإآءٱةى',
+                            'aaaaاهي'
+                        )`;
+                    };
+                    const conditions = searchWords.map((kw: string) => ilike(pgNormalizeText(verificationHadiths.text), `%${kw}%`));
+                    vhResults = await db.select().from(verificationHadiths).where(and(...conditions)).limit(20);
+                }
                 
                 let bestMatch: any = null;
                 let bestScore = 0;
                 
-                for (const vh of allVH) {
+                for (const vh of vhResults) {
                     const normText = normalize(vh.text);
                     const queryWords = normQuery.split(' ').filter((w: string) => w.length >= 3);
                     let matched = 0;

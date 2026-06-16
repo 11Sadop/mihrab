@@ -139,6 +139,18 @@ export function getNextPrayer(timings: PrayerTimesData['timings']) {
     nextIqamaRemaining = nextAdhanRemaining + offset;
   }
 
+  let activeIqamaTimeFormatted: string = '';
+  if (activeIqamaPrayer) {
+    const adhanNormalized = normalizeTime(timings[activeIqamaPrayer]);
+    const [hours, minutes] = adhanNormalized.split(':').map(Number);
+    if (!isNaN(hours) && !isNaN(minutes)) {
+      const iqamaTimeMinutes = hours * 60 + minutes + (IQAMA_OFFSETS[activeIqamaPrayer] || 15);
+      const iqamaHours = Math.floor(iqamaTimeMinutes / 60) % 24;
+      const iqamaMins = iqamaTimeMinutes % 60;
+      activeIqamaTimeFormatted = formatTo12Hour(`${iqamaHours}:${iqamaMins}`);
+    }
+  }
+
   return {
     name: prayerNamesArabic[nextAdhanPrayer] || nextAdhanPrayer,
     time: nextAdhanFormatted,
@@ -148,7 +160,8 @@ export function getNextPrayer(timings: PrayerTimesData['timings']) {
     iqamaDiff: nextIqamaRemaining,
     
     isAfterAdhan: !!activeIqamaPrayer,
-    activeIqamaPrayer: activeIqamaPrayer ? prayerNamesArabic[activeIqamaPrayer] : null
+    activeIqamaPrayer: activeIqamaPrayer ? prayerNamesArabic[activeIqamaPrayer] : null,
+    activeIqamaTimeFormatted
   };
 }
 

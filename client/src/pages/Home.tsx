@@ -134,23 +134,29 @@ export default function Home() {
               <div className="flex flex-col items-center mb-4">
                 <span className="bg-white/10 px-4 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-emerald-100 backdrop-blur-md border border-white/5 mb-2">محراب رفيقك الإسلامي</span>
                 <p className="text-emerald-50/70 font-medium text-xs sm:text-sm">
-                  {nextPrayer.isAfterAdhan ? `متبقي على إقامة (${nextPrayer.activeIqamaPrayer})` : 'الصلاة القادمة'}
+                  {nextPrayer.isAfterAdhan ? 'الصلاة القائمة' : 'الصلاة القادمة'}
                 </p>
               </div>
-              <h2 className="text-5xl sm:text-6xl font-black font-display tracking-tight text-white mb-2">{nextPrayer.name}</h2>
-              <div className="text-4xl sm:text-5xl font-mono font-bold text-emerald-50" dir="ltr">{nextPrayer.time}</div>
+              <h2 className="text-5xl sm:text-6xl font-black font-display tracking-tight text-white mb-2">
+                {nextPrayer.isAfterAdhan ? nextPrayer.activeIqamaPrayer : nextPrayer.name}
+              </h2>
+              <div className="text-4xl sm:text-5xl font-mono font-bold text-emerald-50" dir="ltr">
+                {nextPrayer.isAfterAdhan ? (nextPrayer as any).activeIqamaTimeFormatted : nextPrayer.time}
+              </div>
               
               <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
-                {countdown && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-full px-5 py-2 inline-flex items-center gap-2 border border-white/10">
-                    <span className="text-emerald-200 text-xs sm:text-sm font-bold">⏱ الأذان خلال {countdown}</span>
-                  </div>
-                )}
-                
-                {iqamaCountdown && (
-                  <div className="bg-emerald-500/30 backdrop-blur-sm rounded-full px-5 py-2 inline-flex items-center gap-2 border border-emerald-400/20">
-                    <span className="text-emerald-100 text-xs sm:text-sm font-bold">🕌 الإقامة خلال {iqamaCountdown}</span>
-                  </div>
+                {nextPrayer.isAfterAdhan ? (
+                  iqamaCountdown && (
+                    <div className="bg-emerald-500/30 backdrop-blur-sm rounded-full px-5 py-2 inline-flex items-center gap-2 border border-emerald-400/20">
+                      <span className="text-emerald-100 text-xs sm:text-sm font-bold">🕌 المتبقي على الإقامة: {iqamaCountdown}</span>
+                    </div>
+                  )
+                ) : (
+                  countdown && (
+                    <div className="bg-white/10 backdrop-blur-sm rounded-full px-5 py-2 inline-flex items-center gap-2 border border-white/10">
+                      <span className="text-emerald-200 text-xs sm:text-sm font-bold">⏱ المتبقي على الأذان: {countdown}</span>
+                    </div>
+                  )
                 )}
               </div>
 

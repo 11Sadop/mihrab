@@ -71,6 +71,7 @@ interface HadithResult {
     source: string;
     grade: string;
     explanation?: string;
+    sharhUrl?: string;
 }
 
 interface RankedHadithResult extends HadithResult {
@@ -83,13 +84,33 @@ function normalizeArabicText(text: string): string {
     return text
         .toLowerCase()
         .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF-\u06E8\u06EA-\u06ED\u0640]/g, "")
-        .replace(/[أإآٱء]/g, "ا")
+        .replace(/[أإآءٱ]/g, "ا")
         .replace(/ة/g, "ه")
         .replace(/[ىئ]/g, "ي")
         .replace(/ؤ/g, "و")
         .replace(/[^\u0600-\u06FF\s]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function passesStrictOverlapFilter(text: string, normalizedQuery: string, activeTokens: string[]): boolean {
+    const textNorm = normalizeArabicText(text);
+    if (textNorm.includes(normalizedQuery)) {
+        return true;
+    }
+    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
+    if (queryWords.length <= 1) {
+        return true;
+    }
+    if (activeTokens.length === 0) return true;
+    let matchCount = 0;
+    for (const token of activeTokens) {
+        if (textNorm.includes(token)) {
+            matchCount++;
+        }
+    }
+    const ratio = matchCount / activeTokens.length;
+    return ratio >= 0.50;
 }
 
 function isTrustedGrade(grade: string): boolean {
@@ -248,23 +269,67 @@ export default function HadithVerifyPage() {
         }
         
         setExplanationLoadings(prev => ({ ...prev, [idx]: true }));
+        let backendExplanation = "";
+        let fetchedFromBackend = false;
         try {
             const res = await fetch(`/api/hadith/explain?q=${encodeURIComponent(hadith.text)}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.explanation) {
-                    setExplanations(prev => ({ ...prev, [idx]: data.explanation }));
-                } else {
-                    setExplanations(prev => ({ ...prev, [idx]: "لم يتم العثور على شرح للحديث." }));
+                    backendExplanation = data.explanation;
+                    fetchedFromBackend = true;
                 }
-            } else {
-                setExplanations(prev => ({ ...prev, [idx]: "حدث خطأ أثناء جلب الشرح." }));
             }
-        } catch {
-            setExplanations(prev => ({ ...prev, [idx]: "حدث خطأ أثناء الاتصال بالخادم." }));
-        } finally {
-            setExplanationLoadings(prev => ({ ...prev, [idx]: false }));
+        } catch (e) {
+            console.error("Backend explanation failed:", e);
         }
+
+        const isPlaceholder = !fetchedFromBackend || 
+            backendExplanation.includes("غير متوفر") || 
+            backendExplanation.includes("غير متوفر شرحه التفصيلي") ||
+            backendExplanation.includes("لم يتم العثور على شرح");
+
+        if (isPlaceholder && hadith.sharhUrl) {
+            try {
+                let absoluteUrl = hadith.sharhUrl;
+                if (!absoluteUrl.startsWith("http")) {
+                    if (absoluteUrl.startsWith("/")) {
+                        absoluteUrl = `https://dorar.net${absoluteUrl}`;
+                    } else {
+                        absoluteUrl = `https://dorar.net/${absoluteUrl}`;
+                    }
+                }
+
+                const html = await fetchWithProxy(absoluteUrl);
+                if (html) {
+                    const decodedHtml = decodeGarbledDorarText(html);
+                    const explainRegex = /<div[^>]*class="[^"]*(?:explanation|hadith-explanation|sharh)[^"]*"[^>]*>([\s\S]*?)<\/div>/i;
+                    const match = decodedHtml.match(explainRegex);
+                    if (match) {
+                        const cleanText = match[1]
+                            .replace(/<[^>]+>/g, "")
+                            .replace(/&nbsp;/g, " ")
+                            .replace(/&[^;]+;/g, " ")
+                            .replace(/\s+/g, " ")
+                            .trim();
+                        if (cleanText.length > 20) {
+                            setExplanations(prev => ({ ...prev, [idx]: cleanText }));
+                            setExplanationLoadings(prev => ({ ...prev, [idx]: false }));
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Client side explanation scrap failed:", err);
+            }
+        }
+
+        if (fetchedFromBackend && backendExplanation) {
+            setExplanations(prev => ({ ...prev, [idx]: backendExplanation }));
+        } else {
+            setExplanations(prev => ({ ...prev, [idx]: "لم يتم العثور على شرح للحديث." }));
+        }
+        setExplanationLoadings(prev => ({ ...prev, [idx]: false }));
     };
 
     const shareHadithText = async (hadith: HadithResult) => {
@@ -352,12 +417,16 @@ export default function HadithVerifyPage() {
                 if (!gradeM) {
                     gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
                 }
+                const sharhUrlM = info.match(/href="([^"]*sharh\/[^"]*)"/i) || prev.match(/href="([^"]*sharh\/[^"]*)"/i) || info.match(/href="([^"]*\/h\/[^"]*)"/i) || prev.match(/href="([^"]*\/h\/[^"]*)"/i);
+                const sharhUrl = sharhUrlM ? sharhUrlM[1] : undefined;
+
                 if (text.length > 10) parsed.push({
                     text, 
                     narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
                     scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
                     source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                    grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||'')
+                    grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                    sharhUrl
                 });
             }
             
@@ -377,12 +446,15 @@ export default function HadithVerifyPage() {
                     }
                     if (txtM) {
                         const text = txtM[1].replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim();
+                        const sharhUrlM = block.match(/href="([^"]*sharh\/[^"]*)"/i) || block.match(/href="([^"]*\/h\/[^"]*)"/i);
+                        const sharhUrl = sharhUrlM ? sharhUrlM[1] : undefined;
                         if (text.length > 10) parsed.push({
                             text, 
                             narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
                             scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
                             source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
-                            grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||'')
+                            grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                            sharhUrl
                         });
                     }
                 }
@@ -450,19 +522,11 @@ export default function HadithVerifyPage() {
                     }
                 }
                 overlapRatio = matchCount / activeTokens.length;
-                const wordCount = query.trim().split(/\s+/).length;
-                if (wordCount <= 2) {
-                    if (overlapRatio >= 0.50) {
-                        isMatch = true;
-                    }
-                } else {
-                    if (overlapRatio >= 0.40) {
-                        isMatch = true;
-                    }
-                }
+                isMatch = activeTokens.some(token => normalizedText.includes(token));
             }
 
             if (!isMatch) continue;
+            if (!passesStrictOverlapFilter(item.text, normalizedQuery, activeTokens)) continue;
             if (filterSahih && !isTrustedGrade(item.grade)) continue;
 
             localResults.push({
@@ -509,6 +573,7 @@ export default function HadithVerifyPage() {
                                 grade: translateGrade(item.grade || ""),
                                 trustScore: calcTrustScore(item.grade || "", item.source || ""),
                                 relevanceScore: 1.0,
+                                sharhUrl: item.sharhUrl || item.sharh_url,
                             });
                         }
                     }
@@ -562,7 +627,8 @@ export default function HadithVerifyPage() {
                                             narrator: decodeGarbledDorarText(h.rawi || h.narrator || '').replace(/<[^>]+>/g,'').trim(),
                                             scholar: translateField(decodeGarbledDorarText(h.mohadith || h.scholar || '')),
                                             source: translateField(decodeGarbledDorarText(h.book || h.source || '')),
-                                            grade: translateGrade(decodeGarbledDorarText(h.grade || h.hukm || ''))
+                                            grade: translateGrade(decodeGarbledDorarText(h.grade || h.hukm || '')),
+                                            sharhUrl: h.sharh_url || h.sharhUrl || (h.id ? `/hadith/sharh/${h.id}` : undefined)
                                         };
                                         if (filterSahih && !isTrustedGrade(item.grade)) continue;
                                         merged.push({
@@ -592,7 +658,7 @@ export default function HadithVerifyPage() {
                     trustScore: calcTrustScore(item.grade, item.source),
                     relevanceScore: relevance,
                 };
-            });
+            }).filter((item) => passesStrictOverlapFilter(item.text, normalizedQuery, activeTokens));
 
             const finalRanked = finalDeduped.sort((a, b) => {
                 const scoreA = a.relevanceScore * 1000 + a.trustScore;

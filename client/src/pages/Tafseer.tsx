@@ -7,7 +7,7 @@ import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
 const RECITERS:Rec[]=[
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"}, // Original speed real voice
+  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"}, // 128kbps highest quality
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
   {id:"hosary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
@@ -26,8 +26,15 @@ const PS:Record<number,number>={1:1,2:2,3:50,4:77,5:106,6:128,7:151,8:177,9:187,
 const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9,182:10,201:11,222:12,242:13,262:14,282:15,302:16,322:17,342:18,362:19,382:20,402:21,422:22,442:23,462:24,482:25,502:26,522:27,542:28,562:29,582:30};
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
-// Normalize text - keep ALL marks for display except zero-width spaces
-const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'').replace(/لْءَا/g, 'لْـَٔا').replace(/لْء/g, 'لْـٔ').replace(/بالآخرة/g, 'بِالْـَٔاخِرَةِ');
+// Normalize text - keep ALL marks for display except zero-width spaces and spacing gaps
+const norm=(t:string)=>t.replace(/\uFEFF/g,'')
+  .replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'')
+  .replace(/\u064E\u0670/g, '\u0670') // Strip Fatha adjacent to Superscript Alef to eliminate visual gaps
+  .replace(/\u0670\u064E/g, '\u0670')
+  .replace(/لْءَا/g, 'لْـَٔا')
+  .replace(/لْء/g, 'لْـٔ')
+  .replace(/بالآخرة/g, 'بِالْـَٔاخِرَةِ');
+
 // Add space between muqatta'at letters (e.g., الم) for better diacritic display
 const spaceMuqattaat=(t:string)=>{
   const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'');
@@ -68,7 +75,8 @@ const fetchPage=async(p:number)=>{
     if(a.numberInSurah===1&&a.surah.number!==9){
       t=removeBismillah(t);
     }
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:spaceMuqattaat(t.trim()),orig:norm(a.text),juz:a.juz};
+    // Also apply normalization (norm) to the displayed text to resolve spacing gaps in Al-Fatiha
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:spaceMuqattaat(norm(t).trim()),orig:norm(a.text),juz:a.juz};
   });
 };
 
@@ -248,6 +256,7 @@ export default function TafseerPage(){
   const [hifzIdx,setHifzIdx]=useState(0);
   const [hifzRes,setHifzRes]=useState<Map<string,"ok"|"err">>(new Map());
   const [recTxt,setRecTxt]=useState("");
+  const [hifzMatchedIndices, setHifzMatchedIndices] = useState<Set<number>>(new Set());
   const recRef=useRef<any>(null);
   const txRef=useRef(0);
   const recordingRef = useRef(false);
@@ -273,7 +282,7 @@ export default function TafseerPage(){
     if(d>50&&pg>1){setPg(p=>p-1);resetHifz();}
     else if(d<-50&&pg<604){setPg(p=>p+1);resetHifz();}
   },[pg]);
-  const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");};
+  const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");setHifzMatchedIndices(new Set());};
 
   const searchTimeout=useRef<any>(null);
   const handleSearch=(val:string)=>{
@@ -429,24 +438,37 @@ export default function TafseerPage(){
       if(!pq.data) return;
       const exp=pq.data[hifzIdx]; if(!exp) return;
 
-      let transcript='';
-      const latestIdx = e.results.length - 1;
-      transcript = e.results[latestIdx][0].transcript;
+      // Tarteel Engine Upgrade: Aggregate all results across segments to prevent cuts
+      let transcript = '';
+      for (let i = 0; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript + ' ';
+      }
+      transcript = transcript.trim();
       
-      const sw=normAr(transcript).split(' ').filter(w=>w.length>1);
+      const sw = normAr(transcript).split(' ').filter(w => w.length > 0);
       hifzTxtRef.current = transcript;
       setRecTxt(transcript);
 
-      const ew=normAr(exp.text).split(' ').filter(w=>w.length>1);
-      let matchedCount=0;
-      const recentWindow = sw.slice(-Math.min(sw.length, ew.length + 5));
-      for(const targetWord of ew) {
-        if(recentWindow.some(saidWord => saidWord.includes(targetWord) || targetWord.includes(saidWord))) {
-          matchedCount++;
+      const ew = normAr(exp.text).split(' ').filter(w => w.length > 0);
+      
+      // Real-time word-by-word matching sequence
+      const ewClean = ew.map(w => w.replace(/^[وفبل]/, ''));
+      const swClean = sw.map(w => w.replace(/^[وفبل]/, ''));
+      let targetIdx = 0;
+      const matched = new Set<number>();
+      for (const spoken of swClean) {
+        for (let i = targetIdx; i < Math.min(targetIdx + 3, ewClean.length); i++) {
+          if (spoken === ewClean[i] || spoken.includes(ewClean[i]) || ewClean[i].includes(spoken)) {
+            matched.add(i);
+            targetIdx = i + 1;
+            break;
+          }
         }
       }
-      
-      const completeRatio = ew.length>0 ? matchedCount/ew.length : 0;
+      setHifzMatchedIndices(matched);
+
+      const matchedCount = matched.size;
+      const completeRatio = ew.length > 0 ? matchedCount / ew.length : 0;
       
       if(completeRatio >= 0.75 && !isAdvancingRef.current){
         isAdvancingRef.current = true;
@@ -467,12 +489,32 @@ export default function TafseerPage(){
           setHifzFeedback(null);
           hifzTxtRef.current = '';
           setRecTxt('');
+          setHifzMatchedIndices(new Set());
         }, 1200);
       }
     };
 
-    r.onerror=()=>{};
-    r.onend=()=>{if(recordingRef.current)try{r.start();}catch{}};
+    // Safe error recovery: Restart speech recognition on error or termination if recording is active
+    r.onerror=(err: any)=>{
+      console.warn("Speech recognition error:", err);
+      if(recordingRef.current) {
+        try { r.stop(); } catch {}
+        setTimeout(() => {
+          if (recordingRef.current) {
+            try { r.start(); } catch {}
+          }
+        }, 300);
+      }
+    };
+    r.onend=()=>{
+      if(recordingRef.current) {
+        setTimeout(() => {
+          if (recordingRef.current) {
+            try { r.start(); } catch {}
+          }
+        }, 300);
+      }
+    };
     recRef.current=r;
     r.start();
     recordingRef.current = true;
@@ -838,7 +880,28 @@ export default function TafseerPage(){
                             background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                             padding:(isP||isSel)?'4px 10px':'0',borderRadius:(isP||isSel)?'10px':'0',
                           }}>
-                          {a.text}
+                          {(() => {
+                            if (hifz && cur) {
+                              const words = a.text.split(/\s+/);
+                              return words.map((word, wIdx) => {
+                                const isMatched = hifzMatchedIndices.has(wIdx);
+                                return (
+                                  <span 
+                                    key={wIdx} 
+                                    className="transition-all duration-200 mx-0.5"
+                                    style={{
+                                      color: isMatched ? '#22c55e' : colors.text,
+                                      opacity: isMatched ? 1 : 0.25,
+                                      fontWeight: isMatched ? 'bold' : 'normal'
+                                    }}
+                                  >
+                                    {word}
+                                  </span>
+                                );
+                              });
+                            }
+                            return a.text;
+                          })()}
                         </span>
                         <span className="inline-flex items-center justify-center align-middle mx-1.5" data-v="1"
                           style={{width:'1.7em',height:'1.7em',fontSize:'0.52em',verticalAlign:'middle',position:'relative',display:'inline-flex'}}>
