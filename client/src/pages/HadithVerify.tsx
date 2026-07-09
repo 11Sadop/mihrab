@@ -110,7 +110,7 @@ function passesStrictOverlapFilter(text: string, normalizedQuery: string, active
         }
     }
     const ratio = matchCount / activeTokens.length;
-    return ratio >= 0.70;
+    return ratio >= 0.50;
 }
 
 function isTrustedGrade(grade: string): boolean {
@@ -522,7 +522,7 @@ export default function HadithVerifyPage() {
                     }
                 }
                 overlapRatio = matchCount / activeTokens.length;
-                isMatch = overlapRatio >= 0.6;
+                isMatch = overlapRatio >= 0.45;
             }
 
             if (!isMatch) continue;
@@ -681,8 +681,8 @@ export default function HadithVerifyPage() {
             (value, index, self) =>
                 index ===
                 self.findIndex((t) => {
-                    const normA = normalizeArabicText(t.text).substring(0, 80).replace(/\s+/g, '');
-                    const normB = normalizeArabicText(value.text).substring(0, 80).replace(/\s+/g, '');
+                    const normA = normalizeArabicText(t.text).replace(/\s+/g, '');
+                    const normB = normalizeArabicText(value.text).replace(/\s+/g, '');
                     const sourceA = normalizeArabicText(t.source || '');
                     const sourceB = normalizeArabicText(value.source || '');
                     const scholarA = normalizeArabicText(t.scholar || '');
