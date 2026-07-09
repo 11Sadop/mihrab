@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+﻿import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,85 +7,58 @@ import { useSeo } from "@/hooks/use-seo";
 
 interface Rec{id:string;name:string;server:string;ev?:string;}
 const RECITERS:Rec[]=[
-  {id:"maher",name:"ماهر المعيقلي",server:"https://server12.mp3quran.net/maher",ev:"MaherAlMuaiqly128kbps"}, // 128kbps highest quality
-  {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
-  {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
-  {id:"hosary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
-  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Mujawwad_128kbps"},
-  {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"AbdulBasit_Mujawwad_128kbps"},
-  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Sa_d_al-Ghaamidi_128kbps"}, // Highest bitrate
-  {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
-  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server15.mp3quran.net/lhdan",ev:"Muhammad_Al-Luhaidan_128kbps"},
-  {id:"dosari",name:"ياسر الدوسري",server:"https://server10.mp3quran.net/ibrahim_dosri",ev:"Yasser_Ad-Dussary_128kbps"},
-];
+  {id:"maher",name:"┘à╪º┘ç╪▒ ╪º┘ä┘à╪╣┘è┘é┘ä┘è",server:"https://server12.mp3quran.net/maher",ev:"Maher_AlMuaiqly_64kbps"},
+  {id:"afasy",name:"┘à╪┤╪º╪▒┘è ╪º┘ä╪╣┘ü╪º╪│┘è",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
+  {id:"sudais",name:"╪╣╪¿╪»╪º┘ä╪▒╪¡┘à┘å ╪º┘ä╪│╪»┘è╪│",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
+  {id:"hosary",name:"┘à╪¡┘à┘ê╪» ╪«┘ä┘è┘ä ╪º┘ä╪¡╪╡╪▒┘è",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
+  {id:"minshawi",name:"┘à╪¡┘à╪» ╪╡╪»┘è┘é ╪º┘ä┘à┘å╪┤╪º┘ê┘è",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Mujawwad_128kbps"},
+  {id:"basit",name:"╪╣╪¿╪»╪º┘ä╪¿╪º╪│╪╖ ╪╣╪¿╪»╪º┘ä╪╡┘à╪»",server:"https://server7.mp3quran.net/basit",ev:"AbdulBasit_Mujawwad_128kbps"},
+  {id:"ghamdi",name:"╪│╪╣╪» ╪º┘ä╪║╪º┘à╪»┘è",server:"https://server7.mp3quran.net/s_gmd",ev:"Ghamadi_40kbps"},
+  {id:"ajamy",name:"╪ú╪¡┘à╪» ╪º┘ä╪╣╪¼┘à┘è",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
+  {id:"luhaidan",name:"┘à╪¡┘à╪» ╪º┘ä┘ä╪¡┘è╪»╪º┘å",server:"https://server15.mp3quran.net/lhdan",ev:"Muhammad_Al-Luhaidan_128kbps"},
+  {id:"dosari",name:"┘è╪º╪│╪▒ ╪º┘ä╪»┘ê╪│╪▒┘è",server:"https://server10.mp3quran.net/ibrahim_dosri",ev:"Yasser_Ad-Dussary_128kbps"},
+]
 
-const SURAHS=[{id:1,n:"الفاتحة",c:7},{id:2,n:"البقرة",c:286},{id:3,n:"آل عمران",c:200},{id:4,n:"النساء",c:176},{id:5,n:"المائدة",c:120},{id:6,n:"الأنعام",c:165},{id:7,n:"الأعراف",c:206},{id:8,n:"الأنفال",c:75},{id:9,n:"التوبة",c:129},{id:10,n:"يونس",c:109},{id:11,n:"هود",c:123},{id:12,n:"يوسف",c:111},{id:13,n:"الرعد",c:43},{id:14,n:"إبراهيم",c:52},{id:15,n:"الحجر",c:99},{id:16,n:"النحل",c:128},{id:17,n:"الإسراء",c:111},{id:18,n:"الكهف",c:110},{id:19,n:"مريم",c:98},{id:20,n:"طه",c:135},{id:21,n:"الأنبياء",c:112},{id:22,n:"الحج",c:78},{id:23,n:"المؤمنون",c:118},{id:24,n:"النور",c:64},{id:25,n:"الفرقان",c:77},{id:26,n:"الشعراء",c:227},{id:27,n:"النمل",c:93},{id:28,n:"القصص",c:88},{id:29,n:"العنكبوت",c:69},{id:30,n:"الروم",c:60},{id:31,n:"لقمان",c:34},{id:32,n:"السجدة",c:30},{id:33,n:"الأحزاب",c:73},{id:34,n:"سبأ",c:54},{id:35,n:"فاطر",c:45},{id:36,n:"يس",c:83},{id:37,n:"الصافات",c:182},{id:38,n:"ص",c:88},{id:39,n:"الزمر",c:75},{id:40,n:"غافر",c:85},{id:41,n:"فصلت",c:54},{id:42,n:"الشورى",c:53},{id:43,n:"الزخرف",c:89},{id:44,n:"الدخان",c:59},{id:45,n:"الجاثية",c:37},{id:46,n:"الأحقاف",c:35},{id:47,n:"محمد",c:38},{id:48,n:"الفتح",c:29},{id:49,n:"الحجرات",c:18},{id:50,n:"ق",c:45},{id:51,n:"الذاريات",c:60},{id:52,n:"الطور",c:49},{id:53,n:"النجم",c:62},{id:54,n:"القمر",c:55},{id:55,n:"الرحمن",c:78},{id:56,n:"الواقعة",c:96},{id:57,n:"الحديد",c:29},{id:58,n:"المجادلة",c:22},{id:59,n:"الحشر",c:24},{id:60,n:"الممتحنة",c:13},{id:61,n:"الصف",c:14},{id:62,n:"الجمعة",c:11},{id:63,n:"المنافقون",c:11},{id:64,n:"التغابن",c:18},{id:65,n:"الطلاق",c:12},{id:66,n:"التحريم",c:12},{id:67,n:"الملك",c:30},{id:68,n:"القلم",c:52},{id:69,n:"الحاقة",c:52},{id:70,n:"المعارج",c:44},{id:71,n:"نوح",c:28},{id:72,n:"الجن",c:28},{id:73,n:"المزمل",c:20},{id:74,n:"المدثر",c:56},{id:75,n:"القيامة",c:40},{id:76,n:"الإنسان",c:31},{id:77,n:"المرسلات",c:50},{id:78,n:"النبأ",c:40},{id:79,n:"النازعات",c:46},{id:80,n:"عبس",c:42},{id:81,n:"التكوير",c:29},{id:82,n:"الانفطار",c:19},{id:83,n:"المطففين",c:36},{id:84,n:"الانشقاق",c:25},{id:85,n:"البروج",c:22},{id:86,n:"الطارق",c:17},{id:87,n:"الأعلى",c:19},{id:88,n:"الغاشية",c:26},{id:89,n:"الفجر",c:30},{id:90,n:"البلد",c:20},{id:91,n:"الشمس",c:15},{id:92,n:"الليل",c:21},{id:93,n:"الضحى",c:11},{id:94,n:"الشرح",c:8},{id:95,n:"التين",c:8},{id:96,n:"العلق",c:19},{id:97,n:"القدر",c:5},{id:98,n:"البينة",c:8},{id:99,n:"الزلزلة",c:8},{id:100,n:"العاديات",c:11},{id:101,n:"القارعة",c:11},{id:102,n:"التكاثر",c:8},{id:103,n:"العصر",c:3},{id:104,n:"الهمزة",c:9},{id:105,n:"الفيل",c:5},{id:106,n:"قريش",c:4},{id:107,n:"الماعون",c:7},{id:108,n:"الكوثر",c:3},{id:109,n:"الكافرون",c:6},{id:110,n:"النصر",c:3},{id:111,n:"المسد",c:5},{id:112,n:"الإخلاص",c:4},{id:113,n:"الفلق",c:5},{id:114,n:"الناس",c:6}];
+const SURAHS=[{id:1,n:"╪º┘ä┘ü╪º╪¬╪¡╪⌐",c:7},{id:2,n:"╪º┘ä╪¿┘é╪▒╪⌐",c:286},{id:3,n:"╪ó┘ä ╪╣┘à╪▒╪º┘å",c:200},{id:4,n:"╪º┘ä┘å╪│╪º╪í",c:176},{id:5,n:"╪º┘ä┘à╪º╪ª╪»╪⌐",c:120},{id:6,n:"╪º┘ä╪ú┘å╪╣╪º┘à",c:165},{id:7,n:"╪º┘ä╪ú╪╣╪▒╪º┘ü",c:206},{id:8,n:"╪º┘ä╪ú┘å┘ü╪º┘ä",c:75},{id:9,n:"╪º┘ä╪¬┘ê╪¿╪⌐",c:129},{id:10,n:"┘è┘ê┘å╪│",c:109},{id:11,n:"┘ç┘ê╪»",c:123},{id:12,n:"┘è┘ê╪│┘ü",c:111},{id:13,n:"╪º┘ä╪▒╪╣╪»",c:43},{id:14,n:"╪Ñ╪¿╪▒╪º┘ç┘è┘à",c:52},{id:15,n:"╪º┘ä╪¡╪¼╪▒",c:99},{id:16,n:"╪º┘ä┘å╪¡┘ä",c:128},{id:17,n:"╪º┘ä╪Ñ╪│╪▒╪º╪í",c:111},{id:18,n:"╪º┘ä┘â┘ç┘ü",c:110},{id:19,n:"┘à╪▒┘è┘à",c:98},{id:20,n:"╪╖┘ç",c:135},{id:21,n:"╪º┘ä╪ú┘å╪¿┘è╪º╪í",c:112},{id:22,n:"╪º┘ä╪¡╪¼",c:78},{id:23,n:"╪º┘ä┘à╪ñ┘à┘å┘ê┘å",c:118},{id:24,n:"╪º┘ä┘å┘ê╪▒",c:64},{id:25,n:"╪º┘ä┘ü╪▒┘é╪º┘å",c:77},{id:26,n:"╪º┘ä╪┤╪╣╪▒╪º╪í",c:227},{id:27,n:"╪º┘ä┘å┘à┘ä",c:93},{id:28,n:"╪º┘ä┘é╪╡╪╡",c:88},{id:29,n:"╪º┘ä╪╣┘å┘â╪¿┘ê╪¬",c:69},{id:30,n:"╪º┘ä╪▒┘ê┘à",c:60},{id:31,n:"┘ä┘é┘à╪º┘å",c:34},{id:32,n:"╪º┘ä╪│╪¼╪»╪⌐",c:30},{id:33,n:"╪º┘ä╪ú╪¡╪▓╪º╪¿",c:73},{id:34,n:"╪│╪¿╪ú",c:54},{id:35,n:"┘ü╪º╪╖╪▒",c:45},{id:36,n:"┘è╪│",c:83},{id:37,n:"╪º┘ä╪╡╪º┘ü╪º╪¬",c:182},{id:38,n:"╪╡",c:88},{id:39,n:"╪º┘ä╪▓┘à╪▒",c:75},{id:40,n:"╪║╪º┘ü╪▒",c:85},{id:41,n:"┘ü╪╡┘ä╪¬",c:54},{id:42,n:"╪º┘ä╪┤┘ê╪▒┘ë",c:53},{id:43,n:"╪º┘ä╪▓╪«╪▒┘ü",c:89},{id:44,n:"╪º┘ä╪»╪«╪º┘å",c:59},{id:45,n:"╪º┘ä╪¼╪º╪½┘è╪⌐",c:37},{id:46,n:"╪º┘ä╪ú╪¡┘é╪º┘ü",c:35},{id:47,n:"┘à╪¡┘à╪»",c:38},{id:48,n:"╪º┘ä┘ü╪¬╪¡",c:29},{id:49,n:"╪º┘ä╪¡╪¼╪▒╪º╪¬",c:18},{id:50,n:"┘é",c:45},{id:51,n:"╪º┘ä╪░╪º╪▒┘è╪º╪¬",c:60},{id:52,n:"╪º┘ä╪╖┘ê╪▒",c:49},{id:53,n:"╪º┘ä┘å╪¼┘à",c:62},{id:54,n:"╪º┘ä┘é┘à╪▒",c:55},{id:55,n:"╪º┘ä╪▒╪¡┘à┘å",c:78},{id:56,n:"╪º┘ä┘ê╪º┘é╪╣╪⌐",c:96},{id:57,n:"╪º┘ä╪¡╪»┘è╪»",c:29},{id:58,n:"╪º┘ä┘à╪¼╪º╪»┘ä╪⌐",c:22},{id:59,n:"╪º┘ä╪¡╪┤╪▒",c:24},{id:60,n:"╪º┘ä┘à┘à╪¬╪¡┘å╪⌐",c:13},{id:61,n:"╪º┘ä╪╡┘ü",c:14},{id:62,n:"╪º┘ä╪¼┘à╪╣╪⌐",c:11},{id:63,n:"╪º┘ä┘à┘å╪º┘ü┘é┘ê┘å",c:11},{id:64,n:"╪º┘ä╪¬╪║╪º╪¿┘å",c:18},{id:65,n:"╪º┘ä╪╖┘ä╪º┘é",c:12},{id:66,n:"╪º┘ä╪¬╪¡╪▒┘è┘à",c:12},{id:67,n:"╪º┘ä┘à┘ä┘â",c:30},{id:68,n:"╪º┘ä┘é┘ä┘à",c:52},{id:69,n:"╪º┘ä╪¡╪º┘é╪⌐",c:52},{id:70,n:"╪º┘ä┘à╪╣╪º╪▒╪¼",c:44},{id:71,n:"┘å┘ê╪¡",c:28},{id:72,n:"╪º┘ä╪¼┘å",c:28},{id:73,n:"╪º┘ä┘à╪▓┘à┘ä",c:20},{id:74,n:"╪º┘ä┘à╪»╪½╪▒",c:56},{id:75,n:"╪º┘ä┘é┘è╪º┘à╪⌐",c:40},{id:76,n:"╪º┘ä╪Ñ┘å╪│╪º┘å",c:31},{id:77,n:"╪º┘ä┘à╪▒╪│┘ä╪º╪¬",c:50},{id:78,n:"╪º┘ä┘å╪¿╪ú",c:40},{id:79,n:"╪º┘ä┘å╪º╪▓╪╣╪º╪¬",c:46},{id:80,n:"╪╣╪¿╪│",c:42},{id:81,n:"╪º┘ä╪¬┘â┘ê┘è╪▒",c:29},{id:82,n:"╪º┘ä╪º┘å┘ü╪╖╪º╪▒",c:19},{id:83,n:"╪º┘ä┘à╪╖┘ü┘ü┘è┘å",c:36},{id:84,n:"╪º┘ä╪º┘å╪┤┘é╪º┘é",c:25},{id:85,n:"╪º┘ä╪¿╪▒┘ê╪¼",c:22},{id:86,n:"╪º┘ä╪╖╪º╪▒┘é",c:17},{id:87,n:"╪º┘ä╪ú╪╣┘ä┘ë",c:19},{id:88,n:"╪º┘ä╪║╪º╪┤┘è╪⌐",c:26},{id:89,n:"╪º┘ä┘ü╪¼╪▒",c:30},{id:90,n:"╪º┘ä╪¿┘ä╪»",c:20},{id:91,n:"╪º┘ä╪┤┘à╪│",c:15},{id:92,n:"╪º┘ä┘ä┘è┘ä",c:21},{id:93,n:"╪º┘ä╪╢╪¡┘ë",c:11},{id:94,n:"╪º┘ä╪┤╪▒╪¡",c:8},{id:95,n:"╪º┘ä╪¬┘è┘å",c:8},{id:96,n:"╪º┘ä╪╣┘ä┘é",c:19},{id:97,n:"╪º┘ä┘é╪»╪▒",c:5},{id:98,n:"╪º┘ä╪¿┘è┘å╪⌐",c:8},{id:99,n:"╪º┘ä╪▓┘ä╪▓┘ä╪⌐",c:8},{id:100,n:"╪º┘ä╪╣╪º╪»┘è╪º╪¬",c:11},{id:101,n:"╪º┘ä┘é╪º╪▒╪╣╪⌐",c:11},{id:102,n:"╪º┘ä╪¬┘â╪º╪½╪▒",c:8},{id:103,n:"╪º┘ä╪╣╪╡╪▒",c:3},{id:104,n:"╪º┘ä┘ç┘à╪▓╪⌐",c:9},{id:105,n:"╪º┘ä┘ü┘è┘ä",c:5},{id:106,n:"┘é╪▒┘è╪┤",c:4},{id:107,n:"╪º┘ä┘à╪º╪╣┘ê┘å",c:7},{id:108,n:"╪º┘ä┘â┘ê╪½╪▒",c:3},{id:109,n:"╪º┘ä┘â╪º┘ü╪▒┘ê┘å",c:6},{id:110,n:"╪º┘ä┘å╪╡╪▒",c:3},{id:111,n:"╪º┘ä┘à╪│╪»",c:5},{id:112,n:"╪º┘ä╪Ñ╪«┘ä╪º╪╡",c:4},{id:113,n:"╪º┘ä┘ü┘ä┘é",c:5},{id:114,n:"╪º┘ä┘å╪º╪│",c:6}];
 
 const PS:Record<number,number>={1:1,2:2,3:50,4:77,5:106,6:128,7:151,8:177,9:187,10:208,11:221,12:235,13:249,14:255,15:262,16:267,17:282,18:293,19:305,20:312,21:322,22:332,23:342,24:350,25:359,26:367,27:377,28:385,29:396,30:404,31:411,32:415,33:418,34:428,35:434,36:440,37:446,38:453,39:458,40:467,41:477,42:483,43:489,44:496,45:499,46:502,47:507,48:511,49:515,50:518,51:520,52:523,53:526,54:528,55:531,56:534,57:537,58:542,59:545,60:549,61:551,62:553,63:554,64:556,65:558,66:560,67:562,68:564,69:566,70:568,71:570,72:572,73:574,74:575,75:577,76:578,77:580,78:582,79:583,80:585,81:586,82:587,83:587,84:589,85:590,86:591,87:591,88:592,89:593,90:594,91:595,92:595,93:596,94:596,95:597,96:597,97:598,98:598,99:599,100:599,101:600,102:600,103:601,104:601,105:601,106:602,107:602,108:602,109:603,110:603,111:603,112:604,113:604,114:604};
 
 const JUZ:Record<number,number>={1:1,22:2,42:3,62:4,82:5,102:6,121:7,142:8,162:9,182:10,201:11,222:12,242:13,262:14,282:15,302:16,322:17,342:18,362:19,382:20,402:21,422:22,442:23,462:24,482:25,502:26,522:27,542:28,562:29,582:30};
 function juzForPage(p:number){let j=1;for(const pg of Object.keys(JUZ).map(Number).sort((a,b)=>a-b)){if(pg<=p)j=JUZ[pg];else break;}return j;}
 
-function areWordsSimilar(w1: string, w2: string): boolean {
-  if (w1 === w2) return true;
-  if (w1.length <= 2 || w2.length <= 2) {
-    return w1 === w2;
-  }
-  const len1 = w1.length;
-  const len2 = w2.length;
-  if (Math.abs(len1 - len2) > 1) return false;
-  let dist = 0;
-  let i = 0, j = 0;
-  while (i < len1 && j < len2) {
-    if (w1[i] !== w2[j]) {
-      dist++;
-      if (dist > 1) return false;
-      if (len1 > len2) {
-        i++;
-      } else if (len2 > len1) {
-        j++;
-      } else {
-        i++; j++;
-      }
-    } else {
-      i++; j++;
-    }
-  }
-  return true;
-}
-
-// Normalize text - keep ALL marks for display except zero-width spaces and spacing gaps
-const norm=(t:string)=>t.replace(/\uFEFF/g,'')
-  .replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9۩]/g,'')
-  .replace(/\u064E\u0670/g, '\u0670') // Strip Fatha adjacent to Superscript Alef to eliminate visual gaps
-  .replace(/\u0670\u064E/g, '\u0670');
-
-// Add space between muqatta'at letters (e.g., الم) for better diacritic display
+// Normalize text - keep ALL marks for display except zero-width spaces
+const norm=(t:string)=>t.replace(/\uFEFF/g,'').replace(/[\u06DF\u06E0\u06EA\u06EB\u06EC\u06ED\u06E9█⌐]/g,'').replace(/┘ä┘Æ╪í┘Ä╪º/g, '┘ä┘Æ┘Ç┘Ä┘ö╪º').replace(/┘ä┘Æ╪í/g, '┘ä┘Æ┘Ç┘ö').replace(/╪¿╪º┘ä╪ó╪«╪▒╪⌐/g, '╪¿┘É╪º┘ä┘Æ┘Ç┘Ä┘ö╪º╪«┘É╪▒┘Ä╪⌐┘É');
+// Add space between muqatta'at letters (e.g., ╪º┘ä┘à) for better diacritic display
 const spaceMuqattaat=(t:string)=>{
+  // Preserve spacing for display but don't strip the actual diacritics
   const base=t.replace(/[\u064B-\u065F\u0653\u0670\u200A\u06DE\u06D6-\u06ED]/g,'');
-  if(base.length>=2&&base.length<=5&&/^[المركهيعطسحقنصل]+$/.test(base)){
+  if(base.length>=2&&base.length<=5&&/^[╪º┘ä┘à╪▒┘â┘ç┘è╪╣╪╖╪│╪¡┘é┘å╪╡┘ä]+$/.test(base)){
     return t.replace(/([\u0621-\u064A][\u064B-\u065F\u0653\u0670\u06D6-\u06ED]*)/g,'$1 ').trim();
   }
   return t;
 };
-const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[ٱإأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
+const strip=(t:string)=>t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653]/g,'').replace(/[┘▒╪Ñ╪ú╪ó╪º]/g,'╪º').replace(/┘ë/g,'┘è').replace(/╪⌐/g,'┘ç').replace(/\s+/g,' ').trim();
 const pad3=(n:number)=>String(n).padStart(3,'0');
 function surahForPage(p:number){let s=1;for(const id of Object.keys(PS).map(Number)){if(PS[id]<=p)s=id;else break;}return SURAHS[s-1];}
+function pageForVerse(sn:number,nis:number){ return 1; }
 
 // Robust bismillah removal
-const BISM_PLAIN='بسم الله الرحمن الرحيم';
+const BISM_PLAIN='╪¿╪│┘à ╪º┘ä┘ä┘ç ╪º┘ä╪▒╪¡┘à┘å ╪º┘ä╪▒╪¡┘è┘à';
 function removeBismillah(t:string):string{
   const s=strip(t);
   if(s.startsWith(BISM_PLAIN)){
+    // Find where bismillah ends in original text by matching char count
     let plainIdx=0,origIdx=0;
     const plainTarget=BISM_PLAIN.replace(/\s/g,'');
     while(origIdx<t.length&&plainIdx<plainTarget.length){
       const c=t[origIdx];
+      // Skip diacritics and special chars
       if(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\u0653\u0654\u0655]/.test(c)){origIdx++;continue;}
-      const nc=c.replace(/[ٱإأآا]/g,'ا');
+      const nc=c.replace(/[┘▒╪Ñ╪ú╪ó╪º]/g,'╪º');
       if(nc===plainTarget[plainIdx]||c===' '){if(c!==' ')plainIdx++;origIdx++;}
       else{origIdx++;plainIdx++;}
     }
+    // Skip trailing whitespace
     while(origIdx<t.length&&t[origIdx]===' ')origIdx++;
     return t.slice(origIdx);
   }
@@ -96,12 +69,13 @@ const fetchPage=async(p:number)=>{
   const r=await fetch(`https://api.alquran.cloud/v1/page/${p}/quran-uthmani`);
   if(!r.ok)throw new Error("Fail");const d=await r.json();
   return d.data.ayahs.filter((a:any)=>a.numberInSurah>0).map((a:any)=>{
-    let t=a.text;
+    let t=a.text; // Use ORIGINAL text for display (fix Bil-Akhirah)
+    // Strip bismillah from verse 1 of ALL surahs (so we can manually inject it gracefully at the top)
+    // EXCEPT Tawbah which has no Bismillah.
     if(a.numberInSurah===1&&a.surah.number!==9){
       t=removeBismillah(t);
     }
-    // Also apply normalization (norm) to the displayed text to resolve spacing gaps in Al-Fatiha
-    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:spaceMuqattaat(norm(t).trim()),orig:norm(a.text),juz:a.juz};
+    return{num:a.number,nis:a.numberInSurah,sn:a.surah.number,sname:a.surah.name,text:spaceMuqattaat(t.trim()),orig:norm(a.text),juz:a.juz};
   });
 };
 
@@ -114,26 +88,22 @@ const QBG:Record<string,{bg:string;text:string;border:string;hi:string}>={
 
 const SAJDA_VERSES=new Set(['7:206','13:15','16:50','17:109','19:58','22:18','22:77','25:60','27:26','32:15','38:24','41:38','53:62','84:21','96:19']);
 
-const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'التفسير الميسر'},{id:'ar.jalalayn',name:'تفسير الجلالين'},{id:'ar.ibn-katheer',name:'تفسير ابن كثير'},{id:'ar.qurtubi',name:'تفسير القرطبي'},{id:'ar.baghawi',name:'تفسير البغوي'},{id:'ar.saddi',name:'تفسير السعدي'},{id:'ar.tabari',name:'تفسير الطبري'},];
+const TAFSEER_SOURCES=[{id:'ar.muyassar',name:'╪º┘ä╪¬┘ü╪│┘è╪▒ ╪º┘ä┘à┘è╪│╪▒'},{id:'ar.jalalayn',name:'╪¬┘ü╪│┘è╪▒ ╪º┘ä╪¼┘ä╪º┘ä┘è┘å'},{id:'ar.ibn-katheer',name:'╪¬┘ü╪│┘è╪▒ ╪º╪¿┘å ┘â╪½┘è╪▒'},{id:'ar.qurtubi',name:'╪¬┘ü╪│┘è╪▒ ╪º┘ä┘é╪▒╪╖╪¿┘è'},{id:'ar.baghawi',name:'╪¬┘ü╪│┘è╪▒ ╪º┘ä╪¿╪║┘ê┘è'},{id:'ar.saddi',name:'╪¬┘ü╪│┘è╪▒ ╪º┘ä╪│╪╣╪»┘è'},{id:'ar.tabari',name:'╪¬┘ü╪│┘è╪▒ ╪º┘ä╪╖╪¿╪▒┘è'},];
 
 export default function TafseerPage(){
   const audio1Ref = useRef<HTMLAudioElement | null>(null);
   const audio2Ref = useRef<HTMLAudioElement | null>(null);
   const activeAudioRef = useRef<'1'|'2'>('1');
   const nextPreloadedKey = useRef<string>("");
-  const isSeekingRef = useRef(false);
-  const handleEndedRef = useRef<() => void>(() => {});
-  const handleTimeUpdateRef = useRef<() => void>(() => {});
-  const handleErrRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     audio1Ref.current = new Audio();
     audio2Ref.current = new Audio();
     
     const setup = (a: HTMLAudioElement) => {
-      a.addEventListener('ended', () => handleEndedRef.current());
-      a.addEventListener('timeupdate', () => handleTimeUpdateRef.current());
-      a.addEventListener('error', () => handleErrRef.current());
+      a.addEventListener('ended', handleEnded);
+      a.addEventListener('timeupdate', handleTimeUpdate);
+      a.addEventListener('error', handleErr);
     };
     if(audio1Ref.current) setup(audio1Ref.current);
     if(audio2Ref.current) setup(audio2Ref.current);
@@ -168,7 +138,6 @@ export default function TafseerPage(){
         if (a) {
           a.play().catch(() => setPlayingKey(""));
           setPlayingKey(nextKey);
-          setPlayingSn(q.sn);
           ensureVerseVisible(q.sn, nextNis);
           playQueueRef.current = { ...q, nis: nextNis };
           nextPreloadedKey.current = "";
@@ -182,29 +151,22 @@ export default function TafseerPage(){
           a.src = url;
           a.play().catch(() => setPlayingKey(""));
           setPlayingKey(nextKey);
-          setPlayingSn(q.sn);
           ensureVerseVisible(q.sn, nextNis);
           playQueueRef.current = { ...q, nis: nextNis };
         }
       }
     } else {
       setPlayingKey("");
-      setIsPlaying(false);
-      setPlayingSn(0);
-      playQueueRef.current = null;
     }
   };
-  handleEndedRef.current = handleEnded;
 
   const handleTimeUpdate = () => {
     const a = currentAudio();
     if (!a) return;
     
-    // UI Progress (only if not seeking/dragging)
+    // UI Progress
     const bar = document.getElementById('scrubBar') as HTMLInputElement;
-    if (bar && a.duration && !isSeekingRef.current) { 
-      bar.value = String((a.currentTime / a.duration) * 100); 
-    }
+    if (bar && a.duration) { bar.value = String((a.currentTime / a.duration) * 100); }
     
     // Preload Logic
     const q = playQueueRef.current;
@@ -223,22 +185,8 @@ export default function TafseerPage(){
       }
     }
   };
-  handleTimeUpdateRef.current = handleTimeUpdate;
 
-  const handleScrubInput = () => {
-    isSeekingRef.current = true;
-  };
-
-  const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const a = currentAudio();
-    if (a && a.duration) {
-      const pct = parseFloat(e.target.value);
-      a.currentTime = (pct / 100) * a.duration;
-    }
-    isSeekingRef.current = false;
-  };
-
-  useSeo({title:"محراب - رفيقك الإسلامي",description:"محراب رفيقك الإسلامي - القرآن الكريم والتفسير ومواقيت الصلاة",canonicalPath:"/tafseer"});
+  useSeo({title:"┘à╪¡╪▒╪º╪¿ - ╪▒┘ü┘è┘é┘â ╪º┘ä╪Ñ╪│┘ä╪º┘à┘è",description:"┘à╪¡╪▒╪º╪¿ ╪▒┘ü┘è┘é┘â ╪º┘ä╪Ñ╪│┘ä╪º┘à┘è - ╪º┘ä┘é╪▒╪ó┘å ╪º┘ä┘â╪▒┘è┘à ┘ê╪º┘ä╪¬┘ü╪│┘è╪▒ ┘ê┘à┘ê╪º┘é┘è╪¬ ╪º┘ä╪╡┘ä╪º╪⌐",canonicalPath:"/tafseer"});
   const qc=useQueryClient();
   const [pg,setPg]=useState(1);
   const [recId,setRecId]=useState("maher");
@@ -291,18 +239,8 @@ export default function TafseerPage(){
   const [hifzIdx,setHifzIdx]=useState(0);
   const [hifzRes,setHifzRes]=useState<Map<string,"ok"|"err">>(new Map());
   const [recTxt,setRecTxt]=useState("");
-  const [hifzMatchedIndices, setHifzMatchedIndices] = useState<Set<number>>(new Set());
   const recRef=useRef<any>(null);
   const txRef=useRef(0);
-  const recordingRef = useRef(false);
-  const lastMatchedIdxRef = useRef(-1);
-  const matchedIndicesRef = useRef<Set<number>>(new Set());
-
-  useEffect(() => {
-    lastMatchedIdxRef.current = -1;
-    matchedIndicesRef.current = new Set();
-    setHifzMatchedIndices(new Set());
-  }, [hifzIdx]);
   
   useEffect(()=>{pgRef.current=pg;},[pg]);
   useEffect(()=>{recIdRef.current=recId;},[recId]);
@@ -325,14 +263,7 @@ export default function TafseerPage(){
     if(d>50&&pg>1){setPg(p=>p-1);resetHifz();}
     else if(d<-50&&pg<604){setPg(p=>p+1);resetHifz();}
   },[pg]);
-  const resetHifz=()=>{
-    setHifzIdx(0);
-    setHifzRes(new Map());
-    setRecTxt("");
-    lastMatchedIdxRef.current = -1;
-    matchedIndicesRef.current = new Set();
-    setHifzMatchedIndices(new Set());
-  };
+  const resetHifz=()=>{setHifzIdx(0);setHifzRes(new Map());setRecTxt("");};
 
   const searchTimeout=useRef<any>(null);
   const handleSearch=(val:string)=>{
@@ -350,32 +281,13 @@ export default function TafseerPage(){
   };
   const goSurah=(id:number)=>{setPg(PS[id]||1);setShowSearch(false);setSearch("");setSelVerse(null);setShowOptions(false);setHifz(false);stopHifz();resetHifz();setAyahSearchResults([]);};
 
-  const goVerse = (surahNum: number, pageNum: number, numberInSurah: number) => {
-    setPg(pageNum);
-    setShowSearch(false);
-    setSearch("");
-    setSelVerse(null);
-    setShowOptions(false);
-    setHifz(false);
-    stopHifz();
-    resetHifz();
-    setAyahSearchResults([]);
-    setTimeout(() => {
-      const el = document.getElementById(`verse-${surahNum}-${numberInSurah}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 500);
-  };
-
-  // ═══ AUDIO ═══
+  // ΓòÉΓòÉΓòÉ AUDIO ΓòÉΓòÉΓòÉ
   const getReciter=()=>RECITERS.find(r=>r.id===recIdRef.current)||RECITERS[0];
 
   const ensureVerseVisible=(sn:number,nis:number)=>{
     const data=qc.getQueryData<any[]>(["qp",pgRef.current]);
     if(data&&!data.some((a:any)=>a.sn===sn&&a.nis===nis)){
-      // Fast local page transition
-      if (pgRef.current < 604) {
-        setPg(pgRef.current + 1);
-      }
+      fetch(`https://api.alquran.cloud/v1/ayah/${sn}:${nis}`).then(r=>r.json()).then(d=>{if(d?.data?.page)setPg(d.data.page);}).catch(()=>{});
     } else {
       setTimeout(()=>{const el=document.getElementById(`verse-${sn}-${nis}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}, 100);
     }
@@ -388,9 +300,9 @@ export default function TafseerPage(){
     
     if('mediaSession' in navigator){
       navigator.mediaSession.metadata=new MediaMetadata({
-        title:`سورة ${SURAHS.find(s=>s.id===sn)?.n||''}`,
+        title:`╪│┘ê╪▒╪⌐ ${SURAHS.find(s=>s.id===sn)?.n||''}`,
         artist:rec.name,
-        album:`آية ${nis}`,
+        album:`╪ó┘è╪⌐ ${nis}`,
         artwork:[{src:'/icon-512x512.png',sizes:'512x512',type:'image/png'}]
       });
       navigator.mediaSession.setActionHandler('play',()=>togglePlay());
@@ -451,7 +363,6 @@ export default function TafseerPage(){
     }
     skipNext();
   };
-  handleErrRef.current = handleErr;
 
   const handleReciterChange=(newId:string)=>{
     setRecId(newId);recIdRef.current=newId;
@@ -464,66 +375,42 @@ export default function TafseerPage(){
 
   // Hifz
   const startHifz=useCallback(()=>{
-    if (recordingRef.current) return;
-
     const SR=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
-    if(!SR){alert("جرب Chrome");return;}
+    if(!SR){alert("╪¼╪▒╪¿ Chrome");return;}
     const r=new SR();r.lang="ar-SA";r.continuous=true;r.interimResults=true;r.maxAlternatives=1;
     
     r.onresult=(e:any)=>{
-      const normAr = (s:string) => {
-        // Strip diacritics and special Uthmani marks
-        let t = s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF\u06E0\u06E2\u06E3\u06E5\u06E6\u06E8\u06EA\u06EB\u06EC\u06ED]/g,'');
-        // Normalize hamzas only - no phonetic normalization to keep accuracy
-        t = t.replace(/[أإآٱ]/g, 'ا').replace(/ء/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و');
-        return t.split(/\s+/).filter(w => w.length > 0).join(' ');
-      };
+      const normAr = (s:string) => s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u06DF\u06E0\u06E2\u06E3\u06E5\u06E6\u06E8\u06EA\u06EB\u06EC\u06ED]/g,'')
+        .replace(/[╪ú╪Ñ╪ó╪í]/g, '╪º').replace(/╪⌐/g, '┘ç').replace(/┘ë/g, '┘è').replace(/╪ñ/g, '┘ê');
         
       if(!pq.data) return;
       const exp=pq.data[hifzIdx]; if(!exp) return;
 
-      // Tarteel Engine Upgrade: Aggregate all results across segments to prevent cuts
-      let transcript = '';
-      for (let i = 0; i < e.results.length; i++) {
-        transcript += e.results[i][0].transcript + ' ';
-      }
-      transcript = transcript.trim();
+      let transcript='';
+      // Use only the latest results to avoid "carrying over" previous verse matches
+      const latestIdx = e.results.length - 1;
+      transcript = e.results[latestIdx][0].transcript;
       
-      const sw = normAr(transcript).split(' ').filter(w => w.length > 0);
+      const sw=normAr(transcript).split(' ').filter(w=>w.length>1);
       hifzTxtRef.current = transcript;
       setRecTxt(transcript);
 
-      const ew = normAr(exp.text).split(' ').filter(w => w.length > 0);
-      
-      // Real-time word-by-word matching sequence
-      const ewClean = ew.map(w => w.replace(/^[وفبل]/, ''));
-      const swClean = sw.map(w => w.replace(/^[وفبل]/, ''));
-      
-      let targetIdx = lastMatchedIdxRef.current + 1;
-      const currentMatches = new Set(matchedIndicesRef.current);
-      
-      for (const spoken of swClean) {
-        for (let i = targetIdx; i < Math.min(targetIdx + 3, ewClean.length); i++) {
-          if (areWordsSimilar(spoken, ewClean[i])) {
-            currentMatches.add(i);
-            targetIdx = i + 1;
-            break;
-          }
+      const ew=normAr(exp.text).split(' ').filter(w=>w.length>1);
+      // More robust matching: check if many words from current verse are present in the recent transcript
+      let matchedCount=0;
+      const recentWindow = sw.slice(-Math.min(sw.length, ew.length + 5));
+      for(const targetWord of ew) {
+        if(recentWindow.some(saidWord => saidWord.includes(targetWord) || targetWord.includes(saidWord))) {
+          matchedCount++;
         }
       }
       
-      if (targetIdx > lastMatchedIdxRef.current + 1) {
-        lastMatchedIdxRef.current = targetIdx - 1;
-        matchedIndicesRef.current = currentMatches;
-        setHifzMatchedIndices(currentMatches);
-      }
-
-      const matchedCount = matchedIndicesRef.current.size;
-      const completeRatio = ew.length > 0 ? matchedCount / ew.length : 0;
+      const completeRatio = ew.length>0 ? matchedCount/ew.length : 0;
       
-      if(completeRatio >= 0.85 && !isAdvancingRef.current){
+      // Higher threshold (0.75) for better accuracy, must be currently memorizing
+      if(completeRatio >= 0.75 && !isAdvancingRef.current){
         isAdvancingRef.current = true;
-        setHifzFeedback({type:'ok',msg:'أحسنت! ✅'});
+        setHifzFeedback({type:'ok',msg:'╪ú╪¡╪│┘å╪¬! Γ£à'});
         setHifzStatus('ok');
         playLocalSound('ok');
         const k=`${exp.sn}-${exp.nis}`;
@@ -540,43 +427,18 @@ export default function TafseerPage(){
           setHifzFeedback(null);
           hifzTxtRef.current = '';
           setRecTxt('');
-          lastMatchedIdxRef.current = -1;
-          matchedIndicesRef.current = new Set();
-          setHifzMatchedIndices(new Set());
         }, 1200);
       }
     };
 
-    // Safe error recovery: Restart speech recognition on termination if recording is active
-    r.onerror=(err: any)=>{
-      console.warn("Speech recognition error:", err);
-    };
-    r.onend=()=>{
-      if(recordingRef.current) {
-        setTimeout(() => {
-          if (recordingRef.current) {
-            try { r.start(); } catch {}
-          }
-        }, 300);
-      }
-    };
+    r.onerror=()=>{};
+    r.onend=()=>{if(recording)try{r.start();}catch{}};
     recRef.current=r;
     r.start();
-    recordingRef.current = true;
     setRecording(true);
-  },[hifzIdx,pq.data]);
+  },[hifzIdx,pq.data,recording]);
 
-  const stopHifz=useCallback(()=>{
-    recordingRef.current = false;
-    setRecording(false);
-    if(recRef.current){
-      recRef.current.onend=null;
-      recRef.current.onerror=null;
-      try{recRef.current.stop();}catch{}
-      recRef.current=null;
-    }
-  },[]);
-
+  const stopHifz=useCallback(()=>{if(recRef.current){recRef.current.onend=null;try{recRef.current.stop();}catch{}recRef.current=null;}setRecording(false);},[]);
   const reveal=(i:number)=>{
     if(!pq.data)return;
     const a=pq.data[i];
@@ -596,7 +458,7 @@ export default function TafseerPage(){
     setIsSharing(true);
     try{const r=await fetch(`https://api.alquran.cloud/v1/surah/${selVerse.sn}/quran-uthmani`);const d=await r.json();
       const ayahs=d.data.ayahs.slice(selVerse.nis-1,shareEndNis);
-      const combined=ayahs.map((a:any)=>`${norm(a.text)} ﴿${a.numberInSurah}﴾`).join(' ');
+      const combined=ayahs.map((a:any)=>`${norm(a.text)} ∩┤┐${a.numberInSurah}∩┤╛`).join(' ');
       setIsSharing(false);return{text:combined,refs:`${selVerse.nis}-${shareEndNis}`};
     }catch{setIsSharing(false);return{text:selVerse.text,refs:`${selVerse.nis}`};}
   };
@@ -609,7 +471,7 @@ export default function TafseerPage(){
     wrap.style.cssText=`position:fixed;left:-9999px;top:0;width:1080px;padding:80px 60px;background:${c.bg};direction:rtl;text-align:center;font-family:'KFGQPC HAFS Uthmanic Script','Amiri Quran','Amiri',serif;`;
     const hdr=document.createElement('div');
     hdr.style.cssText=`display:inline-block;border:2px solid ${c.border};padding:16px 60px;margin-bottom:40px;position:relative;`;
-    hdr.innerHTML=`<span style="font-size:40px;color:${c.text};font-weight:bold;">سُورَةُ ${sname}</span>`;
+    hdr.innerHTML=`<span style="font-size:40px;color:${c.text};font-weight:bold;">╪│┘Å┘ê╪▒┘Ä╪⌐┘Å ${sname}</span>`;
     wrap.appendChild(hdr);
     const txt=document.createElement('p');
     txt.style.cssText=`font-size:42px;line-height:2.2;color:${c.text};margin:20px 0 40px;padding:0 20px;`;
@@ -621,7 +483,7 @@ export default function TafseerPage(){
     wrap.appendChild(divider);
     const wm=document.createElement('div');
     wm.style.cssText=`margin-top:40px;font-size:16px;color:${c.border};font-family:sans-serif;direction:ltr;`;
-    wm.textContent='تطبيق محراب - mihrabapp.com';
+    wm.textContent='╪¬╪╖╪¿┘è┘é ┘à╪¡╪▒╪º╪¿ - mihrabapp.com';
     wrap.appendChild(wm);
     document.body.appendChild(wrap);
     try{
@@ -635,9 +497,9 @@ export default function TafseerPage(){
       const boxY=100;
       ctx.strokeStyle=c.border;ctx.lineWidth=2.5;
       ctx.strokeRect(290,boxY,500,80);
-      ctx.font=`۞`; ctx.fillText('۞',245,boxY+40);ctx.fillText('۞',835,boxY+40);
+      ctx.font=`█₧`; ctx.fillText('█₧',245,boxY+40);ctx.fillText('█₧',835,boxY+40);
       ctx.font=`bold 42px ${fontQ}`;ctx.fillStyle=c.text;
-      ctx.fillText(`سُورَةُ ${sname}`,540,boxY+42);
+      ctx.fillText(`╪│┘Å┘ê╪▒┘Ä╪⌐┘Å ${sname}`,540,boxY+42);
       ctx.font=`42px ${fontQ}`;ctx.fillStyle=c.text;
       const maxW=920;const words=text.split(' ');
       let line='',y=280;
@@ -650,10 +512,10 @@ export default function TafseerPage(){
       ctx.strokeStyle=c.border;ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(340,y+10);ctx.lineTo(740,y+10);ctx.stroke();
       ctx.font='bold 20px sans-serif';ctx.fillStyle=c.text;
-      ctx.fillText(`${selVerse.sn}:${refs}${pg ? `  |  صفحة ${pg}` : ''}`, 540, y + 10);
+      ctx.fillText(`${selVerse.sn}:${refs}${pg ? `  |  ╪╡┘ü╪¡╪⌐ ${pg}` : ''}`, 540, y + 10);
       const wmY=Math.max(y+80,cv.height-40);
       ctx.font='16px sans-serif';ctx.fillStyle=c.border;
-      ctx.fillText('تشرفت بالمشاركة عبر تطبيق محراب - mihrabapp.com',540,wmY);
+      ctx.fillText('╪¬╪┤╪▒┘ü╪¬ ╪¿╪º┘ä┘à╪┤╪º╪▒┘â╪⌐ ╪╣╪¿╪▒ ╪¬╪╖╪¿┘è┘é ┘à╪¡╪▒╪º╪¿ - mihrabapp.com',540,wmY);
       if(y+120<cv.height){
         const finalH=y+120;
         const imgData=ctx.getImageData(0,0,cv.width,finalH);
@@ -677,7 +539,7 @@ export default function TafseerPage(){
     let t=text;if(shareMode==='noharakat')t=t.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'');
     const full=`${t}${SURAHS.find(s=>s.id===selVerse.sn)?.n}: ${refs} https://mihrabapp.com/tafseer`;
     if(navigator.share)navigator.share({text:full}).catch(()=>{});
-    else{navigator.clipboard.writeText(full);alert("تم النسخ!");}
+    else{navigator.clipboard.writeText(full);alert("╪¬┘à ╪º┘ä┘å╪│╪«!");}
     setShowSharePage(false);
   };
 
@@ -688,7 +550,7 @@ export default function TafseerPage(){
   const playingName=playingSn?SURAHS.find(s=>s.id===playingSn)?.n:"";
   const isMobile=typeof window!=='undefined'&&window.innerWidth<768;
 
-  // ═══ SHARE PAGE ═══
+  // ΓòÉΓòÉΓòÉ SHARE PAGE ΓòÉΓòÉΓòÉ
   if(showSharePage&&selVerse){
     const sname=SURAHS.find(s=>s.id===selVerse.sn)?.n||"";
     const maxNis=SURAHS.find(s=>s.id===selVerse.sn)?.c||1;
@@ -697,39 +559,39 @@ export default function TafseerPage(){
       <div className="min-h-screen bg-background flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border" style={{paddingTop:'calc(env(safe-area-inset-top,12px) + 8px)'}}>
           <button onClick={()=>setShowSharePage(false)} className="p-2"><X className="w-5 h-5"/></button>
-          <span className="text-sm font-bold">مشاركة الآيات</span>
+          <span className="text-sm font-bold">┘à╪┤╪º╪▒┘â╪⌐ ╪º┘ä╪ó┘è╪º╪¬</span>
           <span className="text-sm text-primary font-bold">{sname}: {selVerse.nis}</span>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-5" dir="rtl">
-          <div><h3 className="text-sm font-bold mb-2">نوع المشاركة:</h3>
-            <div className="space-y-2">{([["image","📷 صورة (حفظ/إرسال)"],["text","📝 نص"],["noharakat","📝 نص بدون تشكيل"]] as const).map(([v,l])=>(
+          <div><h3 className="text-sm font-bold mb-2">┘å┘ê╪╣ ╪º┘ä┘à╪┤╪º╪▒┘â╪⌐:</h3>
+            <div className="space-y-2">{([["image","≡ƒô╖ ╪╡┘ê╪▒╪⌐ (╪¡┘ü╪╕/╪Ñ╪▒╪│╪º┘ä)"],["text","≡ƒô¥ ┘å╪╡"],["noharakat","≡ƒô¥ ┘å╪╡ ╪¿╪»┘ê┘å ╪¬╪┤┘â┘è┘ä"]] as const).map(([v,l])=>(
               <button key={v} onClick={()=>setShareMode(v)} className={`w-full flex items-center justify-between p-3 rounded-xl border ${shareMode===v?"border-primary bg-primary/5 font-bold":"border-border"}`}>
-                <span className="text-sm">{l}</span>{shareMode===v&&<span className="text-primary text-lg">✓</span>}
+                <span className="text-sm">{l}</span>{shareMode===v&&<span className="text-primary text-lg">Γ£ô</span>}
               </button>))}</div></div>
-          <div><h3 className="text-sm font-bold mb-2">النطاق (أقصى 20 آية)</h3>
+          <div><h3 className="text-sm font-bold mb-2">╪º┘ä┘å╪╖╪º┘é (╪ú┘é╪╡┘ë 20 ╪ó┘è╪⌐)</h3>
             <div className="space-y-2">
-              <div className="flex items-center gap-3"><span className="text-sm text-muted-foreground w-8">من</span>
-                <div className="flex-1 p-3 rounded-xl border border-border text-sm bg-card">{sname}: آية {selVerse.nis}</div></div>
-              <div className="flex items-center gap-3"><span className="text-sm text-muted-foreground w-8">إلى</span>
+              <div className="flex items-center gap-3"><span className="text-sm text-muted-foreground w-8">┘à┘å</span>
+                <div className="flex-1 p-3 rounded-xl border border-border text-sm bg-card">{sname}: ╪ó┘è╪⌐ {selVerse.nis}</div></div>
+              <div className="flex items-center gap-3"><span className="text-sm text-muted-foreground w-8">╪Ñ┘ä┘ë</span>
                 <select value={shareEndNis} onChange={e=>setShareEndNis(Number(e.target.value))}
                   className="flex-1 p-3 rounded-xl border border-border text-sm bg-card outline-none">
-                  {Array.from({length:Math.min(20,maxNis-selVerse.nis+1)}).map((_,i)=>{const n=selVerse.nis+i;return<option key={n} value={n} className="bg-card text-foreground">آية {n}</option>})}
+                  {Array.from({length:Math.min(20,maxNis-selVerse.nis+1)}).map((_,i)=>{const n=selVerse.nis+i;return<option key={n} value={n}>╪ó┘è╪⌐ {n}</option>})}
                 </select></div></div></div>
           <div className="p-4 rounded-xl bg-card border border-border">
             <p className="font-quran text-center leading-[2.5]" style={{fontSize:'clamp(16px,4vw,20px)'}}>
               {shareMode==='noharakat'?selVerse.text.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,''):selVerse.text}
-            </p><p className="text-center text-xs text-muted-foreground mt-2">— {sname}: {selVerse.nis}</p></div>
+            </p><p className="text-center text-xs text-muted-foreground mt-2">ΓÇö {sname}: {selVerse.nis}</p></div>
         </div>
         <div className="p-4 border-t border-border" style={{paddingBottom:'calc(env(safe-area-inset-bottom,12px) + 8px)'}}>
           <button onClick={doShare} disabled={isSharing} className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-base">
-            {isSharing?<Loader2 className="w-5 h-5 animate-spin mx-auto"/>:shareMode==='image'?`💾 حفظ/مشاركة ${len} آية كصورة`:`📤 مشاركة ${len} آية`}
+            {isSharing?<Loader2 className="w-5 h-5 animate-spin mx-auto"/>:shareMode==='image'?`≡ƒÆ╛ ╪¡┘ü╪╕/┘à╪┤╪º╪▒┘â╪⌐ ${len} ╪ó┘è╪⌐ ┘â╪╡┘ê╪▒╪⌐`:`≡ƒôñ ┘à╪┤╪º╪▒┘â╪⌐ ${len} ╪ó┘è╪⌐`}
           </button></div>
       </div>);
   }
 
   return(
     <div className="select-none overflow-hidden" style={{background:colors.bg,color:colors.text,height:'100dvh'}}>
-      {/* ═══ TOP BAR (Unified) ═══ */}
+      {/* ΓòÉΓòÉΓòÉ TOP BAR (Unified) ΓòÉΓòÉΓòÉ */}
       {showUI&&<div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-4" style={{paddingTop:'env(safe-area-inset-top, 20px)',background:colors.bg+'ee',borderBottom:'1px solid '+colors.border+'40',height:55}}>
           <div className="flex items-center gap-2">
             <a href="/" className="p-1.5 rounded-lg opacity-60 hover:opacity-100" style={{color:colors.text}}><ArrowRight className="w-4 h-4"/></a>
@@ -737,9 +599,9 @@ export default function TafseerPage(){
           
           {/* Hifz Indicators HUD */}
           {hifz && <div className="flex gap-2 items-center bg-black/5 px-3 py-1 rounded-full scale-90">
-            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='ok'?'bg-green-500 scale-125 shadow-[0_0_8px_rgba(34,197,94,0.6)]':'bg-green-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">صحيح</span></div>
-            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='wrong'?'bg-red-500 scale-125 shadow-[0_0_8px_rgba(239,68,68,0.6)]':'bg-red-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">خطأ</span></div>
-            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='pron'?'bg-amber-500 scale-125 shadow-[0_0_8px_rgba(245,158,11,0.6)]':'bg-amber-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">نطق</span></div>
+            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='ok'?'bg-green-500 scale-125 shadow-[0_0_8px_rgba(34,197,94,0.6)]':'bg-green-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">╪╡╪¡┘è╪¡</span></div>
+            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='wrong'?'bg-red-500 scale-125 shadow-[0_0_8px_rgba(239,68,68,0.6)]':'bg-red-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">╪«╪╖╪ú</span></div>
+            <div className="flex flex-col items-center"><span className={`w-2 h-2 rounded-full transition-all duration-300 ${hifzStatus==='pron'?'bg-amber-500 scale-125 shadow-[0_0_8px_rgba(245,158,11,0.6)]':'bg-amber-500/20'}`}/><span className="text-[8px] opacity-40 mt-0.5">┘å╪╖┘é</span></div>
           </div>}
 
           <div className="flex items-center gap-1">
@@ -750,13 +612,13 @@ export default function TafseerPage(){
             <button onClick={()=>setShowUI(false)} className="p-1.5 rounded-lg opacity-50 hover:opacity-100" style={{color:colors.text}}><ChevronLeft className="w-4 h-4" style={{transform:'rotate(90deg)'}}/></button>
           </div>
         </div>}
-      {!showUI&&<button onClick={()=>setShowUI(true)} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity shadow-sm" style={{background:colors.bg+'ee',color:colors.text,border:'1px solid '+colors.border+'50',paddingTop:'calc(env(safe-area-inset-top,0px) + 4px)',fontSize:'11px',fontWeight:700}}><ChevronLeft className="w-3 h-3" style={{transform:'rotate(-90deg)'}}/> إظهار</button>}
+      {!showUI&&<button onClick={()=>setShowUI(true)} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity shadow-sm" style={{background:colors.bg+'ee',color:colors.text,border:'1px solid '+colors.border+'50',paddingTop:'calc(env(safe-area-inset-top,0px) + 4px)',fontSize:'11px',fontWeight:700}}><ChevronLeft className="w-3 h-3" style={{transform:'rotate(-90deg)'}}/> ╪Ñ╪╕┘ç╪º╪▒</button>}
 
 
       {/* SETTINGS */}
       {showSettings&&<div className="fixed inset-0 z-[58] flex items-end" onClick={()=>setShowSettings(false)}>
         <div className="w-full bg-card rounded-t-2xl p-4 border-t border-border shadow-2xl" onClick={e=>e.stopPropagation()}>
-          <h3 className="text-sm font-bold mb-3 text-center text-foreground">لون صفحة القرآن</h3>
+          <h3 className="text-sm font-bold mb-3 text-center text-foreground">┘ä┘ê┘å ╪╡┘ü╪¡╪⌐ ╪º┘ä┘é╪▒╪ó┘å</h3>
           <div className="flex justify-center gap-3">
             {Object.entries(QBG).map(([k,v])=>(
               <button key={k} onClick={()=>{setQTheme(k);setShowSettings(false);}}
@@ -771,20 +633,20 @@ export default function TafseerPage(){
       {showSearch&&<div className="fixed inset-0 z-[60] bg-black/50" onClick={()=>setShowSearch(false)}>
         <div className="bg-card h-full w-full max-w-sm ml-auto flex flex-col" onClick={e=>e.stopPropagation()}>
           <div className="bg-primary p-3 shrink-0" style={{paddingTop:'env(safe-area-inset-top, 25px)'}}><div className="relative">
-            <Input ref={searchRef} placeholder="ابحث باسم السورة أو نص آية..." value={search} onChange={e=>handleSearch(e.target.value)}
+            <Input ref={searchRef} placeholder="╪º╪¿╪¡╪½ ╪¿╪º╪│┘à ╪º┘ä╪│┘ê╪▒╪⌐ ╪ú┘ê ┘å╪╡ ╪ó┘è╪⌐..." value={search} onChange={e=>handleSearch(e.target.value)}
               className="text-right pl-10 h-10 rounded-xl bg-white/10 border-white/20 text-primary-foreground placeholder:text-white/40" dir="rtl"/>
             <button onClick={()=>setShowSearch(false)} className="absolute left-3 top-2.5"><X className="w-5 h-5 text-white/60"/></button>
           </div></div>
           <div className="flex-1 overflow-y-auto p-2">
             {isSearchingAyahs?<div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary"/></div>:
-            ayahSearchResults.length>0?ayahSearchResults.map((m,i)=><button key={i} onClick={()=>goVerse(m.surah.number, m.page || PS[m.surah.number] || 1, m.numberInSurah)}
-              className="w-full text-right p-3 rounded-lg hover:bg-muted border-b border-border/50 text-foreground" dir="rtl">
-              <div className="flex justify-between mb-1"><span className="text-xs font-bold text-primary">{m.surah.name}</span><span className="text-[10px] text-muted-foreground">آية {m.numberInSurah}</span></div>
-              <p className="text-sm font-quran leading-loose text-foreground">{m.text}</p>
+            ayahSearchResults.length>0?ayahSearchResults.map((m,i)=><button key={i} onClick={()=>goSurah(m.surah.number)}
+              className="w-full text-right p-3 rounded-lg hover:bg-muted border-b border-border/50" dir="rtl">
+              <div className="flex justify-between mb-1"><span className="text-xs font-bold text-primary">{m.surah.name}</span><span className="text-[10px] text-muted-foreground">╪ó┘è╪⌐ {m.numberInSurah}</span></div>
+              <p className="text-sm font-quran leading-loose">{m.text}</p>
             </button>):
-            filteredS.map(s=><button key={s.id} onClick={()=>goSurah(s.id)} className="w-full text-right p-3 rounded-lg hover:bg-muted flex items-center gap-3 text-foreground">
+            filteredS.map(s=><button key={s.id} onClick={()=>goSurah(s.id)} className="w-full text-right p-3 rounded-lg hover:bg-muted flex items-center gap-3">
               <span className="w-7 h-7 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{s.id}</span>
-              <span className="font-bold text-sm flex-1">{s.n}</span><span className="text-[11px] text-muted-foreground">{s.c} آية</span>
+              <span className="font-bold text-sm flex-1">{s.n}</span><span className="text-[11px] text-muted-foreground">{s.c} ╪ó┘è╪⌐</span>
             </button>)}
           </div>
         </div>
@@ -798,16 +660,16 @@ export default function TafseerPage(){
             <span className="text-sm font-bold">{SURAHS.find(s=>s.id===selVerse.sn)?.n}: {selVerse.nis}</span><span className="w-7"/>
           </div>
           <div className="p-3 space-y-3" dir="rtl">
-            <div><h3 className="text-xs font-bold mb-1.5 opacity-60">القارئ</h3>
-              <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="w-full h-10 rounded-xl border border-border bg-card text-foreground text-sm px-3 mb-2 outline-none">
-                {RECITERS.map(r=><option key={r.id} value={r.id} className="bg-card text-foreground">{r.name}</option>)}</select>
+            <div><h3 className="text-xs font-bold mb-1.5 opacity-60">╪º┘ä┘é╪º╪▒╪ª</h3>
+              <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="w-full h-10 rounded-xl border border-border bg-muted/50 text-sm px-3 mb-2 outline-none">
+                {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
               <div className="flex gap-2">
-                <button onClick={()=>{playSurahFrom(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>من هنا</button>
-                <button onClick={()=>{playQueueRef.current=null;playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>الآية</button>
-                <button onClick={()=>{toggleBookmark(`${selVerse.sn}-${selVerse.nis}`);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4"/>{bookmarks.has(`${selVerse.sn}-${selVerse.nis}`)?"إزالة الحفظ":"حفظ العلامة"}</button>
+                <button onClick={()=>{playSurahFrom(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>┘à┘å ┘ç┘å╪º</button>
+                <button onClick={()=>{playQueueRef.current=null;playVerse(selVerse.sn,selVerse.nis);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><Play className="w-4 h-4"/>╪º┘ä╪ó┘è╪⌐</button>
+                <button onClick={()=>{toggleBookmark(`${selVerse.sn}-${selVerse.nis}`);setShowOptions(false);}} className="flex-1 py-2.5 rounded-xl bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4"/>{bookmarks.has(`${selVerse.sn}-${selVerse.nis}`)?"╪Ñ╪▓╪º┘ä╪⌐ ╪º┘ä╪¡┘ü╪╕":"╪¡┘ü╪╕ ╪º┘ä╪╣┘ä╪º┘à╪⌐"}</button>
               </div></div>
-            <button onClick={()=>{setShowOptions(false);setShowTafseer(true);setTafseerText('');setTafseerLoading(true);fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${tafseerSource}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل في تحميل التفسير');setTafseerLoading(false);});}} className="w-full py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1 text-foreground"><BookOpen className="w-4 h-4 text-primary"/>التفسير</button>
-            <button onClick={()=>{setShowOptions(false);setShowSharePage(true);}} className="w-full py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"><Share2 className="w-4 h-4"/>مشاركة / حفظ كصورة</button>
+            <button onClick={()=>{setShowOptions(false);setShowTafseer(true);setTafseerText('');setTafseerLoading(true);fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${tafseerSource}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('┘ü╪┤┘ä ┘ü┘è ╪¬╪¡┘à┘è┘ä ╪º┘ä╪¬┘ü╪│┘è╪▒');setTafseerLoading(false);});}} className="w-full py-2.5 rounded-xl bg-muted text-sm font-bold flex items-center justify-center gap-1"><BookOpen className="w-4 h-4 text-primary"/>╪º┘ä╪¬┘ü╪│┘è╪▒</button>
+            <button onClick={()=>{setShowOptions(false);setShowSharePage(true);}} className="w-full py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold flex items-center justify-center gap-1"><Share2 className="w-4 h-4"/>┘à╪┤╪º╪▒┘â╪⌐ / ╪¡┘ü╪╕ ┘â╪╡┘ê╪▒╪⌐</button>
           </div>
         </div>
       </div>}
@@ -815,13 +677,13 @@ export default function TafseerPage(){
       {/* TAFSEER MODAL */}
       {showTafseer&&selVerse&&<div className="fixed inset-0 z-[62] flex flex-col" style={{background:colors.bg}}>
         <div className="flex items-center justify-between px-4 py-3 border-b" style={{borderColor:colors.border+'40',paddingTop:'calc(env(safe-area-inset-top,12px) + 8px)'}}>
-          <button onClick={()=>setShowTafseer(false)} className="p-2" style={{color:colors.text}}><X className="w-5 h-5"/></button>
+          <button onClick={()=>setShowTafseer(false)} className="p-2"><X className="w-5 h-5"/></button>
           <span className="text-sm font-bold" style={{color:colors.text}}>{SURAHS.find(s=>s.id===selVerse.sn)?.n}: {selVerse.nis}</span>
           <span className="w-9"/>
         </div>
         <div className="px-4 py-3 border-b" style={{borderColor:colors.border+'40'}} dir="rtl">
-          <select value={tafseerSource} onChange={e=>{setTafseerSource(e.target.value);setTafseerLoading(true);setTafseerText('');            fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${e.target.value}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('فشل');setTafseerLoading(false);});          }} className="w-full h-10 rounded-xl border px-3 text-sm outline-none" style={{borderColor:colors.border,background:colors.bg,color:colors.text}}>
-            {TAFSEER_SOURCES.map(t=><option key={t.id} value={t.id} className="bg-card text-foreground">{t.name}</option>)}
+          <select value={tafseerSource} onChange={e=>{setTafseerSource(e.target.value);setTafseerLoading(true);setTafseerText('');            fetch(`https://api.alquran.cloud/v1/ayah/${selVerse.sn}:${selVerse.nis}/${e.target.value}`).then(r=>r.json()).then(d=>{setTafseerText(d.data.text);setTafseerLoading(false);}).catch(()=>{setTafseerText('┘ü╪┤┘ä');setTafseerLoading(false);});          }} className="w-full h-10 rounded-xl border px-3 text-sm outline-none" style={{borderColor:colors.border,background:colors.bg,color:colors.text}}>
+            {TAFSEER_SOURCES.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
         <div className="flex-1 overflow-y-auto p-5" dir="rtl">
@@ -829,37 +691,37 @@ export default function TafseerPage(){
             <p className="font-quran text-center leading-[2.2]" style={{fontSize:'clamp(22px,6vw,28px)',color:colors.text}}>{selVerse.text}</p>
           </div>
           {tafseerLoading?<div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" style={{color:colors.text}}/></div>
-          :<div className="leading-[2.2] font-medium text-justify" style={{fontSize:'clamp(16px,4.5vw,20px)',color:colors.text}}>{tafseerText}</div>}
+          :<div className="leading-[2.2] font-medium" style={{fontSize:'clamp(16px,4.5vw,20px)',color:colors.text}}>{tafseerText}</div>}
         </div>
         <div className="p-3 border-t flex gap-2" style={{borderColor:colors.border+'40',paddingBottom:'calc(env(safe-area-inset-bottom,8px) + 4px)'}}>
-          <button onClick={()=>{const t=tafseerText;const sn=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';const full=selVerse.text+'\n\n'+t+'\n\n'+sn+': '+selVerse.nis;if(navigator.share)navigator.share({text:full}).catch(()=>{});else{navigator.clipboard.writeText(full);alert("تم النسخ!");}}} className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1" style={{background:colors.border+'30',color:colors.text}}><Share2 className="w-4 h-4"/>مشاركة</button>
+          <button onClick={()=>{const t=tafseerText;const sn=SURAHS.find(s=>s.id===selVerse.sn)?.n||'';const full=selVerse.text+'\n\n'+t+'\n\n'+sn+': '+selVerse.nis;if(navigator.share)navigator.share({text:full}).catch(()=>{});else{navigator.clipboard.writeText(full);alert("╪¬┘à ╪º┘ä┘å╪│╪«!");}}} className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1" style={{background:colors.border+'30',color:colors.text}}><Share2 className="w-4 h-4"/>┘à╪┤╪º╪▒┘â╪⌐</button>
         </div>
       </div>}
 
       {/* HIFZ */}
-      {hifz&&showUI&&<div className="fixed left-0 right-0 z-40 px-3 py-1.5 shadow-md border-b" style={{top:'calc(48px + env(safe-area-inset-top,0px))',background:colors.bg,borderColor:colors.border+'50'}}>
-        <div className="flex items-center justify-between" style={{color:colors.text}}>
-          <span className="text-[10px] font-bold">🎤 الحفظ والاستماع</span>
-          {recTxt&&<span className="text-[9px] opacity-60 mr-2 truncate max-w-[150px]">🗣️ {recTxt.split(" ").slice(-4).join(" ")}</span>}
+      {hifz&&showUI&&<div className="fixed left-0 right-0 z-40 px-3 py-1.5" style={{top:'calc(48px + env(safe-area-inset-top,0px))',background:colors.bg,borderBottom:`1px solid ${colors.border}`}}>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold">≡ƒÄñ ╪º┘ä╪¡┘ü╪╕</span>
+          {recTxt&&<span className="text-[9px] opacity-60 mr-2 truncate max-w-[150px]">≡ƒùú∩╕Å {recTxt.split(" ").slice(-4).join(" ")}</span>}
           <div className="flex gap-1">
-            <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">✓{Array.from(hifzRes.values()).filter(v=>v==="ok").length}</span>
-            <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">✗{Array.from(hifzRes.values()).filter(v=>v==="err").length}</span>
+            <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">Γ£ô{Array.from(hifzRes.values()).filter(v=>v==="ok").length}</span>
+            <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">Γ£ù{Array.from(hifzRes.values()).filter(v=>v==="err").length}</span>
           </div></div>
-        {hifzFeedback&&<div className="mt-1 px-2 py-1 rounded-lg text-[11px] font-bold text-center animate-pulse" style={{background:hifzFeedback.type==='ok'?'rgba(34,197,94,0.2)':hifzFeedback.type==='wrong_verse'?'rgba(239,68,68,0.2)':'rgba(245,158,11,0.2)',color:hifzFeedback.type==='ok'?'#4ade80':hifzFeedback.type==='wrong_verse'?'#f87171':'#fbbf24'}}>{hifzFeedback.msg}{hifzFeedback.details&&<span className="block text-[10px] opacity-80 mt-0.5">{hifzFeedback.details.join(' • ')}</span>}</div>}
+        {hifzFeedback&&<div className="mt-1 px-2 py-1 rounded-lg text-[11px] font-bold text-center animate-pulse" style={{background:hifzFeedback.type==='ok'?'rgba(34,197,94,0.2)':hifzFeedback.type==='wrong_verse'?'rgba(239,68,68,0.2)':'rgba(245,158,11,0.2)',color:hifzFeedback.type==='ok'?'#4ade80':hifzFeedback.type==='wrong_verse'?'#f87171':'#fbbf24'}}>{hifzFeedback.msg}{hifzFeedback.details&&<span className="block text-[10px] opacity-80 mt-0.5">{hifzFeedback.details.join(' ΓÇó ')}</span>}</div>}
         <div className="flex gap-1.5 mt-1">
           <button onClick={()=>recording?stopHifz():startHifz()} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 ${recording?"bg-red-500 text-white animate-pulse":"bg-amber-500 text-white"}`}>
-            {recording?<><MicOff className="w-3 h-3"/>إيقاف</>:<><Mic className="w-3 h-3"/>ابدأ التسميع</>}</button>
-          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>كشف</button>
-          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>تخطي</button>
+            {recording?<><MicOff className="w-3 h-3"/>╪Ñ┘è┘é╪º┘ü</>:<><Mic className="w-3 h-3"/>╪º╪¿╪»╪ú</>}</button>
+          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>┘â╪┤┘ü</button>
+          <button onClick={()=>reveal(hifzIdx)} className="px-2 py-1.5 rounded-lg text-[10px] font-bold" style={{background:colors.border+'40',color:colors.text}}>╪¬╪«╪╖┘è</button>
         </div>
       </div>}
 
-      {/* ═══ MUSHAF ═══ */}
+      {/* ΓòÉΓòÉΓòÉ MUSHAF ΓòÉΓòÉΓòÉ */}
       <div className="overflow-y-auto scrollbar-hide flex flex-col"
         style={{height:'calc(100dvh - env(safe-area-inset-top,0px))', marginTop:(showUI?55:0)+(hifz&&showUI?46:0)}}
         onTouchStart={onTS} onTouchEnd={onTE}>
         {pq.isLoading?<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
-        :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p>فشل تحميل الصفحة</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة المحاولة</Button></div>
+        :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p>┘ü╪┤┘ä ╪¬╪¡┘à┘è┘ä ╪º┘ä╪╡┘ü╪¡╪⌐</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">╪Ñ╪╣╪º╪»╪⌐ ╪º┘ä┘à╪¡╪º┘ê┘ä╪⌐</Button></div>
         :<div className="flex-1 w-full max-w-2xl mx-auto px-4 md:px-8 relative min-h-full">
             <div className={`flex flex-col pt-32 pb-32 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
               {groups.map((g,gi)=>{
@@ -873,8 +735,8 @@ export default function TafseerPage(){
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
                   {/* Surah/Juz Header */}
                   <div className="flex justify-between items-center mb-6 px-2 opacity-50 font-bold" dir="rtl" style={{fontSize:'12px',color:colors.text}}>
-                    <span>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
-                    <span>الْجُزْءُ {juzForPage(pg).toLocaleString('ar-EG')}</span>
+                    <span>╪│┘Å┘ê╪▒┘Ä╪⌐┘Å {g.sname.replace(/^╪│┘Å┘ê╪▒┘Ä╪⌐┘Å\s*/,'')}</span>
+                    <span>╪º┘ä┘Æ╪¼┘Å╪▓┘Æ╪í┘Å {juzForPage(pg).toLocaleString('ar-EG')}</span>
                   </div>
 
                   {/* Surah Frame (Only for verse 1) */}
@@ -884,7 +746,7 @@ export default function TafseerPage(){
                         <path d="M10 5 L190 5 L195 10 L195 50 L190 55 L10 55 L5 50 L5 10 Z" fill={colors.border+'10'} stroke={colors.border} strokeWidth="1.5"/>
                         <circle cx="10" cy="30" r="3" fill={colors.border}/> <circle cx="190" cy="30" r="3" fill={colors.border}/>
                       </svg>
-                      <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(20px, 4.5vw, 26px)',color:colors.text, paddingTop:'2px'}}>سُورَةُ {g.sname.replace(/^سُورَةُ\s*/,'')}</span>
+                      <span className="font-quran font-bold relative z-10 block" style={{fontSize:'clamp(20px, 4.5vw, 26px)',color:colors.text, paddingTop:'2px'}}>╪│┘Å┘ê╪▒┘Ä╪⌐┘Å {g.sname.replace(/^╪│┘Å┘ê╪▒┘Ä╪⌐┘Å\s*/,'')}</span>
                     </div>
                   </div>}
                   
@@ -898,7 +760,7 @@ export default function TafseerPage(){
                         background: (playingKey===`${g.sn}-1` && g.sn===1) ? colors.hi : 'transparent',
                         padding: (playingKey===`${g.sn}-1` && g.sn===1) ? '4px 12px' : '0'
                       }}>
-                      بِسْمِ ٱللَّهِ ٱلرَّحْمَنِ ٱلرَّحِيمِ 
+                      ╪¿┘É╪│┘Æ┘à┘É ┘▒┘ä┘ä┘Ä┘æ┘ç┘É ┘▒┘ä╪▒┘Ä┘æ╪¡┘Æ┘à┘Ä┘å┘É ┘▒┘ä╪▒┘Ä┘æ╪¡┘É┘è┘à┘É 
                       {g.sn===1 && (
                         <span className="inline-flex items-center justify-center align-middle mx-3" 
                           style={{width:'1.7em',height:'1.7em',fontSize:'0.52em',verticalAlign:'middle',position:'relative'}}>
@@ -926,28 +788,7 @@ export default function TafseerPage(){
                             background:isP?colors.hi:isSel?colors.hi:cur?'rgba(245,158,11,0.12)':'transparent',
                             padding:(isP||isSel)?'4px 10px':'0',borderRadius:(isP||isSel)?'10px':'0',
                           }}>
-                          {(() => {
-                            if (hifz && cur) {
-                              const words = a.text.split(/\s+/);
-                              return words.map((word, wIdx) => {
-                                const isMatched = hifzMatchedIndices.has(wIdx);
-                                return (
-                                  <span 
-                                    key={wIdx} 
-                                    className="transition-all duration-200 mx-0.5"
-                                    style={{
-                                      color: isMatched ? '#22c55e' : colors.text,
-                                      opacity: isMatched ? 1 : 0.25,
-                                      fontWeight: isMatched ? 'bold' : 'normal'
-                                    }}
-                                  >
-                                    {word}
-                                  </span>
-                                );
-                              });
-                            }
-                            return a.text;
-                          })()}
+                          {a.text}
                         </span>
                         <span className="inline-flex items-center justify-center align-middle mx-1.5" data-v="1"
                           style={{width:'1.7em',height:'1.7em',fontSize:'0.52em',verticalAlign:'middle',position:'relative',display:'inline-flex'}}>
@@ -956,8 +797,8 @@ export default function TafseerPage(){
                             <circle cx="25" cy="25" r="19" fill="none" stroke={isP?'#22c55e':'#c8a96e'} strokeWidth="0.8" opacity="0.6"/>
                             {[0,45,90,135,180,225,270,315].map(deg=><circle key={deg} cx={25+21*Math.cos(deg*Math.PI/180)} cy={25+21*Math.sin(deg*Math.PI/180)} r="2" fill={isP?'#22c55e':'#c8a96e'}/>)}
                           </svg>
-                          <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:800,color:isP?'#22c55e':bookmarks.has(k)?'#ec4899':'#8b7355',lineHeight:1}}>{hidden?'؟':a.nis}</span>
-                        </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#22c55e':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">۩</span>}
+                          <span style={{position:'relative',zIndex:1,fontSize:'0.85em',fontFamily:'sans-serif',fontWeight:800,color:isP?'#22c55e':bookmarks.has(k)?'#ec4899':'#8b7355',lineHeight:1}}>{hidden?'╪ƒ':a.nis}</span>
+                        </span>{SAJDA_VERSES.has(`${g.sn}:${a.nis}`)&&<span style={{color:isP?'#22c55e':'#c8a96e',fontSize:'0.8em',verticalAlign:'super',marginRight:2}} data-v="1">█⌐</span>}
                       </span>;
                     })}
                   </div>
@@ -969,7 +810,7 @@ export default function TafseerPage(){
             <div className="mt-12 mb-20 flex justify-center items-center gap-6 opacity-60">
                 <div className="h-px flex-1 max-w-[80px]" style={{background:`linear-gradient(to right, transparent, ${colors.border})`}} />
                 <div className="flex flex-col items-center">
-                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 mb-1" style={{color:colors.text}}>صفحة</span>
+                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 mb-1" style={{color:colors.text}}>╪╡┘ü╪¡╪⌐</span>
                     <span className="text-sm font-bold tracking-widest" style={{color:colors.text}}>{pg.toLocaleString('ar-EG')}</span>
                 </div>
                 <div className="h-px flex-1 max-w-[80px]" style={{background:`linear-gradient(to left, transparent, ${colors.border})`}} />
@@ -977,32 +818,16 @@ export default function TafseerPage(){
         </div>}
       </div>
 
-      {/* ═══ BOTTOM PLAYER ═══ */}
+      {/* ΓòÉΓòÉΓòÉ BOTTOM PLAYER ΓòÉΓòÉΓòÉ */}
       {playingSn>0&&<div className="fixed left-0 right-0 bottom-0 z-50 bg-card/90 backdrop-blur-md border-t border-border shadow-[0_-4px_25px_rgba(0,0,0,0.15)]" style={{paddingBottom:'env(safe-area-inset-bottom,6px)'}}>
-        <button 
-          onClick={stopAudio} 
-          className="absolute -top-3 right-4 z-[60] bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
-          title="إغلاق المشغل"
-        >
-          <X className="w-3 h-3" />
-        </button>
         <div className="w-full px-6 mb-1 mt-1">
-          <input 
-            id="scrubBar" 
-            type="range" 
-            defaultValue="0" 
-            min="0" 
-            max="100" 
-            onInput={handleScrubInput}
-            onChange={handleScrubChange}
-            className="w-full h-1 bg-emerald-500/10 accent-emerald-500 rounded-full appearance-none cursor-pointer"
-          />
+          <input id="scrubBar" type="range" defaultValue="0" min="0" max="100" className="w-full h-1 bg-emerald-500/10 accent-emerald-500 rounded-full appearance-none cursor-pointer"/>
         </div>
         <div className="flex items-center justify-between px-5 pt-1 pb-1 flex-row-reverse">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-[10px] text-muted-foreground">{playingName} |</span>
             <select value={recId} onChange={e=>handleReciterChange(e.target.value)} className="bg-transparent text-foreground text-[12px] font-bold border-0 outline-none max-w-[120px] truncate">
-              {RECITERS.map(r=><option key={r.id} value={r.id} className="bg-card text-foreground">{r.name}</option>)}</select>
+              {RECITERS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select>
           </div>
           <div className="flex items-center gap-4">
             <button onClick={skipPrev} className="p-1.5 text-muted-foreground hover:text-foreground"><SkipForward className="w-5 h-5"/></button>

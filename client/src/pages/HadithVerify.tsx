@@ -683,11 +683,12 @@ export default function HadithVerifyPage() {
                 self.findIndex((t) => {
                     const normA = normalizeArabicText(t.text).substring(0, 80).replace(/\s+/g, '');
                     const normB = normalizeArabicText(value.text).substring(0, 80).replace(/\s+/g, '');
-                    const narratorA = normalizeArabicText(t.narrator || '');
-                    const narratorB = normalizeArabicText(value.narrator || '');
                     const sourceA = normalizeArabicText(t.source || '');
                     const sourceB = normalizeArabicText(value.source || '');
-                    return normA === normB && narratorA === narratorB && sourceA === sourceB;
+                    const scholarA = normalizeArabicText(t.scholar || '');
+                    const scholarB = normalizeArabicText(value.scholar || '');
+                    // Only deduplicate if text AND source AND scholar are ALL the same
+                    return normA === normB && sourceA === sourceB && scholarA === scholarB;
                 })
         );
     };
@@ -730,7 +731,7 @@ export default function HadithVerifyPage() {
         };
     };
 
-    const examples = ["من صام رمضان", "الطهور شطر الإيمان", "إنما الأعمال بالنيات"];
+    const examples = ["من صام رمضان", "الطهور شطر الإيمان", "إنما الأعمال بالنيات", "لا يؤمن أحدكم", "الدين النصيحة", "من كان يؤمن بالله", "خيركم من تعلم القرآن", "المسلم من سلم المسلمون"];
 
     return (
         <div className="min-h-screen pb-32 bg-gradient-to-b from-background to-secondary/20">
@@ -814,7 +815,7 @@ export default function HadithVerifyPage() {
                 {results.length > 0 && (
                     <div className="space-y-3">
                         <p className="text-sm text-muted-foreground text-center">
-                            نتائج البحث ({results.length})
+                            عدد النتائج: {results.length} حديث
                         </p>
 
                         {results.map((hadith, index) => {
@@ -852,19 +853,15 @@ export default function HadithVerifyPage() {
                                     </p>
 
                                     {/* Details */}
-                                    <div className="border-t border-border pt-3 space-y-1 text-xs text-muted-foreground">
-                                        <p>
-                                            <span className="font-medium">الراوي:</span>{" "}
-                                            {hadith.narrator || "غير محدد"}
-                                        </p>
-                                        <p>
-                                            <span className="font-medium">المحدث:</span>{" "}
-                                            {hadith.scholar || "غير محدد"}
-                                        </p>
-                                        <p>
-                                            <span className="font-medium">المصدر:</span>{" "}
-                                            {hadith.source || "غير محدد"}
-                                        </p>
+                                    <div className="border-t border-border pt-3 space-y-1.5 text-xs text-muted-foreground" dir="rtl">
+                                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                                            <span className="font-bold text-foreground/70">الراوي:</span>
+                                            <span>{hadith.narrator || "غير محدد"}</span>
+                                            <span className="font-bold text-foreground/70">المحدث:</span>
+                                            <span>{hadith.scholar || "غير محدد"}</span>
+                                            <span className="font-bold text-foreground/70">المصدر:</span>
+                                            <span>{hadith.source || "غير محدد"}</span>
+                                        </div>
                                     </div>
 
                                     {/* Collapsible Explanation Block */}
@@ -935,7 +932,7 @@ export default function HadithVerifyPage() {
                         <div>
                             <h3 className="font-bold mb-1">التحقق من صحة الأحاديث</h3>
                             <p className="text-sm text-muted-foreground">
-                                ابحث عن أي حديث للتحقق من صحته ومعرفة درجته
+                                ابحث عن أي حديث للتحقق من صحته ومعرفة درجته ومصدره وشرحه
                             </p>
                         </div>
 
@@ -945,7 +942,7 @@ export default function HadithVerifyPage() {
                                     key={example}
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setQuery(example)}
+                                    onClick={() => { setQuery(example); }}
                                     className="text-xs"
                                 >
                                     {example}
@@ -963,6 +960,7 @@ export default function HadithVerifyPage() {
                             >
                                 الدرر السنية
                             </a>
+                            {" | صحيح البخاري | صحيح مسلم"}
                         </p>
                     </Card>
                 )}
