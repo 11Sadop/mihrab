@@ -110,7 +110,7 @@ function passesStrictOverlapFilter(text: string, normalizedQuery: string, active
         }
     }
     const ratio = matchCount / activeTokens.length;
-    return ratio >= 0.50;
+    return ratio >= 0.70;
 }
 
 function isTrustedGrade(grade: string): boolean {
@@ -522,7 +522,7 @@ export default function HadithVerifyPage() {
                     }
                 }
                 overlapRatio = matchCount / activeTokens.length;
-                isMatch = activeTokens.some(token => normalizedText.includes(token));
+                isMatch = overlapRatio >= 0.6;
             }
 
             if (!isMatch) continue;
