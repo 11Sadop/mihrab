@@ -320,6 +320,8 @@ export async function registerRoutes(
                                 const narM = info.match(/^([^<\n,]+)/);
                                 const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
                                 const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                                const pgM = info.match(/(?:الصفحة أو الرقم|رقم الحديث|الصفحة|الجزء أو الصفحة)\s*:\s*([^<\n,]+)/i);
+                                const takhM = info.match(/(?:تخريج|التخريج|تخريج الحديث)\s*:\s*([^<\n]+)/i);
                                 let grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
                                 if (!grdM) {
                                     grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
@@ -332,6 +334,8 @@ export async function registerRoutes(
                                     narrator: decodeGarbledText(narM?narM[1].replace(/<[^>]+>/g,'').trim():''),
                                     scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
                                     source: tlField(decodeGarbledText(srcM?.[1]||'')), 
+                                    pageNumber: pgM ? decodeGarbledText(pgM[1].replace(/<[^>]+>/g,'').trim()) : undefined,
+                                    takhrij: takhM ? decodeGarbledText(takhM[1].replace(/<[^>]+>/g,'').trim()) : undefined,
                                     grade: tlGrade(decodeGarbledText(grdM?.[1]||'')),
                                     sharhUrl
                                 });
@@ -344,9 +348,11 @@ export async function registerRoutes(
                                 while ((m = divRx.exec(html)) !== null && pageResults.length < 50) {
                                     const block = m[1];
                                     const txtM = block.match(/<span[^>]*>([\s\S]*?)<\/span>/i);
-                                    const narM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
-                                    const schM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
-                                    const srcM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                                    const narratorM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
+                                    const scholarM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
+                                    const sourceM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                                    const pgM = block.match(/(?:الصفحة أو الرقم|رقم الحديث|الصفحة|الجزء أو الصفحة)\s*:\s*([^<\n,]+)/i);
+                                    const takhM = block.match(/(?:تخريج|التخريج|تخريج الحديث)\s*:\s*([^<\n]+)/i);
                                     let grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
                                     if (!grdM) {
                                         grdM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
@@ -357,9 +363,11 @@ export async function registerRoutes(
                                         const sharhUrl = sharhUrlM ? sharhUrlM[1] : undefined;
                                         if (text.length > 10) pageResults.push({
                                             text: decodeGarbledText(text), 
-                                            narrator: decodeGarbledText(narM ? narM[1].replace(/<[^>]+>/g,'').trim() : ''),
-                                            scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
-                                            source: tlField(decodeGarbledText(srcM?.[1]||'')), 
+                                            narrator: decodeGarbledText(narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : ''),
+                                            scholar: tlField(decodeGarbledText(scholarM?.[1]||'')), 
+                                            source: tlField(decodeGarbledText(sourceM?.[1]||'')), 
+                                            pageNumber: pgM ? decodeGarbledText(pgM[1].replace(/<[^>]+>/g,'').trim()) : undefined,
+                                            takhrij: takhM ? decodeGarbledText(takhM[1].replace(/<[^>]+>/g,'').trim()) : undefined,
                                             grade: tlGrade(decodeGarbledText(grdM?.[1]||'')),
                                             sharhUrl
                                         });
@@ -373,6 +381,8 @@ export async function registerRoutes(
                                 narrator: decodeGarbledText((h.rawi||h.narrator||'').replace(/<[^>]+>/g,'').trim()),
                                 scholar: tlField(decodeGarbledText(h.mohadith||h.scholar||'')), 
                                 source: tlField(decodeGarbledText(h.book||h.source||'')),
+                                pageNumber: h.page || h.number || h.pageNumber || undefined,
+                                takhrij: h.takhrij || undefined,
                                 grade: tlGrade(decodeGarbledText(h.grade||h.hukm||'')),
                                 sharhUrl: h.sharh_url || h.sharhUrl || (h.id ? `/hadith/sharh/${h.id}` : undefined)
                             })).filter((h:any) => h.text.length > 5);
@@ -412,6 +422,8 @@ export async function registerRoutes(
                                     const narM = info.match(/^([^<\n,]{2,50})/);
                                     const schM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
                                     const srcM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                                    const pgM = info.match(/(?:الصفحة أو الرقم|رقم الحديث|الصفحة|الجزء أو الصفحة)\s*:\s*([^<\n,]+)/i);
+                                    const takhM = info.match(/(?:تخريج|التخريج|تخريج الحديث)\s*:\s*([^<\n]+)/i);
                                     let grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
                                     if (!grdM) {
                                         grdM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
@@ -425,6 +437,8 @@ export async function registerRoutes(
                                         narrator: decodeGarbledText(narM?narM[1].replace(/<[^>]+>/g,'').trim():''),
                                         scholar: tlField(decodeGarbledText(schM?.[1]||'')), 
                                         source: tlField(decodeGarbledText(srcM?.[1]||'')), 
+                                        pageNumber: pgM ? decodeGarbledText(pgM[1].replace(/<[^>]+>/g,'').trim()) : undefined,
+                                        takhrij: takhM ? decodeGarbledText(takhM[1].replace(/<[^>]+>/g,'').trim()) : undefined,
                                         grade: tlGrade(decodeGarbledText(grdM?.[1]||'')),
                                         sharhUrl
                                     });

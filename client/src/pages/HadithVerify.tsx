@@ -72,6 +72,8 @@ interface HadithResult {
     grade: string;
     explanation?: string;
     sharhUrl?: string;
+    pageNumber?: string;
+    takhrij?: string;
 }
 
 interface RankedHadithResult extends HadithResult {
@@ -413,6 +415,8 @@ export default function HadithVerifyPage() {
                 const narratorM = info.match(/^([^<\n,]{2,60})/);
                 const scholarM = info.match(/المحدث\s*:\s*([^<\n,]+)/i);
                 const sourceM = info.match(/المصدر\s*:\s*([^<\n,]+)/i);
+                const pgM = info.match(/(?:الصفحة أو الرقم|رقم الحديث|الصفحة|الجزء أو الصفحة)\s*:\s*([^<\n,]+)/i);
+                const takhM = info.match(/(?:تخريج|التخريج|تخريج الحديث)\s*:\s*([^<\n]+)/i);
                 let gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<,]+)<\/span>/i);
                 if (!gradeM) {
                     gradeM = info.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n,]+)/i);
@@ -425,6 +429,8 @@ export default function HadithVerifyPage() {
                     narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
                     scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
                     source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                    pageNumber: pgM ? pgM[1].replace(/<[^>]+>/g,'').trim() : undefined,
+                    takhrij: takhM ? takhM[1].replace(/<[^>]+>/g,'').trim() : undefined,
                     grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||''),
                     sharhUrl
                 });
@@ -440,6 +446,8 @@ export default function HadithVerifyPage() {
                     const narratorM = block.match(/الراوي\s*:\s*([^<\n]+)/i);
                     const scholarM = block.match(/المحدث\s*:\s*([^<\n]+)/i);
                     const sourceM = block.match(/المصدر\s*:\s*([^<\n]+)/i);
+                    const pgM = block.match(/(?:الصفحة أو الرقم|رقم الحديث|الصفحة|الجزء أو الصفحة)\s*:\s*([^<\n,]+)/i);
+                    const takhM = block.match(/(?:تخريج|التخريج|تخريج الحديث)\s*:\s*([^<\n]+)/i);
                     let gradeM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
                     if (!gradeM) {
                         gradeM = block.match(/(?:الدرجة|خلاصة حكم المحدث|حكم المحدث)\s*:\s*([^<\n]+)/i);
@@ -453,6 +461,8 @@ export default function HadithVerifyPage() {
                             narrator: narratorM ? narratorM[1].replace(/<[^>]+>/g,'').trim() : '',
                             scholar: translateField(scholarM?.[1]?.replace(/<[^>]+>/g,'')||''),
                             source: translateField(sourceM?.[1]?.replace(/<[^>]+>/g,'')||''),
+                            pageNumber: pgM ? pgM[1].replace(/<[^>]+>/g,'').trim() : undefined,
+                            takhrij: takhM ? takhM[1].replace(/<[^>]+>/g,'').trim() : undefined,
                             grade: translateGrade(gradeM?.[1]?.replace(/<[^>]+>/g,'')||''),
                             sharhUrl
                         });
@@ -825,42 +835,58 @@ export default function HadithVerifyPage() {
                             return (
                                 <Card
                                     key={index}
-                                    className={cn(
-                                        "p-4 space-y-3 border-r-4",
-                                        style.border
-                                    )}
+                                    className="p-5 space-y-4 rounded-xl border border-border bg-[#fdfcfb] dark:bg-[#1c1a17] shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/20"
                                 >
-                                    {/* Grade Badge */}
-                                    <div className="flex justify-end">
-                                        <span
-                                            className={cn(
-                                                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium",
-                                                style.bg,
-                                                style.text
-                                            )}
-                                        >
-                                            <IconComponent className="w-3.5 h-3.5" />
-                                            {hadith.grade}
-                                        </span>
-                                    </div>
-
-                                    {/* Hadith Text */}
+                                    {/* Hadith Text in Signature Burgundy Color */}
                                     <p
-                                        className="text-foreground leading-relaxed font-hadith text-right"
+                                        className="text-[#9e1c3f] dark:text-[#f87171] leading-relaxed font-hadith text-right text-lg font-bold"
                                         dir="rtl"
                                     >
                                         {hadith.text}
                                     </p>
 
-                                    {/* Details */}
-                                    <div className="border-t border-border pt-3 space-y-1.5 text-xs text-muted-foreground" dir="rtl">
-                                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                                            <span className="font-bold text-foreground/70">الراوي:</span>
-                                            <span>{hadith.narrator || "غير محدد"}</span>
-                                            <span className="font-bold text-foreground/70">المحدث:</span>
-                                            <span>{hadith.scholar || "غير محدد"}</span>
-                                            <span className="font-bold text-foreground/70">المصدر:</span>
-                                            <span>{hadith.source || "غير محدد"}</span>
+                                    {/* Details Grid - Styled like Dorar Al-Saniyyah book theme */}
+                                    <div className="bg-[#f7f5f2] dark:bg-[#25221f] rounded-lg p-3 space-y-2 text-xs md:text-sm text-foreground/80 border border-[#eae6e0] dark:border-[#38332e]" dir="rtl">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                                            <div className="flex gap-2">
+                                                <span className="font-bold text-[#8a7a6b] shrink-0">الراوي:</span>
+                                                <span className="text-foreground">{hadith.narrator || "غير محدد"}</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <span className="font-bold text-[#8a7a6b] shrink-0">المحدث:</span>
+                                                <span className="text-foreground">{hadith.scholar || "غير محدد"}</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <span className="font-bold text-[#8a7a6b] shrink-0">المصدر:</span>
+                                                <span className="text-foreground">{hadith.source || "غير محدد"}</span>
+                                            </div>
+                                            {hadith.pageNumber && (
+                                                <div className="flex gap-2">
+                                                    <span className="font-bold text-[#8a7a6b] shrink-0">الصفحة أو الرقم:</span>
+                                                    <span className="text-foreground">{hadith.pageNumber}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {hadith.takhrij && (
+                                            <div className="flex gap-2 pt-2 border-t border-[#e6e2dc] dark:border-[#38332e]">
+                                                <span className="font-bold text-[#8a7a6b] shrink-0">تخريج الحديث:</span>
+                                                <span className="text-muted-foreground text-xs">{hadith.takhrij}</span>
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center gap-2 pt-2 border-t border-[#e6e2dc] dark:border-[#38332e]">
+                                            <span className="font-bold text-[#8a7a6b] shrink-0">خلاصة حكم المحدث:</span>
+                                            <span
+                                                className={cn(
+                                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-xs",
+                                                    style.bg,
+                                                    style.text
+                                                )}
+                                            >
+                                                <IconComponent className="w-3 h-3" />
+                                                {hadith.grade}
+                                            </span>
                                         </div>
                                     </div>
 
@@ -868,7 +894,7 @@ export default function HadithVerifyPage() {
                                     <div className="border-t border-dashed border-border pt-2 mt-2">
                                         <button
                                             onClick={() => toggleExplanation(index, hadith)}
-                                            className="w-full flex items-center justify-between text-xs font-semibold py-1 px-2 rounded bg-secondary/50 text-primary hover:bg-secondary transition-all"
+                                            className="w-full flex items-center justify-between text-xs font-semibold py-1.5 px-3 rounded bg-secondary/50 text-primary hover:bg-secondary transition-all"
                                         >
                                             <span>شرح الحديث الشريف</span>
                                             <span className="text-[10px]">{expandedIdxs[index] ? "▲" : "▼"}</span>
