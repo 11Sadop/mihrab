@@ -859,20 +859,24 @@ export default function TafseerPage(){
       </div>}
 
       {/* ═══ MUSHAF ═══ */}
-      <div className="overflow-y-auto scrollbar-hide flex flex-col"
-        style={{height:'calc(100dvh - env(safe-area-inset-top,0px))', marginTop:(showUI?55:0)+(hifz&&showUI?46:0)}}
+      <div className="overflow-y-auto scrollbar-hide flex flex-col w-full"
+        style={{
+          height: '100dvh',
+          paddingTop: (showUI ? 65 : 20) + (hifz && showUI ? 46 : 0),
+          paddingBottom: playingSn > 0 ? 120 : 60,
+        }}
         onTouchStart={onTS} onTouchEnd={onTE}>
         {pq.isLoading?<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" style={{color:colors.text}}/></div>
         :pq.error?<div className="flex-1 flex items-center justify-center flex-col gap-2"><p>فشل تحميل الصفحة</p><Button onClick={()=>pq.refetch()} size="sm" variant="outline">إعادة المحاولة</Button></div>
-        :<div className="flex-1 w-full max-w-2xl mx-auto px-4 md:px-8 relative min-h-full">
-            <div className={`flex flex-col pt-32 pb-32 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[70vh]':''}`}>
+        :<div className="flex-1 w-full max-w-2xl mx-auto px-5 md:px-10 relative min-h-full flex flex-col">
+            <div className={`flex flex-col py-6 flex-1 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[60vh]':''}`}>
               {groups.map((g,gi)=>{
                 const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
-                const dynSize=allChars<350?'clamp(24px, 7vw, 36px)':
-                               allChars<550?'clamp(22px, 6.5vw, 32px)':
-                               allChars<800?'clamp(19px, 5.5vw, 28px)':
-                               'clamp(17px, 4.5vw, 24px)';
-                const dynLine=allChars<350?'2.8':allChars<600?'2.4':allChars<800?'2.2':'2.1';
+                const dynSize=allChars<350?'clamp(22px, 6vw, 30px)':
+                               allChars<550?'clamp(20px, 5.5vw, 26px)':
+                               allChars<800?'clamp(18px, 4.8vw, 24px)':
+                               'clamp(16px, 4vw, 21px)';
+                const dynLine=allChars<350?'2.6':allChars<600?'2.4':allChars<800?'2.3':'2.2';
                 
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">
                   {/* Surah/Juz Header */}
@@ -917,7 +921,16 @@ export default function TafseerPage(){
                   </div>}
                   
                   {/* Ayahs Grid */}
-                  <div className="text-justify font-quran" dir="rtl" style={{fontSize:dynSize,lineHeight:dynLine,fontWeight:'normal',letterSpacing:'0.01em',color:colors.text, wordSpacing:'0.05em', textAlignLast: 'center'}}>
+                  <div className="font-quran" dir="rtl" style={{
+                    fontSize: dynSize,
+                    lineHeight: dynLine,
+                    fontWeight: 'normal',
+                    color: colors.text,
+                    textAlign: 'justify',
+                    textJustify: 'inter-word',
+                    textAlignLast: 'center',
+                    wordSpacing: '0.08em',
+                  }}>
                     {g.ayahs.map(a=>{
                       if(a.nis===1 && g.sn===1) return null;
                       const k=`${g.sn}-${a.nis}`;const hr=hifzRes.get(k);const hidden=hifz&&!hr&&a.gi>=hifzIdx;const cur=hifz&&a.gi===hifzIdx;

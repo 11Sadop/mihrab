@@ -7,6 +7,12 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/hooks/use-seo";
 import { useToast } from "@/hooks/use-toast";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { hadithDatabase } from "@/data/hadithDatabase";
 import { sahihBukhariHadiths } from "@/data/sahihBukhari";
 import { sahihMuslimHadiths } from "@/data/sahihMuslim";
@@ -255,8 +261,10 @@ export default function HadithVerifyPage() {
     const [hasSearched, setHasSearched] = useState(false);
     const [generatingIdx, setGeneratingIdx] = useState<number|null>(null);
     const [explanations, setExplanations] = useState<Record<number, string>>({});
-    const [explationLoadings, setExplanationLoadings] = useState<Record<number, boolean>>({});
-    const [expandedIdxs, setExpandedIdxs] = useState<Record<number, boolean>>({});
+    
+    const [explanationHadith, setExplanationHadith] = useState<HadithResult | null>(null);
+    const [explanationText, setExplanationText] = useState<string>("");
+    const [explanationLoading, setExplanationLoading] = useState(false);
 
     const [searchMode, setSearchMode] = useState<"w"|"a"|"p">("w");
     const [searchScope, setSearchScope] = useState<string>("*");
@@ -265,39 +273,45 @@ export default function HadithVerifyPage() {
     const [dedup, setDedup] = useState<"yes"|"no">("yes");
     const [showAdvanced, setShowAdvanced] = useState(false);
 
-    const toggleExplanation = async (idx: number, hadith: HadithResult) => {
-        if (expandedIdxs[idx]) {
-            setExpandedIdxs(prev => ({ ...prev, [idx]: false }));
+    const loadHadithExplanation = async (hadith: HadithResult, idx: number) => {
+        setExplanationHadith(hadith);
+        
+        if (hadith.explanation) {
+            setExplanationText(hadith.explanation);
             return;
         }
-        
-        setExpandedIdxs(prev => ({ ...prev, [idx]: true }));
-        
-        if (explanations[idx] || hadith.explanation) {
+
+        if (explanations[idx]) {
+            setExplanationText(explanations[idx]);
             return;
         }
-        
-        setExplanationLoadings(prev => ({ ...prev, [idx]: true }));
-        let backendExplanation = "";
+
+        setExplanationLoading(true);
+        setExplanationText("");
+
+        let textResult = "";
         let fetchedFromBackend = false;
+
+        // Try backend explain endpoint first
         try {
             const res = await fetch(`/api/hadith/explain?q=${encodeURIComponent(hadith.text)}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.explanation) {
-                    backendExplanation = data.explanation;
+                    textResult = data.explanation;
                     fetchedFromBackend = true;
                 }
             }
-        } catch (e) {
-            console.error("Backend explanation failed:", e);
+        } catch (err) {
+            console.error("Backend explanation failed:", err);
         }
 
         const isPlaceholder = !fetchedFromBackend || 
-            backendExplanation.includes("غير متوفر") || 
-            backendExplanation.includes("غير متوفر شرحه التفصيلي") ||
-            backendExplanation.includes("لم يتم العثور على شرح");
+            textResult.includes("غير متوفر") || 
+            textResult.includes("غير متوفر شرحه التفصيلي") ||
+            textResult.includes("لم يتم العثور على شرح");
 
+        // If backend fallback didn't yield detailed result, and we have a sharhUrl, fetch & scrape online
         if (isPlaceholder && hadith.sharhUrl) {
             try {
                 let absoluteUrl = hadith.sharhUrl;
@@ -322,9 +336,7 @@ export default function HadithVerifyPage() {
                             .replace(/\s+/g, " ")
                             .trim();
                         if (cleanText.length > 20) {
-                            setExplanations(prev => ({ ...prev, [idx]: cleanText }));
-                            setExplanationLoadings(prev => ({ ...prev, [idx]: false }));
-                            return;
+                            textResult = cleanText;
                         }
                     }
                 }
@@ -333,12 +345,10 @@ export default function HadithVerifyPage() {
             }
         }
 
-        if (fetchedFromBackend && backendExplanation) {
-            setExplanations(prev => ({ ...prev, [idx]: backendExplanation }));
-        } else {
-            setExplanations(prev => ({ ...prev, [idx]: "لم يتم العثور على شرح للحديث." }));
-        }
-        setExplanationLoadings(prev => ({ ...prev, [idx]: false }));
+        const finalExplanation = textResult || "لم يتم العثور على شرح تفصيلي للحديث حالياً.";
+        setExplanationText(finalExplanation);
+        setExplanations(prev => ({ ...prev, [idx]: finalExplanation }));
+        setExplanationLoading(false);
     };
 
     const shareHadithText = async (hadith: HadithResult) => {
@@ -997,30 +1007,15 @@ export default function HadithVerifyPage() {
                                         </div>
                                     </div>
 
-                                    {/* Collapsible Explanation Block */}
+                                    {/* Explanation Trigger */}
                                     <div className="border-t border-dashed border-border pt-2 mt-2">
                                         <button
-                                            onClick={() => toggleExplanation(index, hadith)}
+                                            onClick={() => loadHadithExplanation(hadith, index)}
                                             className="w-full flex items-center justify-between text-xs font-semibold py-1.5 px-3 rounded bg-secondary/50 text-primary hover:bg-secondary transition-all"
                                         >
                                             <span>شرح الحديث الشريف</span>
-                                            <span className="text-[10px]">{expandedIdxs[index] ? "▲" : "▼"}</span>
+                                            <span className="text-[10px]">📖</span>
                                         </button>
-                                        
-                                        {expandedIdxs[index] && (
-                                            <div className="mt-2 p-3 bg-secondary/30 rounded-lg text-xs leading-relaxed text-foreground text-right border border-border/50 animate-in fade-in slide-in-from-top-1 duration-200" dir="rtl">
-                                                {hadith.explanation ? (
-                                                    hadith.explanation
-                                                ) : explationLoadings[index] ? (
-                                                    <div className="flex items-center gap-2 justify-center py-2 text-muted-foreground">
-                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                        <span>جاري تحميل شرح الحديث من الدرر السنية...</span>
-                                                    </div>
-                                                ) : (
-                                                    explanations[index] || "لا يوجد شرح متوفر."
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                     {/* Share buttons */}
                                     <div className="flex items-center gap-2 pt-2 justify-end">
@@ -1098,6 +1093,55 @@ export default function HadithVerifyPage() {
                     </Card>
                 )}
             </main>
+
+            {/* Hadith Explanation Dialog */}
+            <Dialog open={!!explanationHadith} onOpenChange={(open) => !open && setExplanationHadith(null)}>
+                <DialogContent className="max-w-lg w-[95%] max-h-[85vh] overflow-y-auto rounded-xl p-5 text-right font-sans" dir="rtl">
+                    <DialogHeader className="border-b border-border pb-3 mb-4 text-right">
+                        <DialogTitle className="text-lg font-bold text-primary flex items-center gap-2">
+                            <span>شرح الحديث الشريف</span>
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {explanationLoading ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            <span className="text-sm">جاري تحميل شرح الحديث من الدرر السنية...</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Hadith text snippet */}
+                            {explanationHadith && (
+                                <div className="p-3 bg-secondary/30 rounded-lg border border-border/50 text-right">
+                                    <p className="font-hadith text-sm md:text-base text-foreground/90 leading-relaxed">
+                                        {explanationHadith.text}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Detailed explanation text */}
+                            <div className="font-hadith text-base md:text-lg leading-[1.9] text-foreground/80 text-justify select-text whitespace-pre-line">
+                                {explanationText}
+                            </div>
+
+                            {/* Source URL link */}
+                            {explanationHadith?.sharhUrl && (
+                                <div className="pt-3 border-t border-border/50 text-xs text-muted-foreground flex flex-col gap-1 select-text">
+                                    <span className="font-semibold text-foreground/75">المصدر: موسوعة الدرر السنية</span>
+                                    <a
+                                        href={explanationHadith.sharhUrl.startsWith("http") ? explanationHadith.sharhUrl : `https://dorar.net${explanationHadith.sharhUrl}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline break-all"
+                                    >
+                                        {explanationHadith.sharhUrl.startsWith("http") ? explanationHadith.sharhUrl : `https://dorar.net${explanationHadith.sharhUrl}`}
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
