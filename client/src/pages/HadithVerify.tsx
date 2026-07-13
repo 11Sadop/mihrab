@@ -1,6 +1,6 @@
 import { Header } from "@/components/Header";
 import { useState, useEffect } from "react";
-import { Search, Loader2, Check, X, AlertTriangle, Share2, Image as ImageIcon } from "lucide-react";
+import { Search, Loader2, Check, X, AlertTriangle, Share2, Image as ImageIcon, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -258,6 +258,13 @@ export default function HadithVerifyPage() {
     const [explationLoadings, setExplanationLoadings] = useState<Record<number, boolean>>({});
     const [expandedIdxs, setExpandedIdxs] = useState<Record<number, boolean>>({});
 
+    const [searchMode, setSearchMode] = useState<"w"|"a"|"p">("w");
+    const [searchScope, setSearchScope] = useState<string>("*");
+    const [gradeFilter, setGradeFilter] = useState<"0"|"1"|"2">("0");
+    const [excludeWords, setExcludeWords] = useState("");
+    const [dedup, setDedup] = useState<"yes"|"no">("yes");
+    const [showAdvanced, setShowAdvanced] = useState(false);
+
     const toggleExplanation = async (idx: number, hadith: HadithResult) => {
         if (expandedIdxs[idx]) {
             setExpandedIdxs(prev => ({ ...prev, [idx]: false }));
@@ -504,11 +511,11 @@ export default function HadithVerifyPage() {
             "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
         ]);
 
-        const queryTokens = normalizedQuery.split(/\s+/)
+        const queryTokens = searchMode === 'p' ? [normalizedQuery] : normalizedQuery.split(/\s+/)
             .map(t => normalizeArabicText(t))
             .filter(t => t.length >= 2 && !ARABIC_STOP_WORDS.has(t));
 
-        const backupTokens = normalizedQuery.split(/\s+/)
+        const backupTokens = searchMode === 'p' ? [normalizedQuery] : normalizedQuery.split(/\s+/)
             .map(t => normalizeArabicText(t))
             .filter(t => t.length >= 2);
 
@@ -519,12 +526,12 @@ export default function HadithVerifyPage() {
             const normalizedText = normalizeArabicText(item.text);
             const haystack = normalizeArabicText(`${item.text} ${item.narrator} ${item.source} ${item.grade}`);
             
-            let isMatch = haystack.includes(normalizedQuery);
+            let isMatch = searchMode === 'p' ? normalizedText.includes(normalizedQuery) : haystack.includes(normalizedQuery);
             let overlapRatio = 0.0;
             
             if (isMatch) {
                 overlapRatio = 5.0;
-            } else if (activeTokens.length > 0) {
+            } else if (searchMode !== 'p' && activeTokens.length > 0) {
                 let matchCount = 0;
                 for (const token of activeTokens) {
                     if (normalizedText.includes(token)) {
@@ -536,8 +543,10 @@ export default function HadithVerifyPage() {
             }
 
             if (!isMatch) continue;
-            if (!passesStrictOverlapFilter(item.text, normalizedQuery, activeTokens)) continue;
-            if (filterSahih && !isTrustedGrade(item.grade)) continue;
+            if (searchMode !== 'p' && !passesStrictOverlapFilter(item.text, normalizedQuery, activeTokens)) continue;
+            
+            if (gradeFilter === '1' && !isTrustedGrade(item.grade)) continue;
+            if (gradeFilter === '2' && isTrustedGrade(item.grade)) continue;
 
             localResults.push({
                 ...item,
@@ -546,7 +555,7 @@ export default function HadithVerifyPage() {
             });
         }
 
-        const initialDeduped = removeDuplicates(localResults).sort((a, b) => {
+        const initialDeduped = (dedup === 'yes' ? removeDuplicates(localResults) : localResults).sort((a, b) => {
             const scoreA = a.relevanceScore * 1000 + a.trustScore;
             const scoreB = b.relevanceScore * 1000 + b.trustScore;
             return scoreB - scoreA;
@@ -569,17 +578,26 @@ export default function HadithVerifyPage() {
             
             // Try backend API proxy
             try {
-                const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(cleanedQuery)}${filterSahih ? '&grade=sahih' : ''}`);
+                const gradeVal = gradeFilter === '1' ? '1' : (gradeFilter === '2' ? '2' : '');
+                const stVal = searchMode;
+                const tVal = searchScope;
+                const exclVal = excludeWords ? `&xclude=${encodeURIComponent(excludeWords)}` : '';
+                const dedupVal = dedup;
+
+                const serverRes = await fetch(`/api/hadith/verify?skey=${encodeURIComponent(cleanedQuery)}&grade=${gradeVal}&st=${stVal}&t=${tVal}${exclVal}&dedup=${dedupVal}`);
                 if (serverRes.ok) {
                     const serverData = await serverRes.json();
                     if (Array.isArray(serverData.results)) {
                         for (const item of serverData.results) {
-                            if (filterSahih && !isTrustedGrade(item.grade || "")) continue;
+                            if (gradeFilter === '1' && !isTrustedGrade(item.grade || "")) continue;
+                            if (gradeFilter === '2' && isTrustedGrade(item.grade || "")) continue;
                             merged.push({
                                 text: item.text || "", 
                                 narrator: item.narrator || "",
                                 scholar: translateField(item.scholar || ""),
                                 source: translateField(item.source || "الدرر السنية"),
+                                pageNumber: item.pageNumber,
+                                takhrij: item.takhrij,
                                 grade: translateGrade(item.grade || ""),
                                 trustScore: calcTrustScore(item.grade || "", item.source || ""),
                                 relevanceScore: 1.0,
@@ -594,7 +612,15 @@ export default function HadithVerifyPage() {
             const hasOnlineResults = merged.some(r => r.source !== "قاعدة بيانات محلية" && !r.source.startsWith("صحيح"));
             if (!hasOnlineResults) {
                 try {
-                    const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(cleanedQuery)}&st=a&xclude=0&page=1`;
+                    const gradeVal = gradeFilter === '1' ? '1' : (gradeFilter === '2' ? '2' : '');
+                    const stVal = searchMode;
+                    const tVal = searchScope;
+                    const exclVal = excludeWords ? `&xclude=${encodeURIComponent(excludeWords)}` : '';
+
+                    const dParam = gradeVal ? `&d[]=${gradeVal}` : '';
+                    const tParam = tVal ? `&t=${tVal}` : '';
+                    
+                    const dorarUrl = `https://dorar.net/dorar_api.json?skey=${encodeURIComponent(cleanedQuery)}&st=${stVal}${dParam}${tParam}${exclVal}&page=1`;
                     const proxyResponseHtml = await fetchWithProxy(dorarUrl);
                     if (proxyResponseHtml) {
                         const decodedHtml = decodeGarbledDorarText(proxyResponseHtml);
@@ -618,7 +644,8 @@ export default function HadithVerifyPage() {
                                 rawHtml = decodeGarbledDorarText(rawHtml);
                                 const dorarResults = parseDorarHtml(rawHtml);
                                 for (const item of dorarResults) {
-                                    if (filterSahih && !isTrustedGrade(item.grade)) continue;
+                                    if (gradeFilter === '1' && !isTrustedGrade(item.grade)) continue;
+                                    if (gradeFilter === '2' && isTrustedGrade(item.grade)) continue;
                                     merged.push({
                                         ...item,
                                         trustScore: calcTrustScore(item.grade, item.source),
@@ -637,10 +664,13 @@ export default function HadithVerifyPage() {
                                             narrator: decodeGarbledDorarText(h.rawi || h.narrator || '').replace(/<[^>]+>/g,'').trim(),
                                             scholar: translateField(decodeGarbledDorarText(h.mohadith || h.scholar || '')),
                                             source: translateField(decodeGarbledDorarText(h.book || h.source || '')),
+                                            pageNumber: h.page || h.number || h.pageNumber || undefined,
+                                            takhrij: h.takhrij || undefined,
                                             grade: translateGrade(decodeGarbledDorarText(h.grade || h.hukm || '')),
                                             sharhUrl: h.sharh_url || h.sharhUrl || (h.id ? `/hadith/sharh/${h.id}` : undefined)
                                         };
-                                        if (filterSahih && !isTrustedGrade(item.grade)) continue;
+                                        if (gradeFilter === '1' && !isTrustedGrade(item.grade)) continue;
+                                        if (gradeFilter === '2' && isTrustedGrade(item.grade)) continue;
                                         merged.push({
                                             ...item,
                                             trustScore: calcTrustScore(item.grade, item.source),
@@ -654,7 +684,7 @@ export default function HadithVerifyPage() {
                 } catch {}
             }
 
-            const finalDeduped = removeDuplicates(merged).map((item) => {
+            const finalDeduped = (dedup === 'yes' ? removeDuplicates(merged) : merged).map((item) => {
                 const relevance = calcRelevanceScore(
                     item.text,
                     item.narrator,
@@ -778,30 +808,107 @@ export default function HadithVerifyPage() {
                         />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={filterSahih}
-                                onChange={(e) => setFilterSahih(e.target.checked)}
-                                className="w-4 h-4 rounded focus:ring-primary"
-                            />
-                            الأحاديث الصحيحة فقط
-                        </label>
+                    {/* Advanced Search Toggle Button */}
+                    <button
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className="w-full flex items-center justify-between text-xs font-semibold py-1.5 px-3 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 text-muted-foreground transition-all"
+                        dir="rtl"
+                    >
+                        <span className="flex items-center gap-1.5">
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+                            <span>خيارات البحث المتقدم (الدرر السنية)</span>
+                        </span>
+                        {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
 
+                    {/* Collapsible Advanced Options Panel */}
+                    {showAdvanced && (
+                        <div className="p-4 rounded-xl border border-border bg-[#faf8f5] dark:bg-[#1f1d19] space-y-4 animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
+                            {/* Row 1: Search Match Mode & Grade Filter */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-[#8a7a6b]">طريقة مطابقة البحث:</label>
+                                    <select
+                                        value={searchMode}
+                                        onChange={(e: any) => setSearchMode(e.target.value)}
+                                        className="w-full text-xs p-2 rounded-lg border border-border bg-background focus:ring-1 focus:ring-primary"
+                                    >
+                                        <option value="w">جميع الكلمات (AND)</option>
+                                        <option value="a">أي كلمة (OR)</option>
+                                        <option value="p">بحث مطابق تماماً (جملة دقيقة)</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-[#8a7a6b]">نطاق درجة الحديث:</label>
+                                    <select
+                                        value={gradeFilter}
+                                        onChange={(e: any) => setGradeFilter(e.target.value)}
+                                        className="w-full text-xs p-2 rounded-lg border border-border bg-background focus:ring-1 focus:ring-primary"
+                                    >
+                                        <option value="0">جميع الأحاديث (كل الدرجات)</option>
+                                        <option value="1">أحاديث مقبولة فقط (صحيح / حسن)</option>
+                                        <option value="2">أحاديث ضعيفة ومردودة فقط</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Row 2: Search Scope & Exclude Words */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-[#8a7a6b]">النوع / نطاق البحث:</label>
+                                    <select
+                                        value={searchScope}
+                                        onChange={(e) => setSearchScope(e.target.value)}
+                                        className="w-full text-xs p-2 rounded-lg border border-border bg-background focus:ring-1 focus:ring-primary"
+                                    >
+                                        <option value="*">جميع الأحاديث والأثار</option>
+                                        <option value="0">أحاديث مرفوعة فقط</option>
+                                        <option value="1">أحاديث قدسية فقط</option>
+                                        <option value="2">أثار موقوفة ومقاطيع فقط</option>
+                                        <option value="3">في شروح الأحاديث فقط</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-[#8a7a6b]">استبعاد الكلمات التالية:</label>
+                                    <Input
+                                        value={excludeWords}
+                                        onChange={(e) => setExcludeWords(e.target.value)}
+                                        placeholder="اكتب كلمات لاستبعادها..."
+                                        className="h-8 text-xs focus:ring-1 focus:ring-primary"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Row 3: Deduplication checkbox */}
+                            <div className="flex items-center gap-2 pt-1">
+                                <input
+                                    type="checkbox"
+                                    id="chkDedup"
+                                    checked={dedup === "yes"}
+                                    onChange={(e) => setDedup(e.target.checked ? "yes" : "no")}
+                                    className="w-4 h-4 rounded text-primary focus:ring-primary"
+                                />
+                                <label htmlFor="chkDedup" className="text-xs text-muted-foreground cursor-pointer select-none">
+                                    حذف الروايات المتطابقة تماماً (تصفية التكرار)
+                                </label>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-end">
                         <Button
                             onClick={searchHadith}
                             disabled={loading || !query.trim()}
-                            size="sm"
+                            className="px-6 py-2"
                             data-testid="button-search-hadith"
                         >
                             {loading ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin ml-2" />
-                                    جاري البحث
+                                    جاري البحث...
                                 </>
                             ) : (
-                                "تحقق"
+                                "تحقق من الحديث"
                             )}
                         </Button>
                     </div>
