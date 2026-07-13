@@ -823,11 +823,11 @@ export default function HadithVerifyPage() {
 
                     {/* Collapsible Advanced Options Panel */}
                     {showAdvanced && (
-                        <div className="p-4 rounded-xl border border-border bg-[#faf8f5] dark:bg-[#1f1d19] space-y-4 animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
+                        <div className="p-4 rounded-xl border border-border bg-secondary/30 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
                             {/* Row 1: Search Match Mode & Grade Filter */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-[#8a7a6b]">طريقة مطابقة البحث:</label>
+                                    <label className="text-xs font-bold text-foreground/80">طريقة مطابقة البحث:</label>
                                     <select
                                         value={searchMode}
                                         onChange={(e: any) => setSearchMode(e.target.value)}
@@ -839,7 +839,7 @@ export default function HadithVerifyPage() {
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-[#8a7a6b]">نطاق درجة الحديث:</label>
+                                    <label className="text-xs font-bold text-foreground/80">نطاق درجة الحديث:</label>
                                     <select
                                         value={gradeFilter}
                                         onChange={(e: any) => setGradeFilter(e.target.value)}
@@ -855,7 +855,7 @@ export default function HadithVerifyPage() {
                             {/* Row 2: Search Scope & Exclude Words */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-[#8a7a6b]">النوع / نطاق البحث:</label>
+                                    <label className="text-xs font-bold text-foreground/80">النوع / نطاق البحث:</label>
                                     <select
                                         value={searchScope}
                                         onChange={(e) => setSearchScope(e.target.value)}
@@ -869,7 +869,7 @@ export default function HadithVerifyPage() {
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-[#8a7a6b]">استبعاد الكلمات التالية:</label>
+                                    <label className="text-xs font-bold text-foreground/80">استبعاد الكلمات التالية:</label>
                                     <Input
                                         value={excludeWords}
                                         onChange={(e) => setExcludeWords(e.target.value)}
@@ -942,51 +942,51 @@ export default function HadithVerifyPage() {
                             return (
                                 <Card
                                     key={index}
-                                    className="p-5 space-y-4 rounded-xl border border-border bg-[#fdfcfb] dark:bg-[#1c1a17] shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/20"
+                                    className={cn(
+                                        "p-4 space-y-3 border-r-4",
+                                        style.border
+                                    )}
                                 >
-                                    {/* Hadith Text in Signature Burgundy Color */}
+                                    {/* Hadith Text */}
                                     <p
-                                        className="text-[#9e1c3f] dark:text-[#f87171] leading-relaxed font-hadith text-right text-lg font-bold"
+                                        className="text-foreground leading-relaxed font-hadith text-right text-base sm:text-lg"
                                         dir="rtl"
                                     >
                                         {hadith.text}
                                     </p>
 
-                                    {/* Details Grid - Styled like Dorar Al-Saniyyah book theme */}
-                                    <div className="bg-[#f7f5f2] dark:bg-[#25221f] rounded-lg p-3 space-y-2 text-xs md:text-sm text-foreground/80 border border-[#eae6e0] dark:border-[#38332e]" dir="rtl">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                                            <div className="flex gap-2">
-                                                <span className="font-bold text-[#8a7a6b] shrink-0">الراوي:</span>
-                                                <span className="text-foreground">{hadith.narrator || "غير محدد"}</span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <span className="font-bold text-[#8a7a6b] shrink-0">المحدث:</span>
-                                                <span className="text-foreground">{hadith.scholar || "غير محدد"}</span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <span className="font-bold text-[#8a7a6b] shrink-0">المصدر:</span>
-                                                <span className="text-foreground">{hadith.source || "غير محدد"}</span>
-                                            </div>
+                                    {/* Details */}
+                                    <div className="border-t border-border pt-3 space-y-1.5 text-xs text-muted-foreground" dir="rtl">
+                                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                                            <span className="font-bold text-foreground/70 shrink-0">الراوي:</span>
+                                            <span className="text-foreground">{hadith.narrator || "غير محدد"}</span>
+                                            
+                                            <span className="font-bold text-foreground/70 shrink-0">المحدث:</span>
+                                            <span className="text-foreground">{hadith.scholar || "غير محدد"}</span>
+                                            
+                                            <span className="font-bold text-foreground/70 shrink-0">المصدر:</span>
+                                            <span className="text-foreground">{hadith.source || "غير محدد"}</span>
+                                            
                                             {hadith.pageNumber && (
-                                                <div className="flex gap-2">
-                                                    <span className="font-bold text-[#8a7a6b] shrink-0">الصفحة أو الرقم:</span>
+                                                <>
+                                                    <span className="font-bold text-foreground/70 shrink-0">الصفحة أو الرقم:</span>
                                                     <span className="text-foreground">{hadith.pageNumber}</span>
-                                                </div>
+                                                </>
                                             )}
                                         </div>
 
                                         {hadith.takhrij && (
-                                            <div className="flex gap-2 pt-2 border-t border-[#e6e2dc] dark:border-[#38332e]">
-                                                <span className="font-bold text-[#8a7a6b] shrink-0">تخريج الحديث:</span>
-                                                <span className="text-muted-foreground text-xs">{hadith.takhrij}</span>
+                                            <div className="pt-2 border-t border-border/50 flex gap-2">
+                                                <span className="font-bold text-foreground/70 shrink-0">تخريج الحديث:</span>
+                                                <span className="text-[11px] leading-relaxed text-muted-foreground">{hadith.takhrij}</span>
                                             </div>
                                         )}
 
-                                        <div className="flex items-center gap-2 pt-2 border-t border-[#e6e2dc] dark:border-[#38332e]">
-                                            <span className="font-bold text-[#8a7a6b] shrink-0">خلاصة حكم المحدث:</span>
+                                        <div className="pt-2 border-t border-border/50 flex items-center gap-2">
+                                            <span className="font-bold text-foreground/70 shrink-0">خلاصة حكم المحدث:</span>
                                             <span
                                                 className={cn(
-                                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-xs",
+                                                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded font-bold text-[10px]",
                                                     style.bg,
                                                     style.text
                                                 )}
