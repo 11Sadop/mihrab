@@ -498,9 +498,7 @@ export async function registerRoutes(
                         const normalizeAr = (s: string) => s.replace(/[ًٌٍَُِّْـ]/g, '').replace(/[إأآءٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
 
                         const LOCAL_STOP_WORDS = new Set([
-                            "من", "عن", "ان", "في", "على", "لا", "ما", "الى", "ثم", "انه", "كان",
-                            "قال", "الله", "رسول", "صلي", "عليه", "وسلم", "يا", "ايها", "قد", "لقد",
-                            "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
+                            "في", "ما", "ثم", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
                         ]);
 
                         const queryNorm = normalizeAr(cleanedSearchKey);
@@ -595,9 +593,7 @@ export async function registerRoutes(
 
             // Apply strict overlap filtering to prevent disjoint results
             const LOCAL_STOP_WORDS_SET = new Set([
-                "من", "عن", "ان", "في", "على", "لا", "ما", "الى", "ثم", "انه", "كان",
-                "قال", "الله", "رسول", "صلي", "عليه", "وسلم", "يا", "ايها", "قد", "لقد",
-                "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
+                "في", "ما", "ثم", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
             ]);
             const normalizeAr = (s: string) => s
                 .replace(/[ًٌٍَُِّْـ]/g, '')
@@ -637,7 +633,7 @@ export async function registerRoutes(
                 }
                 
                 const ratio = matchCount / activeQueryWords.length;
-                return ratio >= 0.50; // Require at least 50% word overlap
+                return ratio >= 0.25; // Require at least 25% word overlap
             });
 
             // Apply grade filter for local filtering backup

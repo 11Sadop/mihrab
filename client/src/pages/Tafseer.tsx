@@ -872,10 +872,10 @@ export default function TafseerPage(){
             <div className={`flex flex-col py-6 flex-1 ${groups.reduce((t,gg)=>t+gg.ayahs.length,0)<15?'justify-center min-h-[60vh]':''}`}>
               {groups.map((g,gi)=>{
                 const allChars=groups.reduce((t,gg)=>t+gg.ayahs.reduce((s,a)=>s+a.text.length,0),0);
-                const dynSize=allChars<350?'clamp(22px, 6vw, 30px)':
-                               allChars<550?'clamp(20px, 5.5vw, 26px)':
-                               allChars<800?'clamp(18px, 4.8vw, 24px)':
-                               'clamp(16px, 4vw, 21px)';
+                const dynSize=allChars<350?'clamp(26px, 7vw, 34px)':
+                               allChars<550?'clamp(24px, 6.5vw, 30px)':
+                               allChars<800?'clamp(22px, 5.5vw, 28px)':
+                               'clamp(20px, 5vw, 25px)';
                 const dynLine=allChars<350?'2.6':allChars<600?'2.4':allChars<800?'2.3':'2.2';
                 
                 return <div key={`${g.sn}-${gi}`} className="relative w-full">

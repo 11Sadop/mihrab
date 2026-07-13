@@ -1,6 +1,6 @@
 import { Header } from "@/components/Header";
 import { useState, useEffect } from "react";
-import { Search, Loader2, Check, X, AlertTriangle, Share2, Image as ImageIcon, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Loader2, Check, X, AlertTriangle, Share2, Image as ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -118,7 +118,7 @@ function passesStrictOverlapFilter(text: string, normalizedQuery: string, active
         }
     }
     const ratio = matchCount / activeTokens.length;
-    return ratio >= 0.50;
+    return ratio >= 0.25;
 }
 
 function isTrustedGrade(grade: string): boolean {
@@ -266,12 +266,11 @@ export default function HadithVerifyPage() {
     const [explanationText, setExplanationText] = useState<string>("");
     const [explanationLoading, setExplanationLoading] = useState(false);
 
-    const [searchMode, setSearchMode] = useState<"w"|"a"|"p">("w");
-    const [searchScope, setSearchScope] = useState<string>("*");
-    const [gradeFilter, setGradeFilter] = useState<"0"|"1"|"2">("0");
-    const [excludeWords, setExcludeWords] = useState("");
-    const [dedup, setDedup] = useState<"yes"|"no">("yes");
-    const [showAdvanced, setShowAdvanced] = useState(false);
+    const searchMode = "w";
+    const searchScope = "*";
+    const gradeFilter = "0";
+    const excludeWords = "";
+    const dedup = "yes";
 
     const loadHadithExplanation = async (hadith: HadithResult, idx: number) => {
         setExplanationHadith(hadith);
@@ -516,9 +515,7 @@ export default function HadithVerifyPage() {
         ];
 
         const ARABIC_STOP_WORDS = new Set([
-            "من", "عن", "ان", "في", "على", "لا", "ما", "الى", "ثم", "انه", "كان", 
-            "قال", "الله", "رسول", "صلي", "عليه", "وسلم", "يا", "ايها", "قد", "لقد",
-            "انما", "اما", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
+            "في", "ما", "ثم", "هو", "هي", "هم", "هن", "هذا", "هذه", "الذي", "التي"
         ]);
 
         const queryTokens = searchMode === 'p' ? [normalizedQuery] : normalizedQuery.split(/\s+/)
@@ -549,7 +546,7 @@ export default function HadithVerifyPage() {
                     }
                 }
                 overlapRatio = matchCount / activeTokens.length;
-                isMatch = overlapRatio >= 0.45;
+                isMatch = overlapRatio >= 0.30;
             }
 
             if (!isMatch) continue;
@@ -581,6 +578,9 @@ export default function HadithVerifyPage() {
             }
             return;
         }
+
+        // Safety timeout: ensure loading stops after 8 seconds max
+        const loadingTimeout = setTimeout(() => { setLoading(false); }, 8000);
 
         // 2. Background Concurrent Online Search
         (async () => {
@@ -723,7 +723,8 @@ export default function HadithVerifyPage() {
                 setError("");
             }
             setLoading(false);
-        })();
+            clearTimeout(loadingTimeout);
+        })().catch(() => { setLoading(false); clearTimeout(loadingTimeout); });
     };
 
     const removeDuplicates = <T extends HadithResult>(items: T[]): T[] => {
@@ -818,92 +819,6 @@ export default function HadithVerifyPage() {
                         />
                     </div>
 
-                    {/* Advanced Search Toggle Button */}
-                    <button
-                        onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="w-full flex items-center justify-between text-xs font-semibold py-1.5 px-3 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 text-muted-foreground transition-all"
-                        dir="rtl"
-                    >
-                        <span className="flex items-center gap-1.5">
-                            <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
-                            <span>خيارات البحث المتقدم (الدرر السنية)</span>
-                        </span>
-                        {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    </button>
-
-                    {/* Collapsible Advanced Options Panel */}
-                    {showAdvanced && (
-                        <div className="p-4 rounded-xl border border-border bg-secondary/30 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
-                            {/* Row 1: Search Match Mode & Grade Filter */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-foreground/80">طريقة مطابقة البحث:</label>
-                                    <select
-                                        value={searchMode}
-                                        onChange={(e: any) => setSearchMode(e.target.value)}
-                                        className="w-full text-xs p-2 rounded-lg border border-border bg-background focus:ring-1 focus:ring-primary"
-                                    >
-                                        <option value="w">جميع الكلمات (AND)</option>
-                                        <option value="a">أي كلمة (OR)</option>
-                                        <option value="p">بحث مطابق تماماً (جملة دقيقة)</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-foreground/80">نطاق درجة الحديث:</label>
-                                    <select
-                                        value={gradeFilter}
-                                        onChange={(e: any) => setGradeFilter(e.target.value)}
-                                        className="w-full text-xs p-2 rounded-lg border border-border bg-background focus:ring-1 focus:ring-primary"
-                                    >
-                                        <option value="0">جميع الأحاديث (كل الدرجات)</option>
-                                        <option value="1">أحاديث مقبولة فقط (صحيح / حسن)</option>
-                                        <option value="2">أحاديث ضعيفة ومردودة فقط</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Row 2: Search Scope & Exclude Words */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-foreground/80">النوع / نطاق البحث:</label>
-                                    <select
-                                        value={searchScope}
-                                        onChange={(e) => setSearchScope(e.target.value)}
-                                        className="w-full text-xs p-2 rounded-lg border border-border bg-background focus:ring-1 focus:ring-primary"
-                                    >
-                                        <option value="*">جميع الأحاديث والأثار</option>
-                                        <option value="0">أحاديث مرفوعة فقط</option>
-                                        <option value="1">أحاديث قدسية فقط</option>
-                                        <option value="2">أثار موقوفة ومقاطيع فقط</option>
-                                        <option value="3">في شروح الأحاديث فقط</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-foreground/80">استبعاد الكلمات التالية:</label>
-                                    <Input
-                                        value={excludeWords}
-                                        onChange={(e) => setExcludeWords(e.target.value)}
-                                        placeholder="اكتب كلمات لاستبعادها..."
-                                        className="h-8 text-xs focus:ring-1 focus:ring-primary"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Row 3: Deduplication checkbox */}
-                            <div className="flex items-center gap-2 pt-1">
-                                <input
-                                    type="checkbox"
-                                    id="chkDedup"
-                                    checked={dedup === "yes"}
-                                    onChange={(e) => setDedup(e.target.checked ? "yes" : "no")}
-                                    className="w-4 h-4 rounded text-primary focus:ring-primary"
-                                />
-                                <label htmlFor="chkDedup" className="text-xs text-muted-foreground cursor-pointer select-none">
-                                    حذف الروايات المتطابقة تماماً (تصفية التكرار)
-                                </label>
-                            </div>
-                        </div>
-                    )}
 
                     <div className="flex items-center justify-end">
                         <Button
