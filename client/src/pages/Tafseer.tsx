@@ -11,12 +11,12 @@ const RECITERS:Rec[]=[
   {id:"afasy",name:"مشاري العفاسي",server:"https://server8.mp3quran.net/afs",ev:"Alafasy_128kbps"},
   {id:"sudais",name:"عبدالرحمن السديس",server:"https://server11.mp3quran.net/sds",ev:"Abdurrahmaan_As-Sudais_192kbps"},
   {id:"hosary",name:"محمود خليل الحصري",server:"https://server13.mp3quran.net/husr",ev:"Husary_128kbps"},
-  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Mujawwad_128kbps"},
-  {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"AbdulBasit_Mujawwad_128kbps"},
-  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Sa_d_al-Ghaamidi_128kbps"}, // Highest bitrate
+  {id:"minshawi",name:"محمد صديق المنشاوي",server:"https://server10.mp3quran.net/minsh",ev:"Minshawy_Mujawwad_192kbps"},
+  {id:"basit",name:"عبدالباسط عبدالصمد",server:"https://server7.mp3quran.net/basit",ev:"Abdul_Basit_Mujawwad_128kbps"},
+  {id:"ghamdi",name:"سعد الغامدي",server:"https://server7.mp3quran.net/s_gmd",ev:"Ghamadi_40kbps"}, // Highest bitrate
   {id:"ajamy",name:"أحمد العجمي",server:"https://server10.mp3quran.net/ajm",ev:"Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"},
-  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server15.mp3quran.net/lhdan",ev:"Muhammad_Al-Luhaidan_128kbps"},
-  {id:"dosari",name:"ياسر الدوسري",server:"https://server10.mp3quran.net/ibrahim_dosri",ev:"Yasser_Ad-Dussary_128kbps"},
+  {id:"luhaidan",name:"محمد اللحيدان",server:"https://server15.mp3quran.net/lhdan"},
+  {id:"dosari",name:"ياسر الدوسري",server:"https://server11.mp3quran.net/yasser",ev:"Yasser_Ad-Dussary_128kbps"},
 ];
 
 const SURAHS=[{id:1,n:"الفاتحة",c:7},{id:2,n:"البقرة",c:286},{id:3,n:"آل عمران",c:200},{id:4,n:"النساء",c:176},{id:5,n:"المائدة",c:120},{id:6,n:"الأنعام",c:165},{id:7,n:"الأعراف",c:206},{id:8,n:"الأنفال",c:75},{id:9,n:"التوبة",c:129},{id:10,n:"يونس",c:109},{id:11,n:"هود",c:123},{id:12,n:"يوسف",c:111},{id:13,n:"الرعد",c:43},{id:14,n:"إبراهيم",c:52},{id:15,n:"الحجر",c:99},{id:16,n:"النحل",c:128},{id:17,n:"الإسراء",c:111},{id:18,n:"الكهف",c:110},{id:19,n:"مريم",c:98},{id:20,n:"طه",c:135},{id:21,n:"الأنبياء",c:112},{id:22,n:"الحج",c:78},{id:23,n:"المؤمنون",c:118},{id:24,n:"النور",c:64},{id:25,n:"الفرقان",c:77},{id:26,n:"الشعراء",c:227},{id:27,n:"النمل",c:93},{id:28,n:"القصص",c:88},{id:29,n:"العنكبوت",c:69},{id:30,n:"الروم",c:60},{id:31,n:"لقمان",c:34},{id:32,n:"السجدة",c:30},{id:33,n:"الأحزاب",c:73},{id:34,n:"سبأ",c:54},{id:35,n:"فاطر",c:45},{id:36,n:"يس",c:83},{id:37,n:"الصافات",c:182},{id:38,n:"ص",c:88},{id:39,n:"الزمر",c:75},{id:40,n:"غافر",c:85},{id:41,n:"فصلت",c:54},{id:42,n:"الشورى",c:53},{id:43,n:"الزخرف",c:89},{id:44,n:"الدخان",c:59},{id:45,n:"الجاثية",c:37},{id:46,n:"الأحقاف",c:35},{id:47,n:"محمد",c:38},{id:48,n:"الفتح",c:29},{id:49,n:"الحجرات",c:18},{id:50,n:"ق",c:45},{id:51,n:"الذاريات",c:60},{id:52,n:"الطور",c:49},{id:53,n:"النجم",c:62},{id:54,n:"القمر",c:55},{id:55,n:"الرحمن",c:78},{id:56,n:"الواقعة",c:96},{id:57,n:"الحديد",c:29},{id:58,n:"المجادلة",c:22},{id:59,n:"الحشر",c:24},{id:60,n:"الممتحنة",c:13},{id:61,n:"الصف",c:14},{id:62,n:"الجمعة",c:11},{id:63,n:"المنافقون",c:11},{id:64,n:"التغابن",c:18},{id:65,n:"الطلاق",c:12},{id:66,n:"التحريم",c:12},{id:67,n:"الملك",c:30},{id:68,n:"القلم",c:52},{id:69,n:"الحاقة",c:52},{id:70,n:"المعارج",c:44},{id:71,n:"نوح",c:28},{id:72,n:"الجن",c:28},{id:73,n:"المزمل",c:20},{id:74,n:"المدثر",c:56},{id:75,n:"القيامة",c:40},{id:76,n:"الإنسان",c:31},{id:77,n:"المرسلات",c:50},{id:78,n:"النبأ",c:40},{id:79,n:"النازعات",c:46},{id:80,n:"عبس",c:42},{id:81,n:"التكوير",c:29},{id:82,n:"الانفطار",c:19},{id:83,n:"المطففين",c:36},{id:84,n:"الانشقاق",c:25},{id:85,n:"البروج",c:22},{id:86,n:"الطارق",c:17},{id:87,n:"الأعلى",c:19},{id:88,n:"الغاشية",c:26},{id:89,n:"الفجر",c:30},{id:90,n:"البلد",c:20},{id:91,n:"الشمس",c:15},{id:92,n:"الليل",c:21},{id:93,n:"الضحى",c:11},{id:94,n:"الشرح",c:8},{id:95,n:"التين",c:8},{id:96,n:"العلق",c:19},{id:97,n:"القدر",c:5},{id:98,n:"البينة",c:8},{id:99,n:"الزلزلة",c:8},{id:100,n:"العاديات",c:11},{id:101,n:"القارعة",c:11},{id:102,n:"التكاثر",c:8},{id:103,n:"العصر",c:3},{id:104,n:"الهمزة",c:9},{id:105,n:"الفيل",c:5},{id:106,n:"قريش",c:4},{id:107,n:"الماعون",c:7},{id:108,n:"الكوثر",c:3},{id:109,n:"الكافرون",c:6},{id:110,n:"النصر",c:3},{id:111,n:"المسد",c:5},{id:112,n:"الإخلاص",c:4},{id:113,n:"الفلق",c:5},{id:114,n:"الناس",c:6}];
@@ -155,6 +155,24 @@ export default function TafseerPage(){
   const currentAudio = () => activeAudioRef.current === '1' ? audio1Ref.current : audio2Ref.current;
   const bufferAudio = () => activeAudioRef.current === '1' ? audio2Ref.current : audio1Ref.current;
 
+  const preloadNextVerse = (sn: number, nis: number) => {
+    const q = playQueueRef.current;
+    if (q && nis < q.maxNis) {
+      const nextNis = nis + 1;
+      const nextKey = `${sn}-${nextNis}`;
+      if (nextPreloadedKey.current !== nextKey) {
+        const rec = getReciter();
+        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(sn)}${pad3(nextNis)}.mp3`;
+        const b = bufferAudio();
+        if (b) {
+          b.src = url;
+          b.load();
+          nextPreloadedKey.current = nextKey;
+        }
+      }
+    }
+  };
+
   const handleEnded = () => {
     const q = playQueueRef.current;
     if (q && q.nis < q.maxNis) {
@@ -172,6 +190,7 @@ export default function TafseerPage(){
           ensureVerseVisible(q.sn, nextNis);
           playQueueRef.current = { ...q, nis: nextNis };
           nextPreloadedKey.current = "";
+          preloadNextVerse(q.sn, nextNis);
         }
       } else {
         // Fallback if not preloaded
@@ -185,6 +204,7 @@ export default function TafseerPage(){
           setPlayingSn(q.sn);
           ensureVerseVisible(q.sn, nextNis);
           playQueueRef.current = { ...q, nis: nextNis };
+          preloadNextVerse(q.sn, nextNis);
         }
       }
     } else {
@@ -204,23 +224,6 @@ export default function TafseerPage(){
     const bar = document.getElementById('scrubBar') as HTMLInputElement;
     if (bar && a.duration && !isSeekingRef.current) { 
       bar.value = String((a.currentTime / a.duration) * 100); 
-    }
-    
-    // Preload Logic
-    const q = playQueueRef.current;
-    if (q && q.nis < q.maxNis && a.duration > 0 && a.duration - a.currentTime <= 1.5) {
-      const nextNis = q.nis + 1;
-      const nextKey = `${q.sn}-${nextNis}`;
-      if (nextPreloadedKey.current !== nextKey) {
-        const rec = getReciter();
-        const url = rec.ev ? `https://everyayah.com/data/${rec.ev}/${pad3(q.sn)}${pad3(nextNis)}.mp3` : `${rec.server}/${pad3(q.sn)}${pad3(nextNis)}.mp3`;
-        const b = bufferAudio();
-        if (b) {
-          b.src = url;
-          b.load();
-          nextPreloadedKey.current = nextKey;
-        }
-      }
     }
   };
   handleTimeUpdateRef.current = handleTimeUpdate;
@@ -405,6 +408,7 @@ export default function TafseerPage(){
     
     setIsPlaying(true);setPlayingKey(`${sn}-${nis}`);setPlayingSn(sn);
     ensureVerseVisible(sn,nis);
+    preloadNextVerse(sn, nis);
   };
 
   const playSurahFrom=(sn:number,startNis:number)=>{
