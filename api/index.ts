@@ -364,7 +364,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Primary Regex (Detailed)
         // Extract text and grade if possible
-        const regex = /<div class="hadith-text">([\s\S]*?)<\/div>[\s\S]*?<span class="info-subtitle">حكم المحدث:<\/span>\s*<span[^>]*>([\s\S]*?)<\/span>/g;
+        const regex = /<div class="hadith"[^>]*>([\s\S]*?)<\/div>\s*<div class="hadith-info">[\s\S]*?<span class="info-subtitle">خلاصة حكم المحدث:<\/span>\s*<span[^>]*>([\s\S]*?)<\/span>/g;
 
         let m;
         while ((m = regex.exec(html)) !== null) {
