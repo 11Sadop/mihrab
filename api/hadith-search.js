@@ -1,204 +1,136 @@
-// Standalone hadith search API - no TypeScript to avoid compilation issues
+// Standalone hadith search API - live proxy to الموسوعة الحديثية - الدرر السنية (dorar.net).
+// Dorar's actual response wraps each hadith as:
+//   <div class="hadith" ...>N -  <span class="search-keys">word</span> ... text .</div>
+//   <div class="hadith-info">
+//     <span class="info-subtitle">الراوي:</span> NAME</span>
+//     <span class="info-subtitle">المحدث:</span> NAME
+//     <span class="info-subtitle">المصدر:</span> SOURCE
+//     <span class="info-subtitle">الصفحة أو الرقم:</span> PAGE
+//     <span class="info-subtitle">خلاصة حكم المحدث:</span>  <span >GRADE TEXT</span>
+//   </div>
+// Earlier versions of this endpoint guessed at different class names
+// (e.g. "hadith-text", "primary-text-color") that don't actually appear in
+// Dorar's markup, so results were frequently empty or 'غير محدد'. This
+// version matches the verified real structure directly.
+
+function decodeEntities(text) {
+        return text
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>');
+}
+
+function stripTags(html) {
+        return decodeEntities(html.replace(/<[^>]+>/g, ' '))
+            .replace(/\s+/g, ' ')
+            .trim();
+}
+
+function extractField(block, label) {
+        const re = new RegExp(
+                    '<span[^>]*class="info-subtitle"[^>]*>\\s*' + label + '\\s*:?\\s*<\\/span>([\\s\\S]*?)(?=<span[^>]*class="info-subtitle"|$)',
+                    'i'
+                );
+        const match = block.match(re);
+        if (!match) return '';
+        return stripTags(match[1]).replace(/^:\s*/, '').trim();
+}
+
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
 
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+                return res.status(200).end();
     }
 
     try {
-        const skey = req.query.skey;
-        const grade = req.query.grade;
+                const skey = req.query.skey;
+                const grade = req.query.grade;
 
-        if (!skey) {
-            return res.status(400).json({ error: 'Missing skey parameter' });
-        }
-
-        let url = 'https://dorar.net/dorar_api.json?skey=' + encodeURIComponent(skey);
-        if (grade === 'sahih') url += '&d[]=1';
-
-        console.log('[Hadith Search] Fetching:', url);
-
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json; charset=utf-8',
-                'Accept-Charset': 'utf-8',
-                'Accept-Language': 'ar,en'
+            if (!skey) {
+                            return res.status(400).json({ error: 'Missing skey parameter' });
             }
-        });
 
-        if (!response.ok) {
-            throw new Error('Dorar API returned ' + response.status);
-        }
+            const url = 'https://dorar.net/dorar_api.json?skey=' + encodeURIComponent(skey);
 
-        const textResponse = await response.text();
-        let data;
-        try {
-            data = JSON.parse(textResponse);
-        } catch (e) {
-            return res.status(500).json({ error: 'Failed to parse Dorar response' });
-        }
+            const response = await fetch(url, {
+                            headers: {
+                                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                                'Accept': 'application/json; charset=utf-8',
+                                                'Accept-Charset': 'utf-8',
+                                                'Accept-Language': 'ar,en'
+                            }
+            });
 
-        const html = data?.ahadith?.result;
+            if (!response.ok) {
+                            throw new Error('Dorar API returned ' + response.status);
+            }
 
-        if (!html) {
-            return res.status(200).json({ results: [], message: 'لم يتم العثور على نتائج' });
-        }
+            const data = await response.json();
+                const html = data && data.ahadith && data.ahadith.result;
 
-        const clean = (s) => {
-            if (!s) return '';
-            return s
-                .replace(/<[^>]+>/g, '')
-                .replace(/&nbsp;/g, ' ')
-                .replace(/&quot;/g, '"')
-                .replace(/&amp;/g, '&')
-                .replace(/\\n/g, ' ')
-                .replace(/\\s+/g, ' ')
-                .trim();
-        };
+            if (!html) {
+                            return res.status(200).json({ results: [], total: 0, message: 'لم يتم العثور على نتائج' });
+            }
 
-        const results = [];
-        const blocks = html.split(/<div class="hadith"[^>]*>/i);
+            let results = [];
+                const blockRe = /<div class="hadith"[^>]*>([\s\S]*?)<\/div>\s*<div class="hadith-info">([\s\S]*?)<\/div>/gi;
+                let match;
+                while ((match = blockRe.exec(html)) !== null && results.length < 15) {
+                                const hadithBlock = match[1];
+                                const infoBlock = match[2];
 
-        console.log('[Hadith Search] Found', blocks.length - 1, 'hadith blocks');
+                    let text = stripTags(hadithBlock).replace(/^\d+\s*-\s*/, '').trim();
+                                text = text.replace(/\s*\.\s*$/, '.').trim();
+                                if (!text || text.length < 5) continue;
 
-        for (let i = 1; i < blocks.length && results.length < 15; i++) {
-            const block = blocks[i];
-            if (!block || block.length < 50) continue;
+                    const narrator = extractField(infoBlock, 'الراوي');
+                                const scholar = extractField(infoBlock, 'المحدث');
+                                const source = extractField(infoBlock, 'المصدر');
+                                const gradeText = extractField(infoBlock, 'خلاصة حكم المحدث');
 
-            try {
-                const infoSplit = block.split(/<div class="hadith-info"[^>]*>/i);
-                let text = clean(infoSplit[0]).replace(/^\d+\s*[-–]\s*/, '');
-
-                if (!text || text.length < 10) continue;
-
-                const infoSection = infoSplit.length > 1 ? infoSplit[1] : block;
-
-                const extractField = (fieldName) => {
-                    const patterns = [
-                        new RegExp(fieldName + '[:\\s]*</span>\\s*([^<]+)', 'i'),
-                        new RegExp(fieldName + '[:\\s]+([^<\\n،]+)', 'i'),
-                        new RegExp('>' + fieldName + '[:\\s]*([^<]+)<', 'i'),
-                        new RegExp('info-subtitle[^>]*>' + fieldName + '[^<]*</span>\\s*([^<]+)', 'i'),
-                        new RegExp(fieldName + '</span>([^<]+)', 'i'),
-                    ];
-                    for (const pattern of patterns) {
-                        const match = infoSection.match(pattern);
-                        if (match && match[1] && match[1].trim().length > 0) {
-                            return clean(match[1]);
-                        }
-                    }
-                    return '';
-                };
-
-                // Extract grade with multiple strategies
-                let extractedGrade = '';
-
-                // Strategy 1: Look for خلاصة حكم المحدث pattern
-                const gradePatterns = [
-                    /خلاصة حكم المحدث[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i,
-                    /خلاصة حكم المحدث[:\s]*<\/span>\s*([^<]+)</i,
-                    /حكم المحدث[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i,
-                    /الحكم[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i,
-                ];
-
-                for (const pattern of gradePatterns) {
-                    const match = block.match(pattern);
-                    if (match && match[1] && match[1].trim()) {
-                        extractedGrade = clean(match[1]);
-                        break;
-                    }
+                    results.push({
+                                        text: text.substring(0, 500),
+                                        narrator: narrator || 'غير محدد',
+                                        source: source || 'غير محدد',
+                                        scholar: scholar || '',
+                                        grade: gradeText || 'غير محدد'
+                    });
                 }
 
-                // Strategy 2: Look for common grade words in the entire block
-                if (!extractedGrade) {
-                    const gradeWords = [
-                        'إسناده صحيح على شرط',
-                        'إسناده صحيح',
-                        'إسناده ضعيف',
-                        'صحيح على شرط',
-                        'حسن صحيح',
-                        'رجاله ثقات',
-                        'متفق عليه',
-                        'صحيح لغيره',
-                        'حسن لغيره',
-                        'ضعيف جداً',
-                        'ضعيف جدا',
-                        'لا أصل له',
-                        'لا يصح',
-                        'موضوع',
-                        'منكر',
-                        'صحيح',
-                        'حسن',
-                        'ضعيف',
-                        'ثابت',
-                    ];
-
-                    for (const word of gradeWords) {
-                        if (block.includes(word)) {
-                            extractedGrade = word;
-                            break;
-                        }
-                    }
-                }
-
-                results.push({
-                    text: text.substring(0, 500),
-                    narrator: extractField('الراوي') || 'غير محدد',
-                    source: extractField('المصدر') || 'غير محدد',
-                    scholar: extractField('المحدث') || '',
-                    grade: extractedGrade || 'غير محدد'
-                });
-
-            } catch (parseError) {
-                console.error('[Hadith Search] Error parsing block:', parseError.message);
-                continue;
+            // Optional grade filter (Dorar's own API does not support this server-side)
+            if (grade === 'sahih') {
+                            results = results.filter((r) => /صحيح|حسن|ثبت/.test(r.grade));
             }
-        }
 
-        console.log('[Hadith Search] Returning', results.length, 'results');
+            // Sort by source priority (well-known books first)
+            const getSourcePriority = (source) => {
+                            const s = (source || '').toLowerCase();
+                            if (s.includes('البخاري')) return 1;
+                            if (s.includes('مسلم')) return 2;
+                            if (s.includes('أبي داود') || s.includes('أبو داود')) return 3;
+                            if (s.includes('الترمذي')) return 4;
+                            if (s.includes('النسائي')) return 5;
+                            if (s.includes('ابن ماجه') || s.includes('ابن ماجة')) return 6;
+                            return 10;
+            };
+                results.sort((a, b) => getSourcePriority(a.source) - getSourcePriority(b.source));
 
-        // Source priority for sorting - lower number = higher priority
-        const getSourcePriority = (source) => {
-            const s = source.toLowerCase();
-            if (s.includes('البخاري') || s.includes('bukhari')) return 1;
-            if (s.includes('مسلم') || s.includes('muslim')) return 2;
-            if (s.includes('أبي داود') || s.includes('أبو داود')) return 3;
-            if (s.includes('الترمذي')) return 4;
-            if (s.includes('النسائي')) return 5;
-            if (s.includes('ابن ماجه') || s.includes('ابن ماجة')) return 6;
-            if (s.includes('صحيح')) return 7;
-            if (s.includes('الألباني')) return 8;
-            return 10; // Other sources
-        };
-
-        // Sort results by source priority
-        results.sort((a, b) => {
-            const priorityA = getSourcePriority(a.source);
-            const priorityB = getSourcePriority(b.source);
-            return priorityA - priorityB;
-        });
-
-        // Take sample from first block info section for debugging
-        const firstBlock = blocks[1] || '';
-        const infoStart = firstBlock.indexOf('hadith-info');
-        const sampleInfo = infoStart > -1 ? firstBlock.substring(infoStart, infoStart + 800) : firstBlock.substring(0, 800);
-
-        return res.status(200).json({
-            results,
-            total: results.length,
-            debug: {
-                blocksFound: blocks.length - 1,
-                htmlLength: html.length,
-                sampleInfo: sampleInfo
-            }
-        });
+            return res.status(200).json({
+                            results,
+                            total: results.length,
+                            source: 'dorar.net',
+                            sourceLabel: 'الموسوعة الحديثية - الدرر السنية'
+            });
 
     } catch (e) {
-        console.error('[Hadith Search] Error:', e.message);
-        return res.status(500).json({ error: 'حدث خطأ أثناء البحث', details: e.message });
+                console.error('[Hadith Search] Error:', e.message);
+                return res.status(500).json({ error: 'حدث خطأ أثناء البحث', details: e.message });
     }
 }
