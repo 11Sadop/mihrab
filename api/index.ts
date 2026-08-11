@@ -396,7 +396,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
-        res.json({ results });
+        res.json({ results, liveDataAvailable: !!html, sourceLabel: html ? 'الدرر السنية (مباشر)' : 'نتائج تقريبية - تعذر الاتصال المباشر بخادم الدرر السنية' });
 
       } catch (e: any) {
         console.error('Dorar Proxy Error:', e);
